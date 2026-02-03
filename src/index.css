@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ok: #34C759;
+  --color-danger: #FF3B30;
+  --color-warning: #FF9500;
+  --color-info: #2997FF;
+  --color-primary: #2997FF;
+  --color-primary-light: #2997FF;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f7;
+  color: #1d1d1f;
+}
+
+.dark body,
+:is(.dark) body {
+  background-color: #000000;
+  color: #f5f5f7;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Card elevation */
+.ios-card-shadow {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.dark .ios-card-shadow {
+  box-shadow: none;
+}
+
+/* Typography — Apple style */
+.ios-title {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+.ios-headline {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.ios-title3 {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ios-body {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.47;
+}
+
+.ios-footnote {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.ios-caption-upper {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #86868b;
+}
+
+/* iOS Segmented Control */
+.ios-segmented {
+  display: flex;
+  background-color: rgba(0,0,0,0.06);
+  border-radius: 9px;
+  padding: 2px;
+}
+
+.dark .ios-segmented {
+  background-color: rgba(255,255,255,0.08);
+}
+
+.ios-segmented-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #86868b;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ios-segmented-item.active {
+  background-color: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  color: #1d1d1f;
+}
+
+.dark .ios-segmented-item.active {
+  background-color: rgba(255,255,255,0.16);
+  box-shadow: none;
+  color: #f5f5f7;
+}
+
+/* iOS Settings Row */
+.ios-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  min-height: 44px;
+}
+
+.ios-settings-separator {
+  margin-left: 16px;
+  height: 0.5px;
+  background-color: rgba(0,0,0,0.08);
+}
+
+.dark .ios-settings-separator {
+  background-color: rgba(255,255,255,0.08);
+}
+
+/* Animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* Hairline borders */
+.hairline-b {
+  border-bottom: 0.5px solid rgba(0,0,0,0.12);
+}
+.dark .hairline-b {
+  border-bottom-color: rgba(255,255,255,0.08);
+}
+.hairline-t {
+  border-top: 0.5px solid rgba(0,0,0,0.12);
+}
+.dark .hairline-t {
+  border-top-color: rgba(255,255,255,0.08);
+}

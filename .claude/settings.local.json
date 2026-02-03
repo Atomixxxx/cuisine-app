@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install pdfjs-dist)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(python:*)",
+      "Bash(node -e:*)",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite build)",
+      "Bash(npx vitest:*)",
+      "Bash(curl:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\Final\\\\Documents\\\\cuisine-app\\\\public\"\" 2>/dev/null || echo \"No public folder \")",
+      "Bash(npx vite:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd /c \"taskkill /PID 34140 /F\")",
+      "Bash(powershell -Command \"Stop-Process -Id 34140 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object OwningProcess\")",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(powershell -Command \"Get-ChildItem -Path src -Recurse -Include *.tsx | ForEach-Object { $content = Get-Content $_FullName -Raw; $content = $content -replace ''#007AFF'', ''#2997FF''; $content = $content -replace ''#0A84FF'', ''#2997FF''; Set-Content $_FullName $content -NoNewline }\")",
+      "Bash(npx:*)",
+      "Bash(gh auth status:*)",
+      "Bash(where:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh auth login:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
