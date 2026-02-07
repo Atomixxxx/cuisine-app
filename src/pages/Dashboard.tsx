@@ -76,7 +76,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="app-page-wrap pb-28 md:pl-20">
+    <div className="app-page-wrap pb-28 lg:pl-20">
       {showInstall && (
         <div className="flex items-center gap-3 p-4 rounded-2xl app-panel">
           <div className="flex-1">
@@ -259,7 +259,7 @@ function QuickActions({ onNavigate }: { onNavigate: (path: string) => void }) {
 
   return (
     <>
-      <div className="app-panel md:hidden">
+      <div className="app-panel lg:hidden">
         <h2 className="text-[14px] sm:text-[16px] font-semibold mb-2 app-text">Actions rapides</h2>
         <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {actions.map((action) => (
@@ -280,7 +280,7 @@ function QuickActions({ onNavigate }: { onNavigate: (path: string) => void }) {
       </div>
 
       <div
-        className="hidden md:flex fixed left-2 top-24 z-30 flex-col gap-2 rounded-2xl border border-[color:var(--app-border)] p-2 app-surface-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)]"
+        className="hidden lg:flex fixed left-2 top-24 z-30 flex-col gap-2 rounded-2xl border border-[color:var(--app-border)] p-2 app-surface-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)]"
         aria-label="Actions rapides"
       >
         {actions.map((action) => (
