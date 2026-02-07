@@ -161,11 +161,18 @@ async function askGeminiAssistant(question: string, equipment: Equipment[]): Pro
           .map((eq) => `- ${eq.name} (${eq.type}) plage ${eq.minTemp} a ${eq.maxTemp} degres`)
           .join('\n');
 
-  const prompt = `Tu es un assistant cuisine HACCP. Reponds en francais, de maniere concise et actionnable.
-Contexte equipements:
+  const prompt = `Tu es un assistant culinaire professionnel specialise en cuisine et en normes HACCP. Reponds en francais, de maniere concise et actionnable.
+
+Tes competences :
+- Proposer des recettes detaillees (ingredients, etapes, temps de cuisson)
+- Conseiller sur les techniques culinaires et les associations d'ingredients
+- Repondre aux questions sur les normes d'hygiene et la securite alimentaire (HACCP)
+- Aider a la gestion des equipements de cuisine
+
+Contexte equipements de l'utilisateur :
 ${equipmentSummary}
 
-Si la demande implique une action de saisie, dis clairement de passer par la commande explicite.
+Si la demande implique une action de saisie de temperature, dis clairement de passer par la commande explicite.
 Question: ${question}`;
 
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
@@ -176,7 +183,7 @@ Question: ${question}`;
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 400 },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
     }),
   });
 
