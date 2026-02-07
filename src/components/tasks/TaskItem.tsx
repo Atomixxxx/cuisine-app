@@ -79,7 +79,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
   return (
     <div className="relative overflow-hidden rounded-2xl mb-2">
       {/* Delete button behind the card */}
-      <div className="absolute inset-y-0 right-0 flex items-center justify-end w-[100px] bg-[#ff3b30] rounded-2xl">
+      <div className="absolute inset-y-0 right-0 flex items-center justify-end w-[100px] bg-[color:var(--app-danger)] rounded-2xl">
         <button
           onClick={() => onDelete(task.id)}
           className="flex items-center justify-center w-full h-full text-white"
@@ -98,8 +98,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
       {/* Card content */}
       <div
         className={cn(
-          'relative bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow transition-all duration-200',
-          completing && 'bg-[#34c759]/10/10'
+          'relative rounded-2xl app-card transition-all duration-200',
+          completing && 'bg-[color:var(--app-success)]/10'
         )}
         style={{ transform: `translateX(${swipeX}px)`, transition: swiping.current ? 'none' : 'transform 0.2s ease-out' }}
         onTouchStart={handleTouchStart}
@@ -116,8 +116,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
             className={cn(
               'flex-shrink-0 w-11 h-11 rounded-full border-2 flex items-center justify-center transition-colors duration-200',
               task.completed
-                ? 'bg-[#34c759] border-[#34c759] dark:border-[#34c759]'
-                : 'border-[#d1d1d6] dark:border-[#38383a]'
+                ? 'bg-[color:var(--app-success)] border-[color:var(--app-success)]'
+                : 'border-[color:var(--app-border)]'
             )}
             aria-label={task.completed ? 'Marquer comme non fait' : 'Marquer comme fait'}
           >
@@ -135,8 +135,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
                 className={cn(
                   'text-[15px] font-medium transition-all duration-200',
                   task.completed
-                    ? 'line-through text-[#86868b]'
-                    : 'text-[#1d1d1f] dark:text-[#f5f5f7]'
+                    ? 'line-through app-muted'
+                    : 'app-text'
                 )}
               >
                 {task.title}
@@ -152,13 +152,13 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
 
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
               {/* Category badge */}
-              <span className="inline-block text-[12px] px-2 py-0.5 rounded-full bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b]">
+              <span className="inline-block text-[12px] px-2 py-0.5 rounded-full app-surface-2 app-muted">
                 {CATEGORIES[task.category]}
               </span>
 
               {/* Estimated time */}
               {task.estimatedTime != null && task.estimatedTime > 0 && (
-                <span className="inline-flex items-center text-[12px] text-[#86868b] gap-0.5">
+                <span className="inline-flex items-center text-[12px] app-muted gap-0.5">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
@@ -169,7 +169,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
 
               {/* Recurring indicator */}
               {task.recurring && (
-                <span className="inline-flex items-center text-[12px] text-[#2997FF] gap-0.5">
+                <span className="inline-flex items-center text-[12px] text-[color:var(--app-accent)] gap-0.5">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 1l4 4-4 4" />
                     <path d="M3 11V9a4 4 0 0 1 4-4h14" />
@@ -183,19 +183,19 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
 
             {/* Expanded details */}
             {expanded && (
-              <div className="mt-3 pt-3 border-t border-[#d1d1d6]/30 dark:border-[#38383a]/50">
+              <div className="mt-3 pt-3 border-t border-[color:var(--app-border)]/60">
                 {task.notes && (
-                  <p className="text-[13px] text-[#86868b] mb-2 whitespace-pre-wrap">
+                  <p className="text-[13px] app-muted mb-2 whitespace-pre-wrap">
                     {task.notes}
                   </p>
                 )}
-                <div className="flex items-center gap-2 text-[12px] text-[#86868b]">
+                <div className="flex items-center gap-2 text-[12px] app-muted">
                   <span>Priorité : {PRIORITY_LABELS[task.priority]}</span>
                   <span>&middot;</span>
                   <span>Créé {formatDate(task.createdAt)}</span>
                 </div>
                 {task.completedAt && (
-                  <div className="text-[12px] text-[#86868b] mt-1">
+                  <div className="text-[12px] app-muted mt-1">
                     Terminé {formatDate(task.completedAt)}
                   </div>
                 )}
@@ -204,7 +204,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
                     e.stopPropagation();
                     onEdit(task);
                   }}
-                  className="mt-2 text-[13px] text-[#2997FF] font-semibold active:opacity-70"
+                  className="mt-2 text-[13px] text-[color:var(--app-accent)] font-semibold active:opacity-70"
                 >
                   Modifier
                 </button>
@@ -215,7 +215,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
           {/* Expand indicator */}
           <svg
             className={cn(
-              'w-4 h-4 text-[#d1d1d6] dark:text-[#38383a] flex-shrink-0 mt-3 transition-transform duration-200',
+              'w-4 h-4 app-muted flex-shrink-0 mt-3 transition-transform duration-200',
               expanded && 'rotate-180'
             )}
             viewBox="0 0 24 24"

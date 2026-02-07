@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CATEGORIES, type Task, type TaskCategory } from '../../types';
-import { cn, formatDate } from '../../utils';
+import { cn } from '../../utils';
 import { TaskItemSkeleton, ListSkeleton } from '../common/Skeleton';
 import { useAppStore } from '../../stores/appStore';
 import { showError } from '../../stores/toastStore';
@@ -89,28 +89,28 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#f5f5f7] dark:bg-black">
+    <div className="fixed inset-0 z-50 flex flex-col app-bg">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-3 bg-[#f5f5f7]/80 dark:bg-black/80 backdrop-blur-xl backdrop-saturate-150 hairline-b">
+      <div className="flex items-center gap-3 px-5 py-3 app-header backdrop-blur-xl backdrop-saturate-150 hairline-b">
         <button
           onClick={onClose}
-          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#2997FF] active:opacity-60 transition-opacity"
+          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[color:var(--app-accent)] active:opacity-60 transition-opacity"
           aria-label="Retour"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <h2 className="text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+        <h2 className="text-[17px] font-semibold app-text">
           Archives
         </h2>
-        <span className="text-[15px] text-[#86868b]">
+        <span className="text-[15px] app-muted">
           ({filteredTasks.length})
         </span>
       </div>
 
       {/* Filters */}
-      <div className="px-4 py-3 space-y-3">
+      <div className="m-3 mb-0 p-3 rounded-2xl app-panel space-y-3">
         {/* Category filter */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
           <button
@@ -118,8 +118,8 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
             className={cn(
               'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70',
               filterCategory === 'all'
-                ? 'bg-[#2997FF] text-white'
-                : 'bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b]'
+                ? 'app-accent-bg'
+                : 'app-surface-2 app-muted'
             )}
           >
             Toutes
@@ -131,8 +131,8 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
               className={cn(
                 'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70 whitespace-nowrap',
                 filterCategory === key
-                  ? 'bg-[#2997FF] text-white'
-                  : 'bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b]'
+                  ? 'app-accent-bg'
+                  : 'app-surface-2 app-muted'
               )}
             >
               {CATEGORIES[key]}
@@ -143,34 +143,34 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
         {/* Date range */}
         <div className="flex gap-2">
           <div className="flex-1">
-            <label className="block text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">Du</label>
+            <label className="block text-[12px] font-semibold app-muted uppercase tracking-wide mb-1">Du</label>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF]"
+              className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
             />
           </div>
           <div className="flex-1">
-            <label className="block text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">Au</label>
+            <label className="block text-[12px] font-semibold app-muted uppercase tracking-wide mb-1">Au</label>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF]"
+              className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
             />
           </div>
         </div>
       </div>
 
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
         {loading ? (
           <ListSkeleton count={5} Card={TaskItemSkeleton} />
         ) : filteredTasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="flex flex-col items-center justify-center py-20 text-center app-panel">
             <svg
-              className="w-16 h-16 text-[#d1d1d6] dark:text-[#38383a] mb-4"
+              className="w-16 h-16 app-muted mb-4"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -182,34 +182,34 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
               <path d="M1 3h22v5H1z" />
               <path d="M10 12h4" />
             </svg>
-            <p className="ios-title3 text-[#86868b]">
-              Aucune tâche archivée
+            <p className="ios-title3 app-muted">
+              Aucune tache archivee
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {filteredTasks.map((task) => (
-              <div
-                key={task.id}
-                className="bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow p-3.5"
-              >
+            <div className="space-y-2">
+              {filteredTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="app-panel p-3.5"
+                >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium text-[#86868b] line-through">
+                    <p className="text-[15px] font-medium app-muted line-through">
                       {task.title}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="text-[12px] px-2 py-0.5 rounded-full bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b]">
+                      <span className="text-[12px] px-2 py-0.5 rounded-full app-chip">
                         {CATEGORIES[task.category]}
                       </span>
                       {task.completedAt && (
-                        <span className="text-[12px] text-[#86868b]">
-                          Terminé {format(new Date(task.completedAt), 'dd MMM yyyy', { locale: fr })}
+                        <span className="text-[12px] app-muted">
+                          Termine {format(new Date(task.completedAt), 'dd MMM yyyy', { locale: fr })}
                         </span>
                       )}
                     </div>
                     {task.notes && (
-                      <p className="text-[13px] text-[#86868b] mt-1 truncate">
+                      <p className="text-[13px] app-muted mt-1 truncate">
                         {task.notes}
                       </p>
                     )}
@@ -219,7 +219,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
                     {/* Restore button */}
                     <button
                       onClick={() => handleRestore(task)}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl text-[#2997FF] active:opacity-70 transition-opacity"
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl text-[color:var(--app-accent)] active:opacity-70 transition-opacity"
                       aria-label="Restaurer"
                       title="Restaurer"
                     >
@@ -232,9 +232,9 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
                     {/* Delete permanently */}
                     <button
                       onClick={() => handlePermanentDelete(task.id)}
-                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl text-[#ff3b30] active:opacity-70 transition-opacity"
-                      aria-label="Supprimer définitivement"
-                      title="Supprimer définitivement"
+                      className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl text-[color:var(--app-danger)] active:opacity-70 transition-opacity"
+                      aria-label="Supprimer definitivement"
+                      title="Supprimer definitivement"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6" />
@@ -256,3 +256,4 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
 };
 
 export default TaskArchive;
+

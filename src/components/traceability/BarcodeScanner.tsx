@@ -114,10 +114,10 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
   return (
     <div className="flex flex-col gap-4">
       {/* Scanner area */}
-      <div className="relative rounded-xl overflow-hidden bg-[#1d1d1f]">
+      <div className="relative rounded-xl overflow-hidden app-surface-3">
         <div id={SCANNER_REGION_ID} className="w-full" />
         {!isScanning && !scannerError && !scannedBarcode && (
-          <div className="flex items-center justify-center h-48 text-[#86868b]">
+          <div className="flex items-center justify-center h-48 app-muted">
             <svg className="w-12 h-12 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
@@ -128,11 +128,11 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
 
       {/* Scanned result */}
       {scannedBarcode && (
-        <div aria-live="polite" className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg">
-          <svg className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div aria-live="polite" className="flex items-center gap-2 p-3 rounded-lg border border-[color:var(--app-success)]/30 bg-[color:var(--app-success)]/10">
+          <svg className="w-5 h-5 text-[color:var(--app-success)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-          <span className="text-sm font-medium text-green-800 dark:text-green-200">
+          <span className="text-sm font-medium text-[color:var(--app-success)]">
             Code détecté : <span className="font-mono">{scannedBarcode}</span>
           </span>
         </div>
@@ -140,14 +140,14 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
 
       {/* Error */}
       {scannerError && (
-        <div aria-live="assertive" className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg text-sm text-amber-800 dark:text-amber-200">
+        <div aria-live="assertive" className="p-3 rounded-lg text-sm border border-[color:var(--app-warning)]/30 bg-[color:var(--app-warning)]/10 text-[color:var(--app-warning)]">
           {scannerError}
         </div>
       )}
 
       {/* Manual entry */}
       <div>
-        <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#86868b] mb-1">
+        <label className="block text-sm font-medium app-muted mb-1">
           Saisie manuelle du code-barres
         </label>
         <input
@@ -158,7 +158,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
             if (!scannedBarcode) setScannedBarcode('');
           }}
           placeholder="Entrez le code-barres..."
-          className="w-full px-3 py-2.5 border border-[#d1d1d6] dark:border-[#38383a] rounded-lg bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+          className="w-full px-3 py-2.5 rounded-lg app-surface-2 app-text placeholder-[color:var(--app-muted)] border app-border focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
         />
       </div>
 
@@ -183,7 +183,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
             <button
               type="button"
               onClick={handleTakePhoto}
-              className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 bg-white/90 dark:bg-[#1d1d1f]/90 rounded-lg text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] shadow"
+              className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 app-surface app-border rounded-lg text-sm font-medium app-text shadow"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -195,7 +195,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
           <button
             type="button"
             onClick={handleTakePhoto}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-[#d1d1d6] dark:border-[#38383a] rounded-lg text-[#86868b] dark:text-[#86868b] active:border-[#2997FF] hover:text-[#2997FF] dark:hover:border-[#2997FF] dark:hover:text-[#2997FF] transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed app-border rounded-lg app-muted active:border-[color:var(--app-accent)] hover:text-[color:var(--app-accent)] hover:border-[color:var(--app-accent)] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -211,7 +211,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-4 py-2.5 border border-[#d1d1d6] dark:border-[#38383a] rounded-lg text-[#1d1d1f] dark:text-[#86868b] font-medium hover:bg-[#f5f5f7] dark:hover:bg-[#38383a] transition-colors"
+          className="flex-1 px-4 py-2.5 rounded-lg app-surface-2 app-border app-text font-medium hover:bg-[color:var(--app-surface-3)] transition-colors"
         >
           Annuler
         </button>
@@ -220,7 +220,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
           onClick={handleContinue}
           className={cn(
             'flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors',
-            'bg-[#2997FF] text-white hover:bg-[#2997FF] active:opacity-70'
+            'app-accent-bg active:opacity-70'
           )}
         >
           Continuer

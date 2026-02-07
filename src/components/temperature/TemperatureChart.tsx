@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -88,8 +88,8 @@ export default function TemperatureChart() {
         cx={cx}
         cy={cy}
         r={5}
-        fill={payload.isCompliant ? '#22c55e' : '#ef4444'}
-        stroke="#fff"
+        fill={payload.isCompliant ? 'var(--app-success)' : 'var(--app-danger)'}
+        stroke="var(--app-surface)"
         strokeWidth={2}
       />
     );
@@ -112,8 +112,8 @@ export default function TemperatureChart() {
             className={cn(
               'px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
               selectedEquipmentId === eq.id
-                ? 'bg-[#2997FF] border-blue-600 text-white'
-                : 'bg-white dark:bg-[#1d1d1f] border-[#d1d1d6] dark:border-[#38383a] text-[#1d1d1f] dark:text-[#86868b] active:border-[#2997FF]'
+                ? 'app-surface border-[color:var(--app-accent)] text-[color:var(--app-accent)]'
+                : 'app-surface-2 app-text border app-border active:border-[color:var(--app-accent)]'
             )}
           >
             {eq.name}
@@ -130,8 +130,8 @@ export default function TemperatureChart() {
             className={cn(
               'px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
               rangeOption === rb.key
-                ? 'bg-[#1d1d1f] dark:bg-white border-gray-900 dark:border-white text-white dark:text-[#1d1d1f]'
-                : 'bg-white dark:bg-[#1d1d1f] border-[#d1d1d6] dark:border-[#38383a] text-[#1d1d1f] dark:text-[#86868b]'
+                ? 'app-surface border-[color:var(--app-accent)] text-[color:var(--app-accent)]'
+                : 'app-surface-2 app-text border app-border'
             )}
           >
             {rb.label}
@@ -144,46 +144,47 @@ export default function TemperatureChart() {
               type="date"
               value={customStart}
               onChange={e => setCustomStart(e.target.value)}
-              className="rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] px-2 py-2 text-sm focus:ring-2 focus:ring-[#2997FF]"
+              className="rounded-lg border app-border app-surface-2 app-text px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
             />
-            <span className="text-[#86868b]">-</span>
+            <span className="app-muted">-</span>
             <input
               type="date"
               value={customEnd}
               onChange={e => setCustomEnd(e.target.value)}
-              className="rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] px-2 py-2 text-sm focus:ring-2 focus:ring-[#2997FF]"
+              className="rounded-lg border app-border app-surface-2 app-text px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
             />
           </div>
         )}
       </div>
 
       {/* Chart */}
-      <div className="bg-white dark:bg-[#1d1d1f] rounded-xl border border-[#e8e8ed] dark:border-[#38383a] p-4">
+      <div className="app-card p-4">
         {chartData.length === 0 ? (
-          <div className="text-center py-16 text-[#86868b] dark:text-[#86868b]">
+          <div className="text-center py-16 app-muted ">
             <p className="text-lg font-medium">Aucune donnée</p>
             <p className="text-sm mt-1">Aucun relevé pour cette période et cet équipement</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border)" />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                tick={{ fontSize: 11, fill: 'var(--app-muted)' }}
                 interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                tick={{ fontSize: 11, fill: 'var(--app-muted)' }}
                 domain={['auto', 'auto']}
                 unit="°C"
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(255,255,255,0.95)',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'var(--app-surface)',
+                  border: '1px solid var(--app-border)',
                   borderRadius: '8px',
                   fontSize: '13px',
+                  color: 'var(--app-text)',
                 }}
                 formatter={(value: number | undefined) => [`${value ?? 0}°C`, 'Température']}
                 labelFormatter={(label: any) => String(label)}
@@ -192,25 +193,25 @@ export default function TemperatureChart() {
                 <>
                   <ReferenceLine
                     y={selectedEquipment.maxTemp}
-                    stroke="#ef4444"
+                    stroke="var(--app-danger)"
                     strokeDasharray="6 3"
-                    label={{ value: `Max ${selectedEquipment.maxTemp}°C`, position: 'right', fontSize: 11, fill: '#ef4444' }}
+                    label={{ value: `Max ${selectedEquipment.maxTemp}°C`, position: 'right', fontSize: 11, fill: 'var(--app-danger)' }}
                   />
                   <ReferenceLine
                     y={selectedEquipment.minTemp}
-                    stroke="#3b82f6"
+                    stroke="var(--app-info)"
                     strokeDasharray="6 3"
-                    label={{ value: `Min ${selectedEquipment.minTemp}°C`, position: 'right', fontSize: 11, fill: '#3b82f6' }}
+                    label={{ value: `Min ${selectedEquipment.minTemp}°C`, position: 'right', fontSize: 11, fill: 'var(--app-info)' }}
                   />
                 </>
               )}
               <Line
                 type="monotone"
                 dataKey="temperature"
-                stroke="#6366f1"
+                stroke="var(--app-accent)"
                 strokeWidth={2}
                 dot={<CustomDot />}
-                activeDot={{ r: 7, stroke: '#6366f1', strokeWidth: 2 }}
+                activeDot={{ r: 7, stroke: 'var(--app-accent)', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -224,21 +225,21 @@ export default function TemperatureChart() {
             {
               label: 'Moyenne',
               value: (chartData.reduce((s, p) => s + p.temperature, 0) / chartData.length).toFixed(1),
-              color: 'text-[#2997FF] dark:text-[#2997FF]',
+              color: 'text-[color:var(--app-accent)]',
             },
             {
               label: 'Min',
               value: Math.min(...chartData.map(p => p.temperature)).toFixed(1),
-              color: 'text-cyan-600 dark:text-cyan-400',
+              color: 'text-[color:var(--app-info)]',
             },
             {
               label: 'Max',
               value: Math.max(...chartData.map(p => p.temperature)).toFixed(1),
-              color: 'text-orange-600 dark:text-orange-400',
+              color: 'text-[color:var(--app-warning)]',
             },
           ].map(stat => (
-            <div key={stat.label} className="bg-white dark:bg-[#1d1d1f] rounded-xl border border-[#e8e8ed] dark:border-[#38383a] p-3 text-center">
-              <p className="text-xs text-[#86868b] dark:text-[#86868b] mb-1">{stat.label}</p>
+            <div key={stat.label} className="app-card p-3 text-center">
+              <p className="text-xs app-muted  mb-1">{stat.label}</p>
               <p className={cn('text-xl font-bold', stat.color)}>{stat.value}°C</p>
             </div>
           ))}

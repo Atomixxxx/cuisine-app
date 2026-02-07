@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { ProductTrace } from '../../types';
@@ -62,31 +62,31 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
 
   const dlcStatus = useMemo(() => {
     const days = differenceInDays(new Date(product.expirationDate), new Date());
-    if (days < 0) return { label: 'Expiré', color: 'text-red-600 dark:text-[#ff3b30]', bg: 'bg-red-100 dark:bg-red-900/40' };
-    if (days <= 3) return { label: `Expire dans ${days} jour${days > 1 ? 's' : ''}`, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/40' };
-    return { label: `${days} jours restants`, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/40' };
+    if (days < 0) return { label: 'Expire', color: 'text-[color:var(--app-danger)]', bg: 'bg-[color:var(--app-danger)]/10' };
+    if (days <= 3) return { label: `Expire dans ${days} jour${days > 1 ? 's' : ''}`, color: 'text-[color:var(--app-warning)]', bg: 'bg-[color:var(--app-warning)]/12' };
+    return { label: `${days} jours restants`, color: 'text-[color:var(--app-success)]', bg: 'bg-[color:var(--app-success)]/12' };
   }, [product.expirationDate]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-[#1d1d1f]">
+    <div className="fixed inset-0 z-50 flex flex-col app-bg">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#e8e8ed] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f]">
+      <div className="flex items-center justify-between px-4 py-3 app-header">
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-[#86868b] dark:text-[#86868b] hover:bg-[#e8e8ed] dark:hover:bg-[#1d1d1f] transition-colors"
+          className="p-1.5 rounded-lg app-muted hover:bg-[color:var(--app-surface-3)] transition-colors"
           aria-label="Fermer"
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <h2 className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate mx-3 flex-1 text-center">
+        <h2 className="text-base font-semibold app-text truncate mx-3 flex-1 text-center">
           {product.productName}
         </h2>
         <div className="flex items-center gap-1">
           <button
             onClick={() => onEdit(product)}
-            className="p-1.5 rounded-lg text-[#2997FF] dark:text-[#2997FF] active:opacity-70 dark:active:opacity-70 transition-colors"
+            className="p-1.5 rounded-lg text-[color:var(--app-accent)] active:opacity-70 dark:active:opacity-70 transition-colors"
             aria-label="Modifier"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -95,7 +95,7 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
           </button>
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="p-1.5 rounded-lg text-[#ff3b30] active:opacity-70 dark:active:opacity-70 transition-colors"
+            className="p-1.5 rounded-lg text-[color:var(--app-danger)] active:opacity-70 dark:active:opacity-70 transition-colors"
             aria-label="Supprimer"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -108,7 +108,7 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Photo */}
-        <div className="relative bg-[#e8e8ed] dark:bg-[#1d1d1f] flex items-center justify-center overflow-hidden" style={{ minHeight: '250px' }}>
+        <div className="relative app-surface-2 flex items-center justify-center overflow-hidden" style={{ minHeight: '250px' }}>
           {photoUrl ? (
             <img
               src={photoUrl}
@@ -117,7 +117,7 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
               style={{ transform: `scale(${zoom})`, maxHeight: '350px' }}
             />
           ) : (
-            <div className="flex flex-col items-center text-[#86868b] dark:text-[#86868b] py-12">
+            <div className="flex flex-col items-center app-muted py-12">
               <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -127,22 +127,22 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
 
           {/* Zoom controls */}
           {photoUrl && (
-            <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-white/90 dark:bg-[#1d1d1f]/90 rounded-lg shadow p-1">
+            <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-[color:var(--app-surface)]/90 border app-border rounded-lg shadow p-1">
               <button
                 onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                className="p-1.5 rounded text-[#86868b] dark:text-[#86868b] hover:bg-[#e8e8ed] dark:hover:bg-[#38383a]"
-                aria-label="Zoom arrière"
+                className="p-1.5 rounded app-muted hover:bg-[color:var(--app-surface-3)]"
+                aria-label="Zoom arriere"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
                 </svg>
               </button>
-              <span className="text-xs font-medium text-[#86868b] dark:text-[#86868b] min-w-[3ch] text-center">
+              <span className="text-xs font-medium app-muted min-w-[3ch] text-center">
                 {Math.round(zoom * 100)}%
               </span>
               <button
                 onClick={() => setZoom((z) => Math.min(3, z + 0.25))}
-                className="p-1.5 rounded text-[#86868b] dark:text-[#86868b] hover:bg-[#e8e8ed] dark:hover:bg-[#38383a]"
+                className="p-1.5 rounded app-muted hover:bg-[color:var(--app-surface-3)]"
                 aria-label="Zoom avant"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -156,8 +156,8 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
           {hasPrev && (
             <button
               onClick={handlePrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 dark:bg-[#1d1d1f]/80 text-[#1d1d1f] dark:text-[#86868b] shadow hover:bg-white dark:hover:bg-[#1d1d1f] transition-colors"
-              aria-label="Produit précédent"
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[color:var(--app-surface)]/85 app-text shadow hover:bg-[color:var(--app-surface)] transition-colors"
+              aria-label="Produit precedent"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -167,7 +167,7 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
           {hasNext && (
             <button
               onClick={handleNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 dark:bg-[#1d1d1f]/80 text-[#1d1d1f] dark:text-[#86868b] shadow hover:bg-white dark:hover:bg-[#1d1d1f] transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-[color:var(--app-surface)]/85 app-text shadow hover:bg-[color:var(--app-surface)] transition-colors"
               aria-label="Produit suivant"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -187,10 +187,10 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
           {/* Info rows */}
           <div className="grid gap-3">
             <InfoRow label="Fournisseur" value={product.supplier} />
-            <InfoRow label="Numéro de lot" value={product.lotNumber} />
+            <InfoRow label="Numero de lot" value={product.lotNumber} />
             <InfoRow label="Catégorie" value={product.category} />
             <InfoRow
-              label="Date de réception"
+              label="Date de reception"
               value={format(new Date(product.receptionDate), 'dd MMMM yyyy', { locale: fr })}
             />
             <InfoRow
@@ -199,8 +199,8 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
             />
             {product.barcode && <InfoRow label="Code-barres" value={product.barcode} mono />}
             <InfoRow
-              label="Scanné le"
-              value={format(new Date(product.scannedAt), "dd/MM/yyyy 'à' HH:mm", { locale: fr })}
+              label="Scanne le"
+              value={format(new Date(product.scannedAt), "dd/MM/yyyy HH:mm", { locale: fr })}
             />
           </div>
         </div>
@@ -209,23 +209,23 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
       {/* Delete confirmation overlay */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
-          <div role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-desc" className="bg-white dark:bg-[#1d1d1f] rounded-2xl p-6 max-w-sm w-full shadow-xl">
-            <h3 id="delete-confirm-title" className="text-lg font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-desc" className="app-panel p-6 max-w-sm w-full">
+            <h3 id="delete-confirm-title" className="text-lg font-semibold app-text mb-2">
               Supprimer ce produit ?
             </h3>
-            <p id="delete-confirm-desc" className="text-sm text-[#86868b] dark:text-[#86868b] mb-5">
-              Cette action est irréversible. Le produit «&nbsp;{product.productName}&nbsp;» sera définitivement supprimé.
+            <p id="delete-confirm-desc" className="text-sm app-muted mb-5">
+              Cette action est irreversible. Le produit "{product.productName}" sera definitivement supprime.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 border border-[#d1d1d6] dark:border-[#38383a] rounded-lg text-[#1d1d1f] dark:text-[#86868b] font-medium hover:bg-[#f5f5f7] dark:hover:bg-[#38383a] transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-lg app-surface-2 app-border app-text font-medium hover:bg-[color:var(--app-surface-3)] transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-2.5 bg-[#ff3b30] text-white rounded-lg font-medium active:opacity-70  transition-colors"
+                className="flex-1 px-4 py-2.5 app-danger-bg rounded-lg font-medium active:opacity-70 transition-colors"
               >
                 Supprimer
               </button>
@@ -240,12 +240,13 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs font-medium text-[#86868b] dark:text-[#86868b] uppercase tracking-wide">
+      <span className="text-xs font-medium app-muted uppercase tracking-wide">
         {label}
       </span>
-      <span className={cn('text-sm text-[#1d1d1f] dark:text-[#f5f5f7]', mono && 'font-mono')}>
+      <span className={cn('text-sm app-text', mono && 'font-mono')}>
         {value}
       </span>
     </div>
   );
 }
+

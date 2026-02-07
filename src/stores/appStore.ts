@@ -1,7 +1,19 @@
 import { create } from 'zustand';
 import { db } from '../services/db';
 import { sanitize } from '../utils';
-import type { AppSettings, Equipment, TemperatureRecord, Task, ProductTrace, Invoice, PriceHistory } from '../types';
+import type {
+  AppSettings,
+  Equipment,
+  TemperatureRecord,
+  Task,
+  ProductTrace,
+  Invoice,
+  PriceHistory,
+  Ingredient,
+  Recipe,
+  RecipeIngredient,
+  OilChangeRecord,
+} from '../types';
 
 interface AppState {
   settings: AppSettings | null;
@@ -23,6 +35,9 @@ interface AppState {
   // Temperature
   addTemperatureRecord: (r: TemperatureRecord) => Promise<void>;
   getTemperatureRecords: (startDate?: Date, endDate?: Date, equipmentId?: string) => Promise<TemperatureRecord[]>;
+  addOilChangeRecord: (r: OilChangeRecord) => Promise<void>;
+  removeOilChangeRecord: (id: string) => Promise<void>;
+  getOilChangeRecords: (startDate?: Date, endDate?: Date, fryerId?: string) => Promise<OilChangeRecord[]>;
 
   // Tasks
   getTasks: (includeArchived?: boolean) => Promise<Task[]>;
@@ -31,24 +46,48 @@ interface AppState {
   deleteTask: (id: string) => Promise<void>;
 
   // Products
-  getProducts: () => Promise<ProductTrace[]>;
+  getProducts: (options?: { limit?: number; offset?: number }) => Promise<ProductTrace[]>;
   addProduct: (p: ProductTrace) => Promise<void>;
   updateProduct: (p: ProductTrace) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
 
   // Invoices
-  getInvoices: () => Promise<Invoice[]>;
+  getInvoices: (options?: { limit?: number; offset?: number }) => Promise<Invoice[]>;
   addInvoice: (i: Invoice) => Promise<void>;
   updateInvoice: (i: Invoice) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
+
+  // Ingredients
+  getIngredients: () => Promise<Ingredient[]>;
+  addIngredient: (i: Ingredient) => Promise<void>;
+  updateIngredient: (i: Ingredient) => Promise<void>;
+  deleteIngredient: (id: string) => Promise<void>;
+
+  // Recipes
+  getRecipes: () => Promise<Recipe[]>;
+  getRecipeIngredients: (recipeId: string) => Promise<RecipeIngredient[]>;
+  saveRecipeWithIngredients: (recipe: Recipe, lines: RecipeIngredient[]) => Promise<void>;
+  deleteRecipe: (recipeId: string) => Promise<void>;
 
   // Recurring tasks
   processRecurringTasks: () => Promise<void>;
 
   // Price history
   updatePriceHistory: (invoice: Invoice) => Promise<void>;
+  rebuildPriceHistory: () => Promise<void>;
   getPriceHistory: () => Promise<PriceHistory[]>;
 }
+
+const normalizeKeyPart = (value: string): string =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const buildPriceKey = (itemName: string, supplier: string): string =>
+  `${normalizeKeyPart(itemName)}_${normalizeKeyPart(supplier)}`;
 
 export const useAppStore = create<AppState>((set, _get) => ({
   settings: null,
@@ -82,8 +121,11 @@ export const useAppStore = create<AppState>((set, _get) => ({
   setDarkMode: (v) => {
     if (v) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-    set({ darkMode: v });
-    db.settings.update('default', { darkMode: v });
+    set((state) => ({
+      darkMode: v,
+      settings: state.settings ? { ...state.settings, darkMode: v } : state.settings,
+    }));
+    void db.settings.update('default', { darkMode: v });
   },
 
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -94,21 +136,28 @@ export const useAppStore = create<AppState>((set, _get) => ({
   },
 
   addEquipment: async (e) => {
-    await db.equipment.add({ ...e, name: sanitize(e.name) });
-    const list = await db.equipment.orderBy('order').toArray();
-    set({ equipment: list });
+    const sanitized = { ...e, name: sanitize(e.name) };
+    await db.equipment.add(sanitized);
+    set((state) => ({
+      equipment: [...state.equipment, sanitized].sort((a, b) => a.order - b.order),
+    }));
   },
 
   updateEquipment: async (e) => {
-    await db.equipment.put(e);
-    const list = await db.equipment.orderBy('order').toArray();
-    set({ equipment: list });
+    const sanitized = { ...e, name: sanitize(e.name) };
+    await db.equipment.put(sanitized);
+    set((state) => ({
+      equipment: state.equipment
+        .map((item) => (item.id === sanitized.id ? sanitized : item))
+        .sort((a, b) => a.order - b.order),
+    }));
   },
 
   deleteEquipment: async (id) => {
     await db.equipment.delete(id);
-    const list = await db.equipment.orderBy('order').toArray();
-    set({ equipment: list });
+    set((state) => ({
+      equipment: state.equipment.filter((item) => item.id !== id),
+    }));
   },
 
   addTemperatureRecord: async (r) => {
@@ -116,15 +165,69 @@ export const useAppStore = create<AppState>((set, _get) => ({
   },
 
   getTemperatureRecords: async (startDate, endDate, equipmentId) => {
-    let collection = db.temperatureRecords.orderBy('timestamp');
-    const records = await collection.reverse().toArray();
-    return records.filter(r => {
-      const ts = new Date(r.timestamp).getTime();
-      if (startDate && ts < startDate.getTime()) return false;
-      if (endDate && ts > endDate.getTime()) return false;
-      if (equipmentId && r.equipmentId !== equipmentId) return false;
-      return true;
-    });
+    const hasDateFilter = Boolean(startDate || endDate);
+    const minDate = startDate ?? new Date(0);
+    const maxDate = endDate ?? new Date(8640000000000000);
+
+    if (equipmentId && hasDateFilter) {
+      return db.temperatureRecords
+        .where('[equipmentId+timestamp]')
+        .between([equipmentId, minDate], [equipmentId, maxDate], true, true)
+        .reverse()
+        .toArray();
+    }
+
+    if (hasDateFilter) {
+      return db.temperatureRecords
+        .where('timestamp')
+        .between(minDate, maxDate, true, true)
+        .reverse()
+        .toArray();
+    }
+
+    if (equipmentId) {
+      const records = await db.temperatureRecords.where('equipmentId').equals(equipmentId).toArray();
+      return records.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
+
+    return db.temperatureRecords.orderBy('timestamp').reverse().toArray();
+  },
+
+  addOilChangeRecord: async (r) => {
+    await db.oilChangeRecords.add(r);
+  },
+
+  removeOilChangeRecord: async (id) => {
+    await db.oilChangeRecords.delete(id);
+  },
+
+  getOilChangeRecords: async (startDate, endDate, fryerId) => {
+    const hasDateFilter = Boolean(startDate || endDate);
+    const minDate = startDate ?? new Date(0);
+    const maxDate = endDate ?? new Date(8640000000000000);
+
+    if (fryerId && hasDateFilter) {
+      return db.oilChangeRecords
+        .where('[fryerId+changedAt]')
+        .between([fryerId, minDate], [fryerId, maxDate], true, true)
+        .reverse()
+        .toArray();
+    }
+
+    if (hasDateFilter) {
+      return db.oilChangeRecords
+        .where('changedAt')
+        .between(minDate, maxDate, true, true)
+        .reverse()
+        .toArray();
+    }
+
+    if (fryerId) {
+      const records = await db.oilChangeRecords.where('fryerId').equals(fryerId).toArray();
+      return records.sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
+    }
+
+    return db.oilChangeRecords.orderBy('changedAt').reverse().toArray();
   },
 
   getTasks: async (includeArchived = false) => {
@@ -194,8 +297,13 @@ export const useAppStore = create<AppState>((set, _get) => ({
     }
   },
 
-  getProducts: async () => {
-    return db.productTraces.orderBy('scannedAt').reverse().toArray();
+  getProducts: async (options) => {
+    const limit = options?.limit;
+    const offset = options?.offset ?? 0;
+    let query = db.productTraces.orderBy('scannedAt').reverse();
+    if (offset > 0) query = query.offset(offset);
+    if (typeof limit === 'number') query = query.limit(limit);
+    return query.toArray();
   },
 
   addProduct: async (p) => {
@@ -224,8 +332,13 @@ export const useAppStore = create<AppState>((set, _get) => ({
     await db.productTraces.delete(id);
   },
 
-  getInvoices: async () => {
-    return db.invoices.orderBy('scannedAt').reverse().toArray();
+  getInvoices: async (options) => {
+    const limit = options?.limit;
+    const offset = options?.offset ?? 0;
+    let query = db.invoices.orderBy('scannedAt').reverse();
+    if (offset > 0) query = query.offset(offset);
+    if (typeof limit === 'number') query = query.limit(limit);
+    return query.toArray();
   },
 
   addInvoice: async (i) => {
@@ -254,9 +367,71 @@ export const useAppStore = create<AppState>((set, _get) => ({
     await db.invoices.delete(id);
   },
 
+  getIngredients: async () => {
+    return db.ingredients.orderBy('name').toArray();
+  },
+
+  addIngredient: async (ingredient) => {
+    await db.ingredients.add({
+      ...ingredient,
+      name: sanitize(ingredient.name),
+      supplierId: ingredient.supplierId ? sanitize(ingredient.supplierId) : undefined,
+    });
+  },
+
+  updateIngredient: async (ingredient) => {
+    await db.ingredients.put({
+      ...ingredient,
+      name: sanitize(ingredient.name),
+      supplierId: ingredient.supplierId ? sanitize(ingredient.supplierId) : undefined,
+    });
+  },
+
+  deleteIngredient: async (id) => {
+    await db.ingredients.delete(id);
+    await db.recipeIngredients.where('ingredientId').equals(id).delete();
+  },
+
+  getRecipes: async () => {
+    return db.recipes.orderBy('updatedAt').reverse().toArray();
+  },
+
+  getRecipeIngredients: async (recipeId) => {
+    return db.recipeIngredients.where('recipeId').equals(recipeId).toArray();
+  },
+
+  saveRecipeWithIngredients: async (recipe, lines) => {
+    await db.transaction('rw', db.recipes, db.recipeIngredients, async () => {
+      await db.recipes.put({
+        ...recipe,
+        title: sanitize(recipe.title),
+      });
+
+      await db.recipeIngredients.where('recipeId').equals(recipe.id).delete();
+      if (lines.length > 0) {
+        await db.recipeIngredients.bulkAdd(
+          lines.map((line) => ({
+            ...line,
+            requiredQuantity: Math.max(0, line.requiredQuantity),
+          })),
+        );
+      }
+    });
+  },
+
+  deleteRecipe: async (recipeId) => {
+    await db.transaction('rw', db.recipes, db.recipeIngredients, async () => {
+      await db.recipes.delete(recipeId);
+      await db.recipeIngredients.where('recipeId').equals(recipeId).delete();
+    });
+  },
+
   updatePriceHistory: async (invoice) => {
     for (const item of invoice.items) {
-      const key = `${item.designation.toLowerCase()}_${invoice.supplier.toLowerCase()}`;
+      const itemName = sanitize(item.designation).trim();
+      const supplier = sanitize(invoice.supplier).trim();
+      if (!itemName || !supplier) continue;
+      const key = buildPriceKey(itemName, supplier);
       const existing = await db.priceHistory.get(key);
 
       if (existing) {
@@ -264,6 +439,8 @@ export const useAppStore = create<AppState>((set, _get) => ({
         const priceValues = prices.map(p => p.price);
         await db.priceHistory.put({
           ...existing,
+          itemName,
+          supplier,
           prices,
           averagePrice: Math.round((priceValues.reduce((s, p) => s + p, 0) / priceValues.length) * 100) / 100,
           minPrice: Math.min(...priceValues),
@@ -272,8 +449,8 @@ export const useAppStore = create<AppState>((set, _get) => ({
       } else {
         await db.priceHistory.add({
           id: key,
-          itemName: item.designation,
-          supplier: invoice.supplier,
+          itemName,
+          supplier,
           prices: [{ date: invoice.invoiceDate, price: item.unitPriceHT }],
           averagePrice: item.unitPriceHT,
           minPrice: item.unitPriceHT,
@@ -281,6 +458,53 @@ export const useAppStore = create<AppState>((set, _get) => ({
         });
       }
     }
+  },
+
+  rebuildPriceHistory: async () => {
+    const invoices = await db.invoices.toArray();
+    const map = new Map<string, PriceHistory>();
+
+    for (const invoice of invoices) {
+      const supplier = invoice.supplier.trim();
+      if (!supplier) continue;
+      for (const item of invoice.items) {
+        const itemName = item.designation.trim();
+        if (!itemName) continue;
+        const key = buildPriceKey(itemName, supplier);
+        const existing = map.get(key) ?? {
+          id: key,
+          itemName,
+          supplier,
+          prices: [],
+          averagePrice: 0,
+          minPrice: 0,
+          maxPrice: 0,
+        };
+        existing.itemName = itemName;
+        existing.supplier = supplier;
+        existing.prices.push({ date: invoice.invoiceDate, price: item.unitPriceHT });
+        map.set(key, existing);
+      }
+    }
+
+    const nextEntries: PriceHistory[] = [];
+    for (const entry of map.values()) {
+      const priceValues = entry.prices.map(p => p.price);
+      if (priceValues.length === 0) continue;
+      nextEntries.push({
+        ...entry,
+        averagePrice: Math.round((priceValues.reduce((s, p) => s + p, 0) / priceValues.length) * 100) / 100,
+        minPrice: Math.min(...priceValues),
+        maxPrice: Math.max(...priceValues),
+      });
+    }
+
+    await db.transaction('rw', db.priceHistory, async () => {
+      await db.priceHistory.clear();
+      if (nextEntries.length > 0) {
+        await db.priceHistory.bulkAdd(nextEntries);
+      }
+    });
   },
 
   getPriceHistory: async () => {

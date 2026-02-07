@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { showError } from '../../stores/toastStore';
 import { EQUIPMENT_TYPES } from '../../types';
 import type { Equipment } from '../../types';
-import { cn } from '../../utils';
+import { sanitizeInput } from '../../utils';
 
 interface Props {
   onClose: () => void;
@@ -42,7 +42,7 @@ export default function EquipmentManager({ onClose }: Props) {
 
   const startEdit = (eq: Equipment) => {
     setForm({
-      name: eq.name,
+      name: sanitizeInput(eq.name),
       type: eq.type,
       minTemp: String(eq.minTemp),
       maxTemp: String(eq.maxTemp),
@@ -76,7 +76,7 @@ export default function EquipmentManager({ onClose }: Props) {
         if (!existing) return;
         await updateEquipment({
           ...existing,
-          name: form.name.trim(),
+          name: sanitizeInput(form.name).trim(),
           type: form.type,
           minTemp,
           maxTemp,
@@ -84,7 +84,7 @@ export default function EquipmentManager({ onClose }: Props) {
       } else {
         await addEquipment({
           id: crypto.randomUUID(),
-          name: form.name.trim(),
+          name: sanitizeInput(form.name).trim(),
           type: form.type,
           minTemp,
           maxTemp,
@@ -114,13 +114,13 @@ export default function EquipmentManager({ onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="equipment-title"
-        className="w-full max-w-lg max-h-[85vh] bg-white dark:bg-[#1d1d1f] rounded-2xl shadow-xl flex flex-col overflow-hidden mx-4"
+        className="w-full max-w-lg max-h-[85vh] app-card flex flex-col overflow-hidden mx-4"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e8e8ed] dark:border-[#38383a]">
-          <h2 id="equipment-title" className="text-lg font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">Gestion des équipements</h2>
-          <button onClick={onClose} aria-label="Fermer" className="p-2 text-[#86868b] hover:text-[#86868b] dark:hover:text-[#f5f5f7] rounded-lg hover:bg-[#e8e8ed] dark:hover:bg-[#38383a]">
+        <div className="flex items-center justify-between px-5 py-4 border-b app-border">
+          <h2 id="equipment-title" className="text-lg font-bold app-text">Gestion des équipements</h2>
+          <button onClick={onClose} aria-label="Fermer" className="p-2 app-muted rounded-lg hover:bg-[color:var(--app-surface-3)]">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -130,7 +130,7 @@ export default function EquipmentManager({ onClose }: Props) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {equipment.length === 0 && !showForm && (
-            <p className="text-center text-[#86868b] dark:text-[#86868b] py-8">
+            <p className="text-center app-muted py-8">
               Aucun équipement. Ajoutez-en un ci-dessous.
             </p>
           )}
@@ -138,18 +138,18 @@ export default function EquipmentManager({ onClose }: Props) {
           {equipment.map(eq => (
             <div
               key={eq.id}
-              className="flex items-center justify-between p-3 rounded-xl border border-[#e8e8ed] dark:border-[#38383a] bg-[#f5f5f7] dark:bg-[#38383a]/50"
+              className="flex items-center justify-between p-3 rounded-xl app-surface-2 app-border"
             >
               <div>
-                <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{eq.name}</p>
-                <p className="text-xs text-[#86868b] dark:text-[#86868b]">
+                <p className="font-semibold app-text">{eq.name}</p>
+                <p className="text-xs app-muted">
                   {EQUIPMENT_TYPES[eq.type]} &middot; {eq.minTemp}°C ~ {eq.maxTemp}°C
                 </p>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => startEdit(eq)}
-                  className="p-2 rounded-lg text-[#2997FF] dark:text-[#2997FF] active:opacity-70 dark:active:opacity-70"
+                  className="p-2 rounded-lg text-[color:var(--app-accent)] active:opacity-70"
                   aria-label={`Modifier ${eq.name}`}
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,13 +160,13 @@ export default function EquipmentManager({ onClose }: Props) {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleDelete(eq.id)}
-                      className="px-2 py-1 text-xs rounded-lg bg-[#ff3b30] text-white font-bold"
+                      className="px-2 py-1 text-xs rounded-lg app-danger-bg font-bold"
                     >
                       Confirmer
                     </button>
                     <button
                       onClick={() => setDeleteConfirmId(null)}
-                      className="px-2 py-1 text-xs rounded-lg bg-[#e8e8ed] dark:bg-gray-600 text-[#1d1d1f] dark:text-[#f5f5f7]"
+                      className="px-2 py-1 text-xs rounded-lg app-surface-2 app-text"
                     >
                       Annuler
                     </button>
@@ -174,7 +174,7 @@ export default function EquipmentManager({ onClose }: Props) {
                 ) : (
                   <button
                     onClick={() => setDeleteConfirmId(eq.id)}
-                    className="p-2 rounded-lg text-red-600 dark:text-[#ff3b30] active:opacity-70 dark:active:opacity-70"
+                    className="p-2 rounded-lg text-[color:var(--app-danger)] active:opacity-70"
                     aria-label={`Supprimer ${eq.name}`}
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -188,28 +188,28 @@ export default function EquipmentManager({ onClose }: Props) {
 
           {/* Add/Edit form */}
           {showForm && (
-            <div className="border-2 border-blue-300 dark:border-blue-600 rounded-xl p-4 space-y-3 bg-blue-50/50 dark:bg-blue-900/20">
-              <h3 className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+            <div className="rounded-xl p-4 space-y-3 border border-[color:var(--app-accent)]/40 bg-[color:var(--app-accent)]/10">
+              <h3 className="font-bold app-text">
                 {editingId ? 'Modifier l\'équipement' : 'Nouvel équipement'}
               </h3>
 
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#86868b] mb-1">Nom</label>
+                <label className="block text-sm font-medium app-muted mb-1">Nom</label>
                 <input
                   type="text"
                   value={form.name}
-                  onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={e => setForm(prev => ({ ...prev, name: sanitizeInput(e.target.value) }))}
                   placeholder="Ex: Frigo cuisine"
-                  className="w-full rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] px-3 py-2 text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+                  className="w-full rounded-lg border app-border app-surface-2 app-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#86868b] mb-1">Type</label>
+                <label className="block text-sm font-medium app-muted mb-1">Type</label>
                 <select
                   value={form.type}
                   onChange={e => setForm(prev => ({ ...prev, type: e.target.value as EquipmentType }))}
-                  className="w-full rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] px-3 py-2 text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+                  className="w-full rounded-lg border app-border app-surface-2 app-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 >
                   {EQUIPMENT_TYPE_KEYS.map(key => (
                     <option key={key} value={key}>{EQUIPMENT_TYPES[key]}</option>
@@ -219,42 +219,42 @@ export default function EquipmentManager({ onClose }: Props) {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#86868b] mb-1">Temp. min (°C)</label>
+                  <label className="block text-sm font-medium app-muted mb-1">Temp. min (°C)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={form.minTemp}
                     onChange={e => setForm(prev => ({ ...prev, minTemp: e.target.value }))}
                     placeholder="-18"
-                    className="w-full rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] px-3 py-2 text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+                    className="w-full rounded-lg border app-border app-surface-2 app-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#86868b] mb-1">Temp. max (°C)</label>
+                  <label className="block text-sm font-medium app-muted mb-1">Temp. max (°C)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={form.maxTemp}
                     onChange={e => setForm(prev => ({ ...prev, maxTemp: e.target.value }))}
                     placeholder="4"
-                    className="w-full rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] px-3 py-2 text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+                    className="w-full rounded-lg border app-border app-surface-2 app-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                   />
                 </div>
               </div>
 
-              {error && <p className="text-sm text-red-600 dark:text-[#ff3b30]">{error}</p>}
+              {error && <p className="text-sm text-[color:var(--app-danger)]">{error}</p>}
 
               <div className="flex gap-2">
                 <button
                   onClick={handleSubmit}
                   disabled={saving}
-                  className={`flex-1 py-2 rounded-lg bg-[#2997FF] text-white font-bold text-sm hover:bg-[#2997FF] active:scale-[0.98] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex-1 py-2 rounded-lg app-accent-bg font-bold text-sm active:scale-[0.98] transition-all ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {saving ? 'Enregistrement...' : editingId ? 'Enregistrer' : 'Ajouter'}
                 </button>
                 <button
                   onClick={resetForm}
-                  className="px-4 py-2 rounded-lg bg-[#e8e8ed] dark:bg-gray-600 text-[#1d1d1f] dark:text-[#f5f5f7] font-medium text-sm hover:bg-gray-300 dark:hover:bg-[#f5f5f7]0"
+                  className="px-4 py-2 rounded-lg app-surface-2 app-text font-medium text-sm hover:bg-[color:var(--app-surface-3)]"
                 >
                   Annuler
                 </button>
@@ -265,7 +265,7 @@ export default function EquipmentManager({ onClose }: Props) {
 
         {/* Footer */}
         {!showForm && (
-          <div className="px-5 py-4 border-t border-[#e8e8ed] dark:border-[#38383a]">
+          <div className="px-5 py-4 border-t app-border">
             <button
               onClick={() => {
                 setShowForm(true);
@@ -273,7 +273,7 @@ export default function EquipmentManager({ onClose }: Props) {
                 setForm(emptyForm);
                 setError('');
               }}
-              className="w-full py-3 rounded-xl bg-[#2997FF] text-white font-bold hover:bg-[#2997FF] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl app-accent-bg font-bold active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

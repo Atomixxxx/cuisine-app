@@ -4,17 +4,43 @@ import { showError, showSuccess } from '../stores/toastStore';
 import { getApiKey, setApiKey, hasApiKey } from '../services/ocr';
 import { db } from '../services/db';
 import { cn } from '../utils';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import {
+  buildBackupPayload,
+  downloadBackup,
+  exportStoredAutoBackup,
+  isAutoBackupEnabled,
+  setAutoBackupEnabled,
+  validateBackupImportPayload,
+} from '../services/backup';
+import {
+  isPinConfigured,
+  isPinFormatValid,
+  normalizePinInput,
+  removePinCode,
+  setPinCode,
+  verifyPinCode,
+} from '../services/pin';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 export default function Settings() {
-  const settings = useAppStore(s => s.settings);
-  const loadSettings = useAppStore(s => s.loadSettings);
-  const updateSettings = useAppStore(s => s.updateSettings);
+  const settings = useAppStore((s) => s.settings);
+  const loadSettings = useAppStore((s) => s.loadSettings);
+  const updateSettings = useAppStore((s) => s.updateSettings);
 
   const [establishmentName, setEstablishmentName] = useState('');
   const [priceThreshold, setPriceThreshold] = useState('10');
   const [geminiKey, setGeminiKey] = useState('');
   const [geminiConnected, setGeminiConnected] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autoBackup, setAutoBackup] = useState(true);
+  const [pinEnabled, setPinEnabled] = useState(false);
+  const [currentPin, setCurrentPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [confirmImportOpen, setConfirmImportOpen] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [restoringBackup, setRestoringBackup] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,8 +53,10 @@ export default function Settings() {
       setEstablishmentName(settings.establishmentName);
       setPriceThreshold(String(settings.priceAlertThreshold));
     }
-    getApiKey().then(k => setGeminiKey(k));
-    hasApiKey().then(v => setGeminiConnected(v));
+    setAutoBackup(isAutoBackupEnabled());
+    setPinEnabled(isPinConfigured());
+    getApiKey().then((k) => setGeminiKey(k));
+    hasApiKey().then((v) => setGeminiConnected(v));
   }, [settings]);
 
   const handleSaveSettings = useCallback(async () => {
@@ -37,7 +65,7 @@ export default function Settings() {
     try {
       await updateSettings({
         establishmentName: establishmentName.trim() || 'Mon Etablissement',
-        priceAlertThreshold: Math.max(1, parseInt(priceThreshold) || 10),
+        priceAlertThreshold: Math.max(1, parseInt(priceThreshold, 10) || 10),
       });
       showSuccess('Parametres enregistres');
     } catch {
@@ -51,129 +79,239 @@ export default function Settings() {
     const trimmed = geminiKey.trim();
     await setApiKey(trimmed);
     setGeminiConnected(trimmed.length > 0);
-    if (trimmed) {
-      showSuccess('Cle API Gemini enregistree');
-    } else {
-      showSuccess('Cle API Gemini supprimee');
-    }
+    if (trimmed) showSuccess('Cle API Gemini enregistree');
+    else showSuccess('Cle API Gemini supprimee');
   }, [geminiKey]);
-
-  // ── Backup / Restore ──
 
   const handleExport = useCallback(async () => {
     try {
-      const data = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        equipment: await db.equipment.toArray(),
-        temperatureRecords: await db.temperatureRecords.toArray(),
-        tasks: await db.tasks.toArray(),
-        productTraces: (await db.productTraces.toArray()).map(p => ({
-          ...p,
-          photo: undefined, // Blobs can't be serialized to JSON
-        })),
-        invoices: (await db.invoices.toArray()).map(i => ({
-          ...i,
-          images: [], // Blobs can't be serialized to JSON
-        })),
-        priceHistory: await db.priceHistory.toArray(),
-        settings: await db.settings.toArray(),
-      };
-
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `cuisine-backup-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const payload = await buildBackupPayload();
+      downloadBackup(payload);
       showSuccess('Sauvegarde exportee');
     } catch {
-      showError('Erreur lors de l\'export');
+      showError("Erreur lors de l'export");
     }
   }, []);
 
-  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const restoreBackupFile = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        const raw = JSON.parse(text);
+        const data = validateBackupImportPayload(raw);
+        if (!data) {
+          showError('Fichier de sauvegarde invalide');
+          return;
+        }
+
+        await db.transaction(
+          'rw',
+          [db.equipment, db.temperatureRecords, db.oilChangeRecords, db.tasks, db.productTraces, db.invoices, db.priceHistory, db.settings],
+          async () => {
+            await db.equipment.clear();
+            await db.temperatureRecords.clear();
+            await db.oilChangeRecords.clear();
+            await db.tasks.clear();
+            await db.productTraces.clear();
+            await db.invoices.clear();
+            await db.priceHistory.clear();
+            await db.settings.clear();
+
+            if (data.equipment?.length) await db.equipment.bulkAdd(data.equipment);
+            if (data.temperatureRecords?.length) await db.temperatureRecords.bulkAdd(data.temperatureRecords);
+            if (data.oilChangeRecords?.length) await db.oilChangeRecords.bulkAdd(data.oilChangeRecords);
+            if (data.tasks?.length) await db.tasks.bulkAdd(data.tasks);
+            if (data.productTraces?.length) await db.productTraces.bulkAdd(data.productTraces);
+            if (data.invoices?.length) await db.invoices.bulkAdd(data.invoices);
+            if (data.priceHistory?.length) await db.priceHistory.bulkAdd(data.priceHistory);
+            if (data.settings?.length) await db.settings.bulkAdd(data.settings);
+          },
+        );
+
+        await loadSettings();
+        localStorage.setItem(STORAGE_KEYS.backupLastAt, new Date().toISOString());
+        window.dispatchEvent(new Event('cuisine-backup-updated'));
+        showSuccess('Sauvegarde restauree avec succes');
+      } catch {
+        showError("Erreur lors de l'import. Verifiez le fichier.");
+      } finally {
+        setRestoringBackup(false);
+        setPendingImportFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    [loadSettings],
+  );
+
+  const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPendingImportFile(file);
+    setConfirmImportOpen(true);
+  }, []);
 
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
+  const handleCancelImport = useCallback(() => {
+    setConfirmImportOpen(false);
+    setPendingImportFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
 
-      if (!data.version || !data.equipment) {
-        showError('Fichier de sauvegarde invalide');
+  const handleConfirmImport = useCallback(() => {
+    if (!pendingImportFile || restoringBackup) return;
+    setConfirmImportOpen(false);
+    setRestoringBackup(true);
+    void restoreBackupFile(pendingImportFile);
+  }, [pendingImportFile, restoringBackup, restoreBackupFile]);
+
+  const handleToggleAutoBackup = useCallback(() => {
+    const next = !autoBackup;
+    setAutoBackupEnabled(next);
+    setAutoBackup(next);
+    showSuccess(next ? 'Backup auto hebdomadaire active' : 'Backup auto hebdomadaire desactive');
+  }, [autoBackup]);
+
+  const handleExportAutoBackup = useCallback(() => {
+    const exportAuto = async () => {
+      if (!(await exportStoredAutoBackup())) {
+        showError('Aucun backup auto disponible pour le moment');
         return;
       }
+      showSuccess('Backup auto exporte');
+    };
+    void exportAuto();
+  }, []);
 
-      // Clear existing data and import
-      await db.transaction('rw',
-        db.equipment, db.temperatureRecords, db.tasks,
-        db.productTraces, db.invoices, db.priceHistory, db.settings,
-        async () => {
-          await db.equipment.clear();
-          await db.temperatureRecords.clear();
-          await db.tasks.clear();
-          await db.productTraces.clear();
-          await db.invoices.clear();
-          await db.priceHistory.clear();
-          await db.settings.clear();
+  const setPinField = (setter: (v: string) => void) => (value: string) => {
+    setter(normalizePinInput(value));
+  };
 
-          if (data.equipment?.length) await db.equipment.bulkAdd(data.equipment);
-          if (data.temperatureRecords?.length) await db.temperatureRecords.bulkAdd(data.temperatureRecords);
-          if (data.tasks?.length) await db.tasks.bulkAdd(data.tasks);
-          if (data.productTraces?.length) await db.productTraces.bulkAdd(data.productTraces);
-          if (data.invoices?.length) await db.invoices.bulkAdd(data.invoices);
-          if (data.priceHistory?.length) await db.priceHistory.bulkAdd(data.priceHistory);
-          if (data.settings?.length) await db.settings.bulkAdd(data.settings);
+  const handleEnablePin = useCallback(() => {
+    const enable = async () => {
+      if (!isPinFormatValid(newPin)) {
+        showError('Le code PIN doit contenir 4 chiffres');
+        return;
+      }
+      if (newPin !== confirmPin) {
+        showError('La confirmation du PIN ne correspond pas');
+        return;
+      }
+      try {
+        await setPinCode(newPin);
+        setPinEnabled(true);
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+        showSuccess('Code PIN active');
+      } catch {
+        showError('Impossible d activer le PIN');
+      }
+    };
+    void enable();
+  }, [newPin, confirmPin]);
+
+  const handleDisablePin = useCallback(() => {
+    const disable = async () => {
+      try {
+        const valid = await verifyPinCode(currentPin);
+        if (!valid) {
+          showError('PIN actuel incorrect');
+          return;
         }
-      );
+        await removePinCode();
+        setPinEnabled(false);
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+        showSuccess('Code PIN desactive');
+      } catch {
+        showError('Impossible de desactiver le PIN');
+      }
+    };
+    void disable();
+  }, [currentPin]);
 
-      await loadSettings();
-      showSuccess('Sauvegarde restauree avec succes');
-    } catch {
-      showError('Erreur lors de l\'import. Verifiez le fichier.');
-    }
+  const handleChangePin = useCallback(() => {
+    const change = async () => {
+      try {
+        const valid = await verifyPinCode(currentPin);
+        if (!valid) {
+          showError('PIN actuel incorrect');
+          return;
+        }
+        if (!isPinFormatValid(newPin)) {
+          showError('Le nouveau PIN doit contenir 4 chiffres');
+          return;
+        }
+        if (newPin !== confirmPin) {
+          showError('La confirmation du PIN ne correspond pas');
+          return;
+        }
+        await setPinCode(newPin);
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+        showSuccess('Code PIN modifie');
+      } catch {
+        showError('Impossible de modifier le PIN');
+      }
+    };
+    void change();
+  }, [currentPin, newPin, confirmPin]);
 
-    // Reset input
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [loadSettings]);
-
-  const inputClass = 'w-full px-4 py-3 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[17px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF] dark:focus:ring-[#2997FF]';
+  const inputClass = 'app-input text-[17px]';
 
   return (
-    <div className="px-5 py-6 space-y-8 max-w-2xl mx-auto">
-      <h1 className="ios-title text-[#1d1d1f] dark:text-[#f5f5f7]">Parametres</h1>
+    <div className="app-page-wrap max-w-2xl pb-28 space-y-4">
+      <div className="app-hero-card space-y-3">
+        <div>
+          <h1 className="ios-title app-text">Parametres</h1>
+          <p className="text-[14px] app-muted">Configuration generale, API, sauvegardes et securite.</p>
+        </div>
+        <div className="app-kpi-grid">
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Etablissement</p>
+            <p className="app-kpi-value text-[16px] font-semibold truncate">{establishmentName || 'Non renseigne'}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Gemini API</p>
+            <p className="app-kpi-value text-[16px] font-semibold">{geminiConnected ? 'Connecte' : 'Inactif'}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Backup auto</p>
+            <p className="app-kpi-value text-[16px] font-semibold">{autoBackup ? 'Actif' : 'Off'}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Code PIN</p>
+            <p className="app-kpi-value text-[16px] font-semibold">{pinEnabled ? 'Actif' : 'Off'}</p>
+          </div>
+        </div>
+      </div>
 
-      {/* General settings */}
       <div>
-        <h2 className="ios-caption-upper text-[#86868b] mb-2 px-4">General</h2>
-        <div className="bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow overflow-hidden">
+        <h2 className="ios-caption-upper app-muted mb-2">General</h2>
+        <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] text-[#1d1d1f] dark:text-[#f5f5f7]">Nom de l'etablissement</label>
+            <label className="text-[17px] app-text">Nom de l'etablissement</label>
             <input
               type="text"
               value={establishmentName}
-              onChange={e => setEstablishmentName(e.target.value)}
+              onChange={(e) => setEstablishmentName(e.target.value)}
               placeholder="Mon Restaurant"
               className={inputClass}
             />
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] text-[#1d1d1f] dark:text-[#f5f5f7]">Seuil alerte prix (%)</label>
+            <label className="text-[17px] app-text">Seuil alerte prix (%)</label>
             <input
               type="number"
               min="1"
               max="100"
               value={priceThreshold}
-              onChange={e => setPriceThreshold(e.target.value)}
+              onChange={(e) => setPriceThreshold(e.target.value)}
               className={inputClass}
             />
-            <p className="text-[13px] text-[#86868b]">
-              Alerte si la variation de prix depasse ce pourcentage
-            </p>
+            <p className="text-[13px] app-muted">Alerte si la variation de prix depasse ce pourcentage</p>
           </div>
           <div className="px-4 py-3">
             <button
@@ -181,7 +319,7 @@ export default function Settings() {
               disabled={saving}
               className={cn(
                 'w-full py-3 rounded-xl text-[17px] font-semibold transition-opacity active:opacity-70',
-                saving ? 'bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b] cursor-not-allowed' : 'bg-[#2997FF] text-white'
+                saving ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
               )}
             >
               {saving ? 'Enregistrement...' : 'Enregistrer'}
@@ -190,38 +328,42 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Gemini API */}
       <div>
-        <h2 className="ios-caption-upper text-[#86868b] mb-2 px-4">API Gemini</h2>
-        <div className="bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow overflow-hidden">
+        <h2 className="ios-caption-upper app-muted mb-2">API Gemini</h2>
+        <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
-            <span className="text-[17px] text-[#1d1d1f] dark:text-[#f5f5f7]">Statut</span>
-            <span className={cn(
-              'flex items-center gap-1.5 text-[15px] font-medium',
-              geminiConnected ? 'text-[#34c759]' : 'text-[#86868b]'
-            )}>
-              <span className={cn('w-2 h-2 rounded-full', geminiConnected ? 'bg-[#34c759]' : 'bg-[#d1d1d6] dark:bg-[#38383a]')} />
+            <span className="text-[17px] app-text">Statut</span>
+            <span
+              className={cn(
+                'flex items-center gap-1.5 text-[15px] font-medium',
+                geminiConnected ? 'text-[color:var(--app-success)]' : 'app-muted',
+              )}
+            >
+              <span
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  geminiConnected ? 'bg-[color:var(--app-success)]' : 'app-surface-3',
+                )}
+              />
               {geminiConnected ? 'Connecte' : 'Non configure'}
             </span>
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] text-[#1d1d1f] dark:text-[#f5f5f7]">Cle API</label>
+            <label className="text-[17px] app-text">Cle API</label>
             <input
               type="password"
               value={geminiKey}
-              onChange={e => setGeminiKey(e.target.value)}
+              onChange={(e) => setGeminiKey(e.target.value)}
               placeholder="AIza..."
               className={inputClass}
             />
-            <p className="text-[13px] text-[#86868b]">
-              Necessaire pour l'analyse des factures par IA
-            </p>
+            <p className="text-[13px] app-muted">Necessaire pour l'analyse des factures par IA</p>
           </div>
           <div className="px-4 py-3">
             <button
               onClick={handleSaveGeminiKey}
-              className="w-full py-3 rounded-xl bg-[#ac39ff] text-white text-[17px] font-semibold active:opacity-70 transition-opacity"
+              className="w-full py-3 rounded-xl app-accent-bg text-[17px] font-semibold active:opacity-70 transition-opacity"
             >
               Enregistrer la cle
             </button>
@@ -229,52 +371,151 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Backup / Restore */}
       <div>
-        <h2 className="ios-caption-upper text-[#86868b] mb-2 px-4">Sauvegarde</h2>
-        <div className="bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow overflow-hidden">
+        <h2 className="ios-caption-upper app-muted mb-2">Sauvegarde</h2>
+        <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
-            <p className="text-[15px] text-[#86868b]">
+            <p className="text-[15px] app-muted">
               Exportez vos donnees pour les sauvegarder ou les transferer. Les photos ne sont pas incluses.
             </p>
+          </div>
+          <div className="ios-settings-separator" />
+          <div className="ios-settings-row">
+            <span className="text-[17px] app-text">Backup auto hebdomadaire</span>
+            <button
+              onClick={handleToggleAutoBackup}
+              className={cn(
+                'px-3 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70',
+                autoBackup ? 'app-success-bg' : 'app-surface-2 app-muted',
+              )}
+            >
+              {autoBackup ? 'Active' : 'Desactive'}
+            </button>
           </div>
           <div className="ios-settings-separator" />
           <div className="px-4 py-3 flex gap-3">
             <button
               onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#34c759] text-white text-[17px] font-semibold active:opacity-70 transition-opacity"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl app-success-bg text-[17px] font-semibold active:opacity-70 transition-opacity"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
               Exporter
             </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              className="hidden"
-            />
+            <button
+              onClick={handleExportAutoBackup}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl app-surface-2 app-text text-[17px] font-semibold active:opacity-70 transition-opacity"
+            >
+              Export auto
+            </button>
+          </div>
+          <div className="ios-settings-separator" />
+          <div className="px-4 py-3">
+            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#ff9500] text-white text-[17px] font-semibold active:opacity-70 transition-opacity"
+              disabled={restoringBackup}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl app-warning-bg text-[17px] font-semibold active:opacity-70 transition-opacity"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-              Importer
+              {restoringBackup ? 'Restauration...' : 'Importer'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* App info */}
-      <div className="text-center text-[13px] text-[#86868b] py-4">
+      <div>
+        <h2 className="ios-caption-upper app-muted mb-2">Securite</h2>
+        <div className="rounded-2xl app-panel overflow-hidden">
+          <div className="ios-settings-row">
+            <span className="text-[17px] app-text">Code PIN</span>
+            <span className={cn('text-[15px] font-medium', pinEnabled ? 'text-[color:var(--app-success)]' : 'app-muted')}>
+              {pinEnabled ? 'Active' : 'Desactive'}
+            </span>
+          </div>
+          <div className="ios-settings-separator" />
+          {pinEnabled && (
+            <>
+              <div className="ios-settings-row flex-col items-stretch gap-1.5">
+                <label className="text-[17px] app-text">PIN actuel</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={currentPin}
+                  onChange={(e) => setPinField(setCurrentPin)(e.target.value)}
+                  placeholder="0000"
+                  className={inputClass}
+                />
+              </div>
+              <div className="ios-settings-separator" />
+            </>
+          )}
+          <div className="ios-settings-row flex-col items-stretch gap-1.5">
+            <label className="text-[17px] app-text">{pinEnabled ? 'Nouveau PIN' : 'PIN'}</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={newPin}
+              onChange={(e) => setPinField(setNewPin)(e.target.value)}
+              placeholder="0000"
+              className={inputClass}
+            />
+          </div>
+          <div className="ios-settings-separator" />
+          <div className="ios-settings-row flex-col items-stretch gap-1.5">
+            <label className="text-[17px] app-text">Confirmation PIN</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={confirmPin}
+              onChange={(e) => setPinField(setConfirmPin)(e.target.value)}
+              placeholder="0000"
+              className={inputClass}
+            />
+          </div>
+          <div className="px-4 py-3 flex gap-3">
+            {pinEnabled ? (
+              <>
+                <button
+                  onClick={handleChangePin}
+                  className="flex-1 py-3 rounded-xl app-accent-bg text-[16px] font-semibold active:opacity-70 transition-opacity"
+                >
+                  Changer PIN
+                </button>
+                <button
+                  onClick={handleDisablePin}
+                  className="flex-1 py-3 rounded-xl app-danger-bg text-[16px] font-semibold active:opacity-70 transition-opacity"
+                >
+                  Desactiver
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleEnablePin}
+                className="w-full py-3 rounded-xl app-accent-bg text-[16px] font-semibold active:opacity-70 transition-opacity"
+              >
+                Activer le PIN
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="text-center text-[13px] app-muted py-4">
         <p>CuisineControl v1.0</p>
         <p className="mt-1">Gestion HACCP pour la restauration</p>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmImportOpen}
+        onCancel={handleCancelImport}
+        onConfirm={handleConfirmImport}
+        title="Restaurer la sauvegarde ?"
+        message="Cette action remplacera toutes vos donnees actuelles. Cette operation est irreversible."
+        confirmText="Oui, restaurer"
+        cancelText="Annuler"
+        variant="danger"
+      />
     </div>
   );
 }

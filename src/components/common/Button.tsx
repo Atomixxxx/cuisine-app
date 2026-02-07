@@ -16,13 +16,13 @@ interface ButtonProps {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-[#2997FF] text-white active:opacity-70",
+    "app-accent-bg active:opacity-70",
   secondary:
-    "bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] active:opacity-70",
+    "app-surface-2 app-text active:opacity-70",
   danger:
-    "bg-[#ff3b30] text-white active:opacity-70",
+    "bg-[color:var(--app-danger)] text-white active:opacity-70",
   ghost:
-    "bg-transparent text-[#2997FF] active:opacity-70",
+    "bg-transparent text-[color:var(--app-accent)] active:opacity-70",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -47,7 +47,7 @@ export default function Button({
       onClick={onClick}
       disabled={disabled}
       className={[
-        "inline-flex items-center justify-center rounded-xl font-semibold transition-opacity duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2997FF] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black",
+        "inline-flex items-center justify-center rounded-xl font-semibold transition-opacity duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black",
         "min-h-[44px] min-w-[44px]",
         variantClasses[variant],
         sizeClasses[size],

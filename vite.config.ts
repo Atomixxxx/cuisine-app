@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -13,23 +13,52 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['icons/icon-192.svg', 'icons/icon-512.svg', 'icons/icon-maskable.svg'],
       manifest: {
-        name: 'CuisineApp - Assistant Cuisinier Pro',
-        short_name: 'CuisineApp',
-        description: 'Application tout-en-un pour cuisiniers professionnels',
-        theme_color: '#1e40af',
-        background_color: '#0f172a',
+        id: '/',
+        name: 'CuisineControl - Assistant Cuisine',
+        short_name: 'CuisineControl',
+        description: 'Assistant HACCP personnel pour la cuisine pro',
+        theme_color: '#2997FF',
+        background_color: '#f7f4ee',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        scope: '/',
+        start_url: '/dashboard',
         icons: [
-          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ]
+          { src: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/icons/icon-maskable.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' },
+        ],
+        shortcuts: [
+          {
+            name: 'Saisie temperatures',
+            short_name: 'Temperatures',
+            description: 'Saisir rapidement les releves',
+            url: '/temperature?quick=input',
+          },
+          {
+            name: 'Scanner un produit',
+            short_name: 'Scan produit',
+            description: 'Ouvrir le scanner tracabilite',
+            url: '/traceability?tab=scanner&quick=scan',
+          },
+          {
+            name: 'Scanner une facture',
+            short_name: 'Scan facture',
+            description: 'Ouvrir le scan facture',
+            url: '/invoices?quick=scan',
+          },
+          {
+            name: 'Nouvelle tache',
+            short_name: 'Tache',
+            description: 'Ajouter une tache en un geste',
+            url: '/tasks?quick=new',
+          },
+        ],
       },
       workbox: {
+        navigateFallback: 'index.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {

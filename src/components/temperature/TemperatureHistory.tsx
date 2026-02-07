@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, startOfDay, endOfDay, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../stores/appStore';
@@ -95,22 +95,22 @@ export default function TemperatureHistory() {
   return (
     <div className="space-y-4">
       {/* Calendar */}
-      <div className="bg-white dark:bg-[#1d1d1f] rounded-xl p-4 border border-[#e8e8ed] dark:border-[#38383a]">
+      <div className="app-card p-4">
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
-            className="p-2 rounded-lg hover:bg-[#e8e8ed] dark:hover:bg-[#38383a] text-[#86868b] dark:text-[#86868b]"
+            className="p-2 rounded-lg app-muted hover:bg-[color:var(--app-surface-3)]"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h3 className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7] capitalize">
+          <h3 className="font-bold app-text capitalize">
             {format(currentMonth, 'MMMM yyyy', { locale: fr })}
           </h3>
           <button
             onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
-            className="p-2 rounded-lg hover:bg-[#e8e8ed] dark:hover:bg-[#38383a] text-[#86868b] dark:text-[#86868b]"
+            className="p-2 rounded-lg app-muted hover:bg-[color:var(--app-surface-3)]"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -120,7 +120,7 @@ export default function TemperatureHistory() {
 
         <div className="grid grid-cols-7 gap-1 mb-1">
           {DAY_LABELS.map(d => (
-            <div key={d} className="text-center text-xs font-medium text-[#86868b] dark:text-[#86868b] py-1">
+            <div key={d} className="text-center text-xs font-medium app-muted py-1">
               {d}
             </div>
           ))}
@@ -139,10 +139,10 @@ export default function TemperatureHistory() {
                 onClick={() => handleDayClick(day)}
                 className={cn(
                   'h-9 rounded-lg text-sm font-medium transition-colors',
-                  isSelected && 'bg-[#2997FF] text-white',
-                  inRange && !isSelected && 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-                  isToday && !isSelected && !inRange && 'ring-2 ring-blue-400',
-                  !isSelected && !inRange && 'text-[#1d1d1f] dark:text-[#86868b] hover:bg-[#e8e8ed] dark:hover:bg-[#38383a]'
+                  isSelected && 'app-accent-bg',
+                  inRange && !isSelected && 'bg-[color:var(--app-accent)]/12 text-[color:var(--app-accent)]',
+                  isToday && !isSelected && !inRange && 'ring-2 ring-[color:var(--app-accent)]',
+                  !isSelected && !inRange && 'app-text hover:bg-[color:var(--app-surface-3)]'
                 )}
               >
                 {format(day, 'd')}
@@ -153,7 +153,7 @@ export default function TemperatureHistory() {
 
         {/* Range toggle */}
         <div className="mt-3 flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-[#86868b] dark:text-[#86868b] cursor-pointer">
+          <label className="flex items-center gap-2 text-sm app-muted cursor-pointer">
             <input
               type="checkbox"
               checked={dateRangeMode}
@@ -162,12 +162,12 @@ export default function TemperatureHistory() {
                 setRangeStart(null);
                 setRangeEnd(null);
               }}
-              className="rounded border-[#d1d1d6] dark:border-[#38383a] text-[#2997FF] focus:ring-[#2997FF]"
+              className="rounded app-border text-[color:var(--app-accent)] focus:ring-[color:var(--app-accent)]"
             />
             Plage de dates
           </label>
           {dateRangeMode && rangeStart && rangeEnd && (
-            <span className="text-xs text-[#86868b] dark:text-[#86868b]">
+            <span className="text-xs app-muted">
               {format(rangeStart, 'dd/MM', { locale: fr })} - {format(rangeEnd, 'dd/MM', { locale: fr })}
             </span>
           )}
@@ -179,7 +179,7 @@ export default function TemperatureHistory() {
         <select
           value={filterEquipmentId}
           onChange={e => setFilterEquipmentId(e.target.value)}
-          className="flex-1 min-w-[140px] rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] px-3 py-2 text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+          className="flex-1 min-w-[140px] rounded-lg border app-border app-surface-2 app-text px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
         >
           <option value="">Tous les équipements</option>
           {equipment.map(eq => (
@@ -192,8 +192,8 @@ export default function TemperatureHistory() {
           className={cn(
             'px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
             anomaliesOnly
-              ? 'bg-red-100 dark:bg-red-900/40 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300'
-              : 'bg-white dark:bg-[#1d1d1f] border-[#d1d1d6] dark:border-[#38383a] text-[#1d1d1f] dark:text-[#86868b]'
+              ? 'bg-[color:var(--app-danger)]/10 border-[color:var(--app-danger)]/40 text-[color:var(--app-danger)]'
+              : 'app-surface-2 app-text border app-border'
           )}
         >
           Anomalies uniquement
@@ -203,7 +203,7 @@ export default function TemperatureHistory() {
       {/* Records list */}
       <div className="space-y-2">
         {filteredRecords.length === 0 ? (
-          <div className="text-center py-10 text-[#86868b] dark:text-[#86868b]">
+          <div className="text-center py-10 app-muted">
             <p className="text-lg font-medium">Aucun relevé</p>
             <p className="text-sm mt-1">
               {anomaliesOnly ? 'Aucune anomalie pour cette période' : 'Aucun relevé pour cette sélection'}
@@ -216,18 +216,18 @@ export default function TemperatureHistory() {
               <div
                 key={record.id}
                 className={cn(
-                  'rounded-xl p-3 border-l-4',
+                  'rounded-xl p-3 border-l-4 app-card',
                   record.isCompliant
-                    ? 'border-l-green-500 bg-white dark:bg-[#1d1d1f]'
-                    : 'border-l-red-500 bg-red-50 dark:bg-red-900/20'
+                    ? 'border-l-[color:var(--app-success)]'
+                    : 'border-l-[color:var(--app-danger)] bg-[color:var(--app-danger)]/10'
                 )}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    <p className="font-semibold app-text">
                       {eq?.name ?? 'Équipement inconnu'}
                     </p>
-                    <p className="text-xs text-[#86868b] dark:text-[#86868b]">
+                    <p className="text-xs app-muted">
                       {format(new Date(record.timestamp), 'HH:mm', { locale: fr })}
                       {eq && ` \u00b7 ${EQUIPMENT_TYPES[eq.type]}`}
                     </p>
@@ -236,7 +236,7 @@ export default function TemperatureHistory() {
                     <span
                       className={cn(
                         'text-xl font-bold',
-                        record.isCompliant ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-[#ff3b30]'
+                        record.isCompliant ? 'text-[color:var(--app-success)]' : 'text-[color:var(--app-danger)]'
                       )}
                     >
                       {record.temperature}°C
@@ -245,8 +245,8 @@ export default function TemperatureHistory() {
                       className={cn(
                         'text-xs font-bold px-2 py-1 rounded-full',
                         record.isCompliant
-                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                          : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                          ? 'bg-[color:var(--app-success)]/15 text-[color:var(--app-success)]'
+                          : 'bg-[color:var(--app-danger)]/15 text-[color:var(--app-danger)]'
                       )}
                     >
                       {record.isCompliant ? 'OK' : 'NON CONFORME'}

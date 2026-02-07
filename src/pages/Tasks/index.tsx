@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { isToday } from 'date-fns';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../stores/appStore';
-import {
-  CATEGORIES,
-  type Task,
-  type TaskCategory,
-  type RecurringType,
-} from '../../types';
+import { CATEGORIES, type Task, type TaskCategory } from '../../types';
 import { cn, vibrate } from '../../utils';
 import { showError } from '../../stores/toastStore';
 import TaskList from '../../components/tasks/TaskList';
@@ -16,10 +12,10 @@ import TaskArchive from '../../components/tasks/TaskArchive';
 const categoryKeys = Object.keys(CATEGORIES) as TaskCategory[];
 
 const TasksPage: React.FC = () => {
-  const getTasks = useAppStore(s => s.getTasks);
-  const addTask = useAppStore(s => s.addTask);
-  const updateTask = useAppStore(s => s.updateTask);
-  const deleteTask = useAppStore(s => s.deleteTask);
+  const getTasks = useAppStore((s) => s.getTasks);
+  const addTask = useAppStore((s) => s.addTask);
+  const updateTask = useAppStore((s) => s.updateTask);
+  const deleteTask = useAppStore((s) => s.deleteTask);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +24,7 @@ const TasksPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showArchive, setShowArchive] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -42,29 +39,30 @@ const TasksPage: React.FC = () => {
   }, [getTasks]);
 
   useEffect(() => {
-    loadTasks();
+    void loadTasks();
   }, [loadTasks]);
 
-  // Filtered tasks
+  useEffect(() => {
+    const quick = searchParams.get('quick');
+    if (quick !== 'new') return;
+    setEditingTask(null);
+    setShowForm(true);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('quick');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const filteredTasks = useMemo(() => {
     if (filterCategory === 'all') return tasks;
     return tasks.filter((t) => t.category === filterCategory);
   }, [tasks, filterCategory]);
 
-  // Stats
   const activeTasks = useMemo(() => tasks.filter((t) => !t.completed), [tasks]);
-  const todayTasks = useMemo(
-    () => tasks.filter((t) => isToday(new Date(t.createdAt))),
-    [tasks]
-  );
-  const todayCompleted = useMemo(
-    () => todayTasks.filter((t) => t.completed).length,
-    [todayTasks]
-  );
+  const todayTasks = useMemo(() => tasks.filter((t) => isToday(new Date(t.createdAt))), [tasks]);
+  const todayCompleted = useMemo(() => todayTasks.filter((t) => t.completed).length, [todayTasks]);
   const todayTotal = todayTasks.length;
   const progressPercent = todayTotal > 0 ? Math.round((todayCompleted / todayTotal) * 100) : 0;
 
-  // Handlers
   const handleToggle = useCallback(
     async (task: Task) => {
       try {
@@ -73,7 +71,7 @@ const TasksPage: React.FC = () => {
           ...task,
           completed: !task.completed,
           completedAt: !task.completed ? now : undefined,
-          archived: !task.completed ? true : false,
+          archived: !task.completed,
         };
         await updateTask(updated);
         await loadTasks();
@@ -81,7 +79,7 @@ const TasksPage: React.FC = () => {
         showError('Impossible de mettre a jour la tache');
       }
     },
-    [updateTask, loadTasks]
+    [updateTask, loadTasks],
   );
 
   const handleEdit = useCallback((task: Task) => {
@@ -98,7 +96,7 @@ const TasksPage: React.FC = () => {
         showError('Impossible de supprimer la tache');
       }
     },
-    [deleteTask, loadTasks]
+    [deleteTask, loadTasks],
   );
 
   const handleSave = useCallback(
@@ -129,7 +127,7 @@ const TasksPage: React.FC = () => {
         showError('Impossible de sauvegarder la tache');
       }
     },
-    [editingTask, tasks.length, addTask, updateTask, loadTasks]
+    [editingTask, tasks.length, addTask, updateTask, loadTasks],
   );
 
   const handleCancelForm = useCallback(() => {
@@ -137,29 +135,30 @@ const TasksPage: React.FC = () => {
     setEditingTask(null);
   }, []);
 
-  // Archive view
   if (showArchive) {
-    return <TaskArchive onClose={() => { setShowArchive(false); loadTasks(); }} />;
+    return (
+      <TaskArchive
+        onClose={() => {
+          setShowArchive(false);
+          void loadTasks();
+        }}
+      />
+    );
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-center justify-between mb-3">
+    <div className="app-page-wrap h-full pb-28">
+      <div className="app-hero-card space-y-3">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <h1 className="ios-title text-[#1d1d1f] dark:text-[#f5f5f7]">
-              Tâches
-            </h1>
-            <p className="text-[15px] text-[#86868b] mt-1">
-              {activeTasks.length} tâche{activeTasks.length !== 1 ? 's' : ''} restante{activeTasks.length !== 1 ? 's' : ''}
+            <h1 className="ios-title app-text">Taches</h1>
+            <p className="text-[14px] app-muted">
+              {activeTasks.length} restante{activeTasks.length !== 1 ? 's' : ''}
             </p>
           </div>
-
-          {/* Archive button */}
           <button
             onClick={() => setShowArchive(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-[#2997FF] bg-[#2997FF]/10/15 active:opacity-70 transition-opacity"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold app-surface-2 app-text active:opacity-70 transition-opacity"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 8v13H3V8" />
@@ -170,51 +169,56 @@ const TasksPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Progress bar */}
+        <div className="app-kpi-grid">
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Actives</p>
+            <p className="app-kpi-value">{activeTasks.length}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Creees aujourd'hui</p>
+            <p className="app-kpi-value">{todayTotal}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Terminees aujourd'hui</p>
+            <p className="app-kpi-value">{todayCompleted}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Progression</p>
+            <p className="app-kpi-value">{progressPercent}%</p>
+          </div>
+        </div>
+
         {todayTotal > 0 && (
-          <div className="mb-4 p-4 bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow">
+          <div className="rounded-xl app-surface-2 p-3 border border-[color:var(--app-border)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[13px] text-[#86868b]">
-                Progression du jour
-              </span>
-              <span className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+              <span className="text-[13px] app-muted">Progression du jour</span>
+              <span className="text-[13px] font-semibold app-text">
                 {todayCompleted}/{todayTotal} ({progressPercent}%)
               </span>
             </div>
-            <div className="w-full h-1 bg-[#e8e8ed] dark:bg-[#38383a] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#34c759] rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progressPercent}%` }}
-              />
+            <div className="w-full h-1.5 app-surface-3 rounded-full overflow-hidden">
+              <div className="h-full bg-[color:var(--app-success)] rounded-full transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
         )}
+      </div>
 
-        {/* iOS Segmented Control for view */}
-        <div className="ios-segmented mb-3">
-          <button
-            onClick={() => setGrouped(true)}
-            className={cn('ios-segmented-item', grouped && 'active')}
-          >
-            Par catégorie
+      <div className="app-panel space-y-3">
+        <div className="ios-segmented">
+          <button onClick={() => setGrouped(true)} className={cn('ios-segmented-item', grouped && 'active')}>
+            Par categorie
           </button>
-          <button
-            onClick={() => setGrouped(false)}
-            className={cn('ios-segmented-item', !grouped && 'active')}
-          >
+          <button onClick={() => setGrouped(false)} className={cn('ios-segmented-item', !grouped && 'active')}>
             Liste
           </button>
         </div>
 
-        {/* Category filter chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           <button
             onClick={() => setFilterCategory('all')}
             className={cn(
-              'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70',
-              filterCategory === 'all'
-                ? 'bg-[#2997FF] text-white'
-                : 'bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b]'
+              'flex-shrink-0 app-chip-btn whitespace-nowrap active:opacity-70',
+              filterCategory === 'all' ? 'app-accent-bg' : 'app-surface-2 app-muted',
             )}
           >
             Toutes
@@ -224,10 +228,8 @@ const TasksPage: React.FC = () => {
               key={key}
               onClick={() => setFilterCategory(key)}
               className={cn(
-                'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70 whitespace-nowrap',
-                filterCategory === key
-                  ? 'bg-[#2997FF] text-white'
-                  : 'bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b]'
+                'flex-shrink-0 app-chip-btn whitespace-nowrap active:opacity-70',
+                filterCategory === key ? 'app-accent-bg' : 'app-surface-2 app-muted',
               )}
             >
               {CATEGORIES[key]}
@@ -236,32 +238,23 @@ const TasksPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="flex-1 overflow-y-auto py-2">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="w-8 h-8 border-2 border-[#2997FF] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <TaskList
-            tasks={filteredTasks}
-            grouped={grouped}
-            onToggle={handleToggle}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+          <TaskList tasks={filteredTasks} grouped={grouped} onToggle={handleToggle} onEdit={handleEdit} onDelete={handleDelete} />
         )}
       </div>
 
-      {/* FAB - iOS blue */}
       <button
         onClick={() => {
           setEditingTask(null);
           setShowForm(true);
         }}
-        className="fixed bottom-20 right-4 w-14 h-14 bg-[#2997FF] text-white rounded-full flex items-center justify-center active:opacity-70 transition-opacity z-40"
-        style={{ boxShadow: '0 2px 12px rgba(0,122,255,0.4)' }}
-        aria-label="Ajouter une tâche"
+        className="fixed bottom-20 right-4 w-14 h-14 app-accent-bg rounded-full flex items-center justify-center active:opacity-70 transition-opacity z-40 shadow-[0_10px_22px_rgba(41,151,255,0.4)]"
+        aria-label="Ajouter une tache"
       >
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19" />
@@ -269,14 +262,7 @@ const TasksPage: React.FC = () => {
         </svg>
       </button>
 
-      {/* Task form modal */}
-      {showForm && (
-        <TaskForm
-          task={editingTask}
-          onSave={handleSave}
-          onCancel={handleCancelForm}
-        />
-      )}
+      {showForm && <TaskForm task={editingTask} onSave={handleSave} onCancel={handleCancelForm} />}
     </div>
   );
 };

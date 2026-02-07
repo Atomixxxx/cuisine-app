@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { cn } from '../../utils';
 
 interface SkeletonProps {
@@ -8,7 +9,7 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-xl bg-[#e8e8ed] dark:bg-[#38383a]',
+        'animate-pulse rounded-xl app-surface-3',
         className
       )}
     />
@@ -17,7 +18,7 @@ export function Skeleton({ className }: SkeletonProps) {
 
 export function InvoiceCardSkeleton() {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#1d1d1f] ios-card-shadow">
+    <div className="flex items-center gap-3 p-3 rounded-2xl app-card">
       <Skeleton className="w-14 h-18 rounded-xl shrink-0" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-4 w-2/3" />
@@ -37,7 +38,7 @@ export function InvoiceCardSkeleton() {
 
 export function ProductCardSkeleton() {
   return (
-    <div className="rounded-2xl bg-white dark:bg-[#1d1d1f] ios-card-shadow overflow-hidden">
+    <div className="rounded-2xl app-card overflow-hidden">
       <Skeleton className="w-full h-32 rounded-none" />
       <div className="p-3 space-y-2">
         <Skeleton className="h-4 w-3/4" />
@@ -50,7 +51,7 @@ export function ProductCardSkeleton() {
 
 export function TaskItemSkeleton() {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#1d1d1f] ios-card-shadow">
+    <div className="flex items-center gap-3 p-3 rounded-2xl app-card">
       <Skeleton className="w-6 h-6 rounded-full shrink-0" />
       <div className="flex-1 space-y-1.5">
         <Skeleton className="h-4 w-3/4" />
@@ -61,7 +62,7 @@ export function TaskItemSkeleton() {
   );
 }
 
-export function ListSkeleton({ count = 4, Card }: { count?: number; Card: () => JSX.Element }) {
+export function ListSkeleton({ count = 4, Card }: { count?: number; Card: () => ReactElement }) {
   return (
     <div className="space-y-3">
       {Array.from({ length: count }, (_, i) => (

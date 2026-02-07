@@ -3,6 +3,7 @@ import { analyzeInvoiceImages, hasApiKey, getApiKey, setApiKey } from '../../ser
 import { pdfToImages } from '../../services/pdfReader';
 import type { OCRResult } from '../../services/ocr';
 import { cn, vibrate, blobToUrl, compressImage } from '../../utils';
+import { logger } from '../../services/logger';
 import InvoiceForm from './InvoiceForm';
 
 interface InvoiceScannerProps {
@@ -76,10 +77,13 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
 
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key.trim()}`,
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key.trim(),
+          },
           body: JSON.stringify({
             contents: [{ parts: [{ text: 'Dis "OK" en un mot.' }] }],
             generationConfig: { maxOutputTokens: 10 },
@@ -109,20 +113,20 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
   return (
     <div className="p-4 space-y-4">
       <div className="text-center space-y-2">
-        <div className="mx-auto w-12 h-12 rounded-full bg-[#2997FF]/10/15 flex items-center justify-center text-[#2997FF]">
+        <div className="mx-auto w-12 h-12 rounded-full bg-[color:var(--app-accent)]/10 flex items-center justify-center text-[color:var(--app-accent)]">
           <KeyIcon />
         </div>
-        <h3 className="ios-title3 text-[#1d1d1f] dark:text-[#f5f5f7]">
+        <h3 className="ios-title3 app-text">
           Configuration Gemini
         </h3>
-        <p className="text-[15px] text-[#86868b]">
+        <p className="text-[15px] app-muted">
           Pour analyser vos factures avec precision, entrez votre cle API Google Gemini.
         </p>
         <a
           href="https://aistudio.google.com/apikey"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block text-[15px] text-[#2997FF] font-medium"
+          className="inline-block text-[15px] text-[color:var(--app-accent)] font-medium"
         >
           Obtenir une cle gratuite
         </a>
@@ -134,17 +138,17 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
           value={key}
           onChange={(e) => { setKey(e.target.value); setTestResult(null); }}
           placeholder="AIzaSy..."
-          className="w-full px-4 py-3 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[17px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF] dark:focus:ring-[#2997FF]"
+          className="w-full px-4 py-3 rounded-xl app-surface-2 app-text text-[17px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
         />
 
         {testResult === 'invalid' && (
-          <p className="text-[13px] text-[#ff3b30]">Cle API invalide. Verifiez et reessayez.</p>
+          <p className="text-[13px] text-[color:var(--app-danger)]">Cle API invalide. Verifiez et reessayez.</p>
         )}
         {testResult === 'error' && (
-          <p className="text-[13px] text-[#ff3b30]">Erreur de connexion. Verifiez votre internet.</p>
+          <p className="text-[13px] text-[color:var(--app-danger)]">Erreur de connexion. Verifiez votre internet.</p>
         )}
         {testResult === 'ok' && (
-          <p className="text-[13px] text-[#34c759]">Cle valide !</p>
+          <p className="text-[13px] text-[color:var(--app-success)]">Cle valide !</p>
         )}
 
         <button
@@ -152,7 +156,7 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
           disabled={!key.trim() || testing}
           className={cn(
             'w-full py-3 rounded-xl font-semibold text-[17px] active:opacity-70 transition-opacity',
-            'bg-[#2997FF] text-white',
+            'app-accent-bg',
             (!key.trim() || testing) && 'opacity-40 cursor-not-allowed',
           )}
         >
@@ -173,6 +177,17 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
   const [showApiSetup, setShowApiSetup] = useState(true);
   const [apiKeyLoaded, setApiKeyLoaded] = useState(false);
   const [apiKeyExists, setApiKeyExists] = useState(false);
+  const pagesRef = useRef<PageImage[]>([]);
+
+  useEffect(() => {
+    pagesRef.current = pages;
+  }, [pages]);
+
+  useEffect(() => {
+    return () => {
+      pagesRef.current.forEach((page) => URL.revokeObjectURL(page.url));
+    };
+  }, []);
 
   useEffect(() => {
     hasApiKey().then(has => {
@@ -230,7 +245,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
         setPages((prev) => [...prev, ...newPages]);
       }
     } catch (err) {
-      console.error('Import error:', err);
+      logger.error('Invoice import error', { err });
       setError(
         err instanceof Error
           ? `Erreur d'import : ${err.message}`
@@ -289,7 +304,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
       });
       setOcrResult(result);
     } catch (err) {
-      console.error('Analysis Error:', err);
+      logger.error('Invoice analysis error', { err });
       setError(
         err instanceof Error
           ? err.message
@@ -321,7 +336,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
   if (!apiKeyLoaded) {
     return (
       <div className="p-4 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#2997FF] dark:border-[#2997FF] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -335,7 +350,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
           <div className="px-4 pb-4">
             <button
               onClick={() => setShowApiSetup(false)}
-              className="w-full py-2 text-[15px] text-[#86868b] active:opacity-70"
+              className="w-full py-2 text-[15px] app-muted active:opacity-70"
             >
               Retour
             </button>
@@ -361,16 +376,16 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
     <div className="p-4 space-y-4">
       {/* API key status + settings */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[13px] text-[#86868b]">
+        <div className="flex items-center gap-2 text-[13px] app-muted">
           <div className={cn(
             'w-2 h-2 rounded-full',
-            apiKeyExists ? 'bg-[#34c759]' : 'bg-[#ff3b30]'
+            apiKeyExists ? 'bg-[color:var(--app-success)]' : 'bg-[color:var(--app-danger)]'
           )} />
           <span>{apiKeyExists ? 'Gemini connecte' : 'Cle API manquante'}</span>
         </div>
         <button
           onClick={() => setShowApiSetup(true)}
-          className="text-[13px] text-[#2997FF] font-medium active:opacity-70"
+          className="text-[13px] text-[color:var(--app-accent)] font-medium active:opacity-70"
         >
           {apiKeyExists ? 'Modifier la cle' : 'Configurer'}
         </button>
@@ -386,8 +401,8 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
           disabled={isProcessing || isImporting}
           className={cn(
             'flex flex-col items-center justify-center gap-2 p-6 rounded-2xl border-2 border-dashed active:opacity-70 transition-opacity',
-            'border-[#2997FF]/30 dark:border-[#2997FF]/30 bg-[#2997FF]/5/5',
-            'text-[#2997FF]',
+            'border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/6',
+            'text-[color:var(--app-accent)]',
             (isProcessing || isImporting) && 'opacity-40 cursor-not-allowed'
           )}
         >
@@ -403,8 +418,8 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
           disabled={isProcessing || isImporting}
           className={cn(
             'flex flex-col items-center justify-center gap-2 p-6 rounded-2xl border-2 border-dashed active:opacity-70 transition-opacity',
-            'border-[#d1d1d6] dark:border-[#38383a] bg-[#e8e8ed]/50 dark:bg-[#38383a]/50',
-            'text-[#86868b]',
+            'border-[color:var(--app-border)] bg-[color:var(--app-surface-2)]/70',
+            'app-muted',
             (isProcessing || isImporting) && 'opacity-40 cursor-not-allowed'
           )}
         >
@@ -434,9 +449,9 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
 
       {/* Import progress */}
       {isImporting && (
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#1d1d1f] ios-card-shadow">
-          <div className="w-6 h-6 border-2 border-[#2997FF] dark:border-[#2997FF] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7]">
+        <div className="flex items-center gap-3 p-3 rounded-2xl app-card">
+          <div className="w-6 h-6 border-2 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-[15px] app-text">
             Import du fichier en cours...
           </p>
         </div>
@@ -446,13 +461,13 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
       {pages.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+            <h3 className="text-[15px] font-semibold app-text">
               Pages capturees ({pages.length})
             </h3>
             <button
               onClick={handleReset}
               disabled={isProcessing || isImporting}
-              className="text-[13px] text-[#ff3b30] font-medium active:opacity-70"
+              className="text-[13px] text-[color:var(--app-danger)] font-medium active:opacity-70"
             >
               Tout supprimer
             </button>
@@ -462,7 +477,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
             {pages.map((page, index) => (
               <div
                 key={page.id}
-                className="relative group rounded-2xl overflow-hidden bg-white dark:bg-[#1d1d1f] ios-card-shadow"
+                className="relative group rounded-2xl overflow-hidden app-card"
               >
                 <img
                   src={page.url}
@@ -478,20 +493,20 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
                   <button
                     onClick={() => handleMovePage(page.id, 'up')}
                     disabled={index === 0}
-                    className="p-1 bg-white/90 dark:bg-[#1d1d1f]/90 rounded-lg text-[#1d1d1f] dark:text-[#f5f5f7] disabled:opacity-30"
+                    className="p-1 bg-[color:var(--app-surface)]/90 rounded-lg app-text disabled:opacity-30"
                   >
                     <ArrowUpIcon />
                   </button>
                   <button
                     onClick={() => handleMovePage(page.id, 'down')}
                     disabled={index === pages.length - 1}
-                    className="p-1 bg-white/90 dark:bg-[#1d1d1f]/90 rounded-lg text-[#1d1d1f] dark:text-[#f5f5f7] disabled:opacity-30"
+                    className="p-1 bg-[color:var(--app-surface)]/90 rounded-lg app-text disabled:opacity-30"
                   >
                     <ArrowDownIcon />
                   </button>
                   <button
                     onClick={() => handleDeletePage(page.id)}
-                    className="p-1 bg-[#ff3b30]/90/90 rounded-lg text-white"
+                    className="p-1 bg-[color:var(--app-danger)]/90 rounded-lg text-white"
                   >
                     <TrashIcon />
                   </button>
@@ -504,32 +519,32 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
 
       {/* Error message */}
       {error && (
-        <div className="p-3 rounded-2xl bg-[#ff3b30]/10/10 text-[#ff3b30] text-[15px]">
+        <div className="p-3 rounded-2xl bg-[color:var(--app-danger)]/10 text-[color:var(--app-danger)] text-[15px]">
           {error}
         </div>
       )}
 
       {/* Processing state */}
       {isProcessing && (
-        <div className="space-y-3 p-4 rounded-2xl bg-white dark:bg-[#1d1d1f] ios-card-shadow">
+        <div className="space-y-3 p-4 rounded-2xl app-card">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 border-3 border-[#2997FF] dark:border-[#2997FF] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-3 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
             <div>
-              <p className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+              <p className="text-[15px] font-semibold app-text">
                 Analyse en cours...
               </p>
-              <p className="text-[13px] text-[#86868b]">
+              <p className="text-[13px] app-muted">
                 Lecture intelligente via Gemini
               </p>
             </div>
           </div>
-          <div className="w-full bg-[#e8e8ed] dark:bg-[#38383a] rounded-full h-2">
+          <div className="w-full app-surface-3 rounded-full h-2">
             <div
-              className="bg-[#2997FF] h-2 rounded-full transition-all duration-300"
+              className="bg-[color:var(--app-accent)] h-2 rounded-full transition-all duration-300"
               style={{ width: `${ocrProgress}%` }}
             />
           </div>
-          <p className="text-[13px] text-center text-[#86868b]">
+          <p className="text-[13px] text-center app-muted">
             {ocrProgress}%
           </p>
         </div>
@@ -539,7 +554,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
       {pages.length > 0 && !isProcessing && !isImporting && (
         <button
           onClick={handleAnalyze}
-          className="w-full py-3 px-4 bg-[#2997FF] text-white font-semibold text-[17px] rounded-xl active:opacity-70 transition-opacity flex items-center justify-center gap-2"
+          className="w-full py-3 px-4 app-accent-bg font-semibold text-[17px] rounded-xl active:opacity-70 transition-opacity flex items-center justify-center gap-2"
         >
           <svg
             width="20"
@@ -570,16 +585,16 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-[#d1d1d6] dark:text-[#38383a] mb-4"
+            className="app-muted mb-4"
           >
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
             <circle cx="8.5" cy="8.5" r="1.5" />
             <polyline points="21,15 16,10 5,21" />
           </svg>
-          <p className="ios-title3 text-[#86868b]">
+          <p className="ios-title3 app-muted">
             Prenez en photo ou importez vos factures
           </p>
-          <p className="text-[15px] text-[#86868b] mt-1">
+          <p className="text-[15px] app-muted mt-1">
             PDF, JPG, PNG — plusieurs pages possibles
           </p>
         </div>

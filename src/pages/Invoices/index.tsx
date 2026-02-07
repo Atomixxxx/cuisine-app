@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../stores/appStore';
 import type { Invoice } from '../../types';
 import { cn, vibrate } from '../../utils';
@@ -9,6 +10,7 @@ import InvoiceGallery from '../../components/invoices/InvoiceGallery';
 const PriceTracker = lazy(() => import('../../components/invoices/PriceTracker'));
 
 type SubTab = 'scanner' | 'factures' | 'cadencier';
+const PAGE_SIZE = 50;
 
 const TAB_CONFIG: { key: SubTab; label: string }[] = [
   { key: 'scanner', label: 'Scanner' },
@@ -31,14 +33,22 @@ export default function InvoicesPage() {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('factures');
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMoreInvoices, setHasMoreInvoices] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const getInvoices = useAppStore((s) => s.getInvoices);
 
-  const loadInvoices = useCallback(async () => {
+  const supplierCount = useMemo(() => new Set(invoices.map((invoice) => invoice.supplier).filter(Boolean)).size, [invoices]);
+
+  const loadInitialInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getInvoices();
+      const data = await getInvoices({ limit: PAGE_SIZE, offset: 0 });
       setInvoices(data);
+      setPage(1);
+      setHasMoreInvoices(data.length === PAGE_SIZE);
     } catch {
       showError('Impossible de charger les factures');
     } finally {
@@ -47,8 +57,42 @@ export default function InvoicesPage() {
   }, [getInvoices]);
 
   useEffect(() => {
-    loadInvoices();
-  }, [loadInvoices]);
+    void loadInitialInvoices();
+  }, [loadInitialInvoices]);
+
+  const loadMoreInvoices = useCallback(async () => {
+    if (loading || loadingMore || !hasMoreInvoices) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const data = await getInvoices({
+        limit: PAGE_SIZE,
+        offset: (nextPage - 1) * PAGE_SIZE,
+      });
+      setInvoices((prev) => [...prev, ...data]);
+      setPage(nextPage);
+      setHasMoreInvoices(data.length === PAGE_SIZE);
+    } catch {
+      showError('Impossible de charger plus de factures');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [getInvoices, hasMoreInvoices, loading, loadingMore, page]);
+
+  useEffect(() => {
+    const quick = searchParams.get('quick');
+    if (!quick) return;
+
+    if (quick === 'scan') {
+      setActiveSubTab('scanner');
+    } else if (quick === 'cadencier') {
+      setActiveSubTab('cadencier');
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('quick');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleTabChange = (tab: SubTab) => {
     vibrate();
@@ -56,7 +100,7 @@ export default function InvoicesPage() {
   };
 
   const handleScanComplete = () => {
-    loadInvoices();
+    void loadInitialInvoices();
     setActiveSubTab('factures');
   };
 
@@ -66,46 +110,88 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f5f5f7] dark:bg-black">
-      {/* iOS Segmented Control */}
-      <div className="px-4 pt-4 pb-3">
-        <div className="ios-segmented">
-          {TAB_CONFIG.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => handleTabChange(key)}
-              className={cn('ios-segmented-item', activeSubTab === key && 'active')}
-            >
-              {label}
-            </button>
-          ))}
+    <div className="app-page-wrap h-full pb-24">
+      <div className="app-hero-card space-y-3">
+        <div>
+          <h1 className="ios-title app-text">Factures</h1>
+          <p className="text-[15px] app-muted">Scan OCR, historique et cadencier prix.</p>
+        </div>
+        <div className="app-kpi-grid">
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Factures chargees</p>
+            <p className="app-kpi-value">{invoices.length}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Fournisseurs detectes</p>
+            <p className="app-kpi-value">{supplierCount}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Pagination</p>
+            <p className="app-kpi-value text-[16px] font-semibold">{hasMoreInvoices ? 'Disponible' : 'Fin de liste'}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Mode</p>
+            <p className="app-kpi-value text-[16px] font-semibold">{activeSubTab}</p>
+          </div>
         </div>
       </div>
 
-      {/* Content area */}
-      <div className="flex-1 overflow-y-auto relative">
-        {activeSubTab === 'scanner' && (
-          <InvoiceScanner onComplete={handleScanComplete} />
-        )}
+      <div className="ios-segmented">
+        {TAB_CONFIG.map(({ key, label }) => (
+          <button key={key} onClick={() => handleTabChange(key)} className={cn('ios-segmented-item', activeSubTab === key && 'active')}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto relative py-2">
+        {activeSubTab === 'scanner' && <InvoiceScanner onComplete={handleScanComplete} />}
+
         {activeSubTab === 'factures' && (
-          <InvoiceGallery
-            invoices={invoices}
-            loading={loading}
-            onRefresh={loadInvoices}
-          />
+          <div className="pb-4">
+            <InvoiceGallery
+              invoices={invoices}
+              loading={loading}
+              onRefresh={() => {
+                void loadInitialInvoices();
+              }}
+            />
+            {!loading && hasMoreInvoices && (
+              <div className="pt-2 flex justify-center">
+                <button
+                  onClick={() => {
+                    void loadMoreInvoices();
+                  }}
+                  disabled={loadingMore}
+                  className={cn(
+                    'px-4 py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity',
+                    loadingMore ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-surface-2 app-text',
+                  )}
+                >
+                  {loadingMore ? 'Chargement...' : 'Charger plus'}
+                </button>
+              </div>
+            )}
+          </div>
         )}
+
         {activeSubTab === 'cadencier' && (
-          <Suspense fallback={<div className="flex justify-center py-12"><div className="w-8 h-8 border-3 border-[#2997FF] dark:border-[#2997FF] border-t-transparent rounded-full animate-spin" /></div>}>
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-3 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            }
+          >
             <PriceTracker />
           </Suspense>
         )}
       </div>
 
-      {/* Floating action button */}
       {activeSubTab !== 'scanner' && (
         <button
           onClick={handleFabClick}
-          className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-[#2997FF] text-white shadow-lg shadow-[#2997FF]/30 dark:shadow-[#2997FF]/30 flex items-center justify-center active:opacity-70 transition-opacity"
+          className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full app-accent-bg shadow-[0_10px_24px_rgba(41,151,255,0.35)] flex items-center justify-center active:opacity-70 transition-opacity"
           aria-label="Scanner une facture"
         >
           <PlusIcon />

@@ -1,14 +1,33 @@
 import Dexie, { type Table } from 'dexie';
-import type { Equipment, TemperatureRecord, ProductTrace, Task, Invoice, PriceHistory, AppSettings } from '../types';
+import type {
+  Equipment,
+  TemperatureRecord,
+  ProductTrace,
+  Task,
+  Invoice,
+  PriceHistory,
+  AppSettings,
+  Ingredient,
+  Recipe,
+  RecipeIngredient,
+  SupplierProductMapping,
+  OilChangeRecord,
+} from '../types';
 
 class CuisineDB extends Dexie {
   equipment!: Table<Equipment>;
   temperatureRecords!: Table<TemperatureRecord>;
+  oilChangeRecords!: Table<OilChangeRecord>;
   productTraces!: Table<ProductTrace>;
   tasks!: Table<Task>;
   invoices!: Table<Invoice>;
   priceHistory!: Table<PriceHistory>;
   settings!: Table<AppSettings>;
+  ingredients!: Table<Ingredient>;
+  recipes!: Table<Recipe>;
+  recipeIngredients!: Table<RecipeIngredient>;
+  supplierProductMappings!: Table<SupplierProductMapping>;
+  backupSnapshots!: Table<{ id: string; payload: string; createdAt: Date }>;
 
   constructor() {
     super('CuisineApp');
@@ -20,6 +39,67 @@ class CuisineDB extends Dexie {
       invoices: 'id, supplier, invoiceNumber, invoiceDate, totalTTC, scannedAt, *tags',
       priceHistory: 'id, itemName, supplier, [itemName+supplier]',
       settings: 'id',
+    });
+
+    this.version(2).stores({
+      equipment: 'id, name, type, order',
+      temperatureRecords: 'id, equipmentId, timestamp, isCompliant',
+      productTraces: 'id, barcode, productName, supplier, category, receptionDate, expirationDate, scannedAt',
+      tasks: 'id, category, priority, completed, createdAt, archived, order',
+      invoices: 'id, supplier, invoiceNumber, invoiceDate, totalTTC, scannedAt, *tags',
+      priceHistory: 'id, itemName, supplier, [itemName+supplier]',
+      settings: 'id',
+      ingredients: 'id, name, unit, supplierId',
+      recipes: 'id, title, updatedAt',
+      recipeIngredients: 'id, recipeId, ingredientId, [recipeId+ingredientId]',
+    });
+
+    this.version(3).stores({
+      equipment: 'id, name, type, order',
+      temperatureRecords: 'id, equipmentId, timestamp, isCompliant',
+      productTraces: 'id, barcode, productName, supplier, category, receptionDate, expirationDate, scannedAt',
+      tasks: 'id, category, priority, completed, createdAt, archived, order',
+      invoices: 'id, supplier, invoiceNumber, invoiceDate, totalTTC, scannedAt, *tags',
+      priceHistory: 'id, itemName, supplier, [itemName+supplier]',
+      settings: 'id',
+      ingredients: 'id, name, unit, supplierId',
+      recipes: 'id, title, updatedAt',
+      recipeIngredients: 'id, recipeId, ingredientId, [recipeId+ingredientId]',
+      supplierProductMappings:
+        'id, supplierId, supplierSku, supplierLabelNormalized, templateRecipeId, [supplierId+supplierSku], [supplierId+supplierLabelNormalized]',
+    });
+
+    this.version(4).stores({
+      equipment: 'id, name, type, order',
+      temperatureRecords: 'id, equipmentId, timestamp, isCompliant, [equipmentId+timestamp]',
+      productTraces: 'id, barcode, productName, supplier, category, receptionDate, expirationDate, scannedAt',
+      tasks: 'id, category, priority, completed, createdAt, archived, order',
+      invoices: 'id, supplier, invoiceNumber, invoiceDate, totalTTC, scannedAt, *tags',
+      priceHistory: 'id, itemName, supplier, [itemName+supplier]',
+      settings: 'id',
+      ingredients: 'id, name, unit, supplierId',
+      recipes: 'id, title, updatedAt',
+      recipeIngredients: 'id, recipeId, ingredientId, [recipeId+ingredientId]',
+      supplierProductMappings:
+        'id, supplierId, supplierSku, supplierLabelNormalized, templateRecipeId, [supplierId+supplierSku], [supplierId+supplierLabelNormalized]',
+      backupSnapshots: 'id, createdAt',
+    });
+
+    this.version(5).stores({
+      equipment: 'id, name, type, order',
+      temperatureRecords: 'id, equipmentId, timestamp, isCompliant, [equipmentId+timestamp]',
+      oilChangeRecords: 'id, fryerId, changedAt, [fryerId+changedAt]',
+      productTraces: 'id, barcode, productName, supplier, category, receptionDate, expirationDate, scannedAt',
+      tasks: 'id, category, priority, completed, createdAt, archived, order',
+      invoices: 'id, supplier, invoiceNumber, invoiceDate, totalTTC, scannedAt, *tags',
+      priceHistory: 'id, itemName, supplier, [itemName+supplier]',
+      settings: 'id',
+      ingredients: 'id, name, unit, supplierId',
+      recipes: 'id, title, updatedAt',
+      recipeIngredients: 'id, recipeId, ingredientId, [recipeId+ingredientId]',
+      supplierProductMappings:
+        'id, supplierId, supplierSku, supplierLabelNormalized, templateRecipeId, [supplierId+supplierSku], [supplierId+supplierLabelNormalized]',
+      backupSnapshots: 'id, createdAt',
     });
   }
 }
@@ -43,7 +123,7 @@ export async function initDefaultData() {
     await db.equipment.bulkAdd([
       { id: crypto.randomUUID(), name: 'Frigo 1', type: 'fridge', minTemp: 0, maxTemp: 4, order: 0 },
       { id: crypto.randomUUID(), name: 'Frigo 2', type: 'fridge', minTemp: 0, maxTemp: 4, order: 1 },
-      { id: crypto.randomUUID(), name: 'Congélateur', type: 'freezer', minTemp: -25, maxTemp: -18, order: 2 },
+      { id: crypto.randomUUID(), name: 'Congelateur', type: 'freezer', minTemp: -25, maxTemp: -18, order: 2 },
       { id: crypto.randomUUID(), name: 'Chambre froide', type: 'cold_room', minTemp: 0, maxTemp: 3, order: 3 },
     ]);
   }

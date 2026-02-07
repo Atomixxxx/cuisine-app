@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-const DISMISS_KEY = 'cuisine_pwa_install_dismissed';
+const DISMISS_KEY = STORAGE_KEYS.pwaInstallDismissed;
 
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);

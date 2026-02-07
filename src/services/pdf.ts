@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import type { TemperatureRecord, Equipment, ProductTrace } from '../types';
+import type { TemperatureRecord, Equipment, ProductTrace, OilChangeRecord } from '../types';
 
 export function generateTemperaturePDF(
   records: TemperatureRecord[],
@@ -126,6 +126,57 @@ export function generateTemperaturePDF(
   }
 
   doc.save(`temperatures_haccp_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+}
+
+export function generateOilChangePDF(
+  records: OilChangeRecord[],
+  establishmentName: string,
+  periodLabel: string,
+) {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text("Feuille de changement d'huile", 14, 22);
+  doc.setFontSize(11);
+  doc.text(establishmentName || 'Mon etablissement', 14, 30);
+  doc.text(`Periode : ${periodLabel}`, 14, 36);
+
+  const tableData = records
+    .sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime())
+    .map((record) => [
+      format(new Date(record.changedAt), 'dd/MM/yyyy', { locale: fr }),
+      format(new Date(record.changedAt), 'HH:mm', { locale: fr }),
+      record.fryerId,
+      'OK',
+      'OK',
+      'N/A',
+      '-',
+      record.operator || '-',
+      'Huile changee',
+    ]);
+
+  autoTable(doc, {
+    startY: 44,
+    head: [['Date', 'Heure', 'Friteuse', 'Visuel', 'Olfactif', 'Test chimique', 'Temp huile', 'Operateur', 'Action']],
+    body: tableData,
+    styles: { fontSize: 8, cellPadding: 2.5 },
+    headStyles: { fillColor: [30, 64, 175] },
+    alternateRowStyles: { fillColor: [241, 245, 249] },
+  });
+
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i += 1) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Genere le ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: fr })} - Page ${i}/${pageCount}`,
+      14,
+      doc.internal.pageSize.height - 10,
+    );
+  }
+
+  doc.save(`huile_friteuse_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 }
 
 export function generateTraceabilityPDF(

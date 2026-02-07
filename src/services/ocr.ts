@@ -1,6 +1,7 @@
 import type { InvoiceItem } from '../types';
 import { sanitize } from '../utils';
 import { db } from './db';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 export interface OCRResult {
   text: string;
@@ -15,17 +16,28 @@ export interface OCRResult {
 
 // API key is stored in IndexedDB settings table for persistence
 let _cachedApiKey: string | null = null;
+let _ocrAnalyzeLock = false;
+let _lastOcrAnalyzeAt = 0;
+const OCR_MIN_INTERVAL_MS = 1200;
+
+function getEnvApiKey(): string {
+  return (import.meta.env.VITE_GEMINI_API_KEY ?? '').trim();
+}
 
 export async function getApiKey(): Promise<string> {
   if (_cachedApiKey !== null) return _cachedApiKey;
   const settings = await db.settings.get('default');
   _cachedApiKey = settings?.geminiApiKey ?? '';
   // Migrate from localStorage if present
-  const legacyKey = localStorage.getItem('gemini_api_key');
+  const legacyKey = localStorage.getItem(STORAGE_KEYS.geminiApiKeyLegacy);
   if (legacyKey && !_cachedApiKey) {
     _cachedApiKey = legacyKey;
     await db.settings.update('default', { geminiApiKey: legacyKey });
-    localStorage.removeItem('gemini_api_key');
+    localStorage.removeItem(STORAGE_KEYS.geminiApiKeyLegacy);
+  }
+  const envApiKey = getEnvApiKey();
+  if (!_cachedApiKey && envApiKey) {
+    _cachedApiKey = envApiKey;
   }
   return _cachedApiKey;
 }
@@ -41,6 +53,10 @@ export async function hasApiKey(): Promise<boolean> {
   return key.length > 0;
 }
 
+export function resetOcrApiKeyCache(): void {
+  _cachedApiKey = null;
+}
+
 /**
  * Convert a Blob to a base64-encoded string (without the data URL prefix).
  */
@@ -52,6 +68,62 @@ async function blobToBase64(blob: Blob): Promise<string> {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  maxRetries = 2,
+): Promise<Response> {
+  let attempt = 0;
+  let delayMs = 700;
+  let lastNetworkError: unknown = null;
+
+  while (attempt <= maxRetries) {
+    try {
+      const response = await fetch(url, init);
+      const retryableStatus =
+        response.status === 429 ||
+        response.status === 500 ||
+        response.status === 502 ||
+        response.status === 503 ||
+        response.status === 504;
+
+      if (!retryableStatus || attempt === maxRetries) {
+        return response;
+      }
+    } catch (error) {
+      lastNetworkError = error;
+      if (attempt === maxRetries) {
+        throw error;
+      }
+    }
+
+    await wait(delayMs);
+    delayMs *= 2;
+    attempt += 1;
+  }
+
+  throw lastNetworkError instanceof Error
+    ? lastNetworkError
+    : new Error('Echec de connexion au service OCR');
+}
+
+async function reserveOcrSlot(): Promise<void> {
+  if (_ocrAnalyzeLock) {
+    throw new Error('Une analyse OCR est deja en cours. Patientez quelques secondes.');
+  }
+  _ocrAnalyzeLock = true;
+  const now = Date.now();
+  const waitMs = OCR_MIN_INTERVAL_MS - (now - _lastOcrAnalyzeAt);
+  if (waitMs > 0) {
+    await wait(waitMs);
+  }
+  _lastOcrAnalyzeAt = Date.now();
 }
 
 /**
@@ -67,7 +139,9 @@ export async function analyzeInvoiceImages(
     throw new Error('Clé API Gemini non configurée. Ajoutez votre clé dans les paramètres.');
   }
 
-  onProgress?.(10);
+  await reserveOcrSlot();
+  try {
+    onProgress?.(10);
 
   // Convert all images to base64 parts
   const imageParts = await Promise.all(
@@ -134,11 +208,14 @@ Règles:
 
   onProgress?.(40);
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+  const response = await fetchWithRetry(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
       body: JSON.stringify(body),
     },
   );
@@ -196,14 +273,17 @@ Règles:
       }))
     : [];
 
-  return {
-    text: sanitize(String(parsed.rawText || parsed.text || '')),
-    supplier: sanitize(String(parsed.supplier || '')),
-    invoiceNumber: sanitize(String(parsed.invoiceNumber || '')),
-    invoiceDate: String(parsed.invoiceDate || new Date().toISOString().split('T')[0]),
-    items,
-    totalHT: Number(parsed.totalHT) || 0,
-    totalTVA: Number(parsed.totalTVA) || 0,
-    totalTTC: Number(parsed.totalTTC) || 0,
-  };
+    return {
+      text: sanitize(String(parsed.rawText || parsed.text || '')),
+      supplier: sanitize(String(parsed.supplier || '')),
+      invoiceNumber: sanitize(String(parsed.invoiceNumber || '')),
+      invoiceDate: String(parsed.invoiceDate || new Date().toISOString().split('T')[0]),
+      items,
+      totalHT: Number(parsed.totalHT) || 0,
+      totalTVA: Number(parsed.totalTVA) || 0,
+      totalTTC: Number(parsed.totalTTC) || 0,
+    };
+  } finally {
+    _ocrAnalyzeLock = false;
+  }
 }

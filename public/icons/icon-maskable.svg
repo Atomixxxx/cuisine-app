@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="CuisineControl maskable">
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="25%" r="90%">
+      <stop offset="0" stop-color="#0f766e" />
+      <stop offset="1" stop-color="#134e4a" />
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)" />
+  <circle cx="256" cy="154" r="14" fill="#f7f4ee" />
+  <path d="M134 304c0-67 55-122 122-122s122 55 122 122h-26c0-53-43-96-96-96s-96 43-96 96h-26z" fill="#f7f4ee" />
+  <rect x="118" y="304" width="276" height="38" rx="19" fill="#f7f4ee" />
+  <rect x="162" y="362" width="188" height="26" rx="13" fill="#f7f4ee" opacity="0.85" />
+</svg>

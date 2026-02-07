@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../stores/appStore';
@@ -17,6 +18,7 @@ import ProductDetail from '../../components/traceability/ProductDetail';
 type Tab = 'scanner' | 'history';
 type ViewMode = 'grid' | 'list';
 type ScannerStep = 'scan' | 'form';
+const PAGE_SIZE = 50;
 
 export default function Traceability() {
   const getProducts = useAppStore(s => s.getProducts);
@@ -29,6 +31,9 @@ export default function Traceability() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [products, setProducts] = useState<ProductTrace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMoreProducts, setHasMoreProducts] = useState(false);
 
   // Scanner state
   const [scannerStep, setScannerStep] = useState<ScannerStep>('scan');
@@ -45,14 +50,17 @@ export default function Traceability() {
   const [filterSupplier, setFilterSupplier] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const refreshBadges = useBadgeStore(s => s.refreshBadges);
 
-  const loadProducts = useCallback(async () => {
+  const loadInitialProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await getProducts();
+      const list = await getProducts({ limit: PAGE_SIZE, offset: 0 });
       setProducts(list);
+      setPage(1);
+      setHasMoreProducts(list.length === PAGE_SIZE);
       refreshBadges();
     } catch {
       showError('Impossible de charger les produits');
@@ -62,8 +70,51 @@ export default function Traceability() {
   }, [getProducts, refreshBadges]);
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    loadInitialProducts();
+  }, [loadInitialProducts]);
+
+  const loadMoreProducts = useCallback(async () => {
+    if (loading || loadingMore || !hasMoreProducts) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const list = await getProducts({
+        limit: PAGE_SIZE,
+        offset: (nextPage - 1) * PAGE_SIZE,
+      });
+      setProducts((prev) => [...prev, ...list]);
+      setPage(nextPage);
+      setHasMoreProducts(list.length === PAGE_SIZE);
+    } catch {
+      showError('Impossible de charger plus de produits');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [getProducts, hasMoreProducts, loading, loadingMore, page]);
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab');
+    const quick = searchParams.get('quick');
+    let changed = false;
+
+    if (requestedTab === 'history' || requestedTab === 'scanner') {
+      setActiveTab(requestedTab);
+      if (requestedTab === 'scanner') setScannerStep('scan');
+      changed = true;
+    }
+
+    if (quick === 'scan') {
+      setActiveTab('scanner');
+      setScannerStep('scan');
+      changed = true;
+    }
+
+    if (!changed) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('tab');
+    nextParams.delete('quick');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Derived: unique suppliers
   const suppliers = useMemo(() => {
@@ -98,6 +149,15 @@ export default function Traceability() {
     });
   }, [products, searchText, filterCategory, filterSupplier, dateFrom, dateTo]);
 
+  const urgentProducts = useMemo(
+    () =>
+      filteredProducts.filter((product) => {
+        const daysLeft = differenceInDays(new Date(product.expirationDate), new Date());
+        return daysLeft <= 3;
+      }).length,
+    [filteredProducts],
+  );
+
   // Handlers
   const handleScanComplete = useCallback((barcode: string | undefined, photo: Blob | undefined) => {
     setScannedBarcode(barcode);
@@ -113,12 +173,12 @@ export default function Traceability() {
         setScannerStep('scan');
         setScannedBarcode(undefined);
         setCapturedPhoto(undefined);
-        await loadProducts();
+        await loadInitialProducts();
       } catch {
         showError('Impossible de sauvegarder le produit');
       }
     },
-    [addProduct, loadProducts]
+    [addProduct, loadInitialProducts]
   );
 
   const handleCancelForm = useCallback(() => {
@@ -131,12 +191,12 @@ export default function Traceability() {
     async (id: string) => {
       try {
         await deleteProduct(id);
-        await loadProducts();
+        await loadInitialProducts();
       } catch {
         showError('Impossible de supprimer le produit');
       }
     },
-    [deleteProduct, loadProducts]
+    [deleteProduct, loadInitialProducts]
   );
 
   const handleEditProduct = useCallback((product: ProductTrace) => {
@@ -149,12 +209,12 @@ export default function Traceability() {
       try {
         await updateProduct(product);
         setEditingProduct(null);
-        await loadProducts();
+        await loadInitialProducts();
       } catch {
         showError('Impossible de modifier le produit');
       }
     },
-    [updateProduct, loadProducts]
+    [updateProduct, loadInitialProducts]
   );
 
   const handleExportPDF = useCallback(() => {
@@ -170,29 +230,51 @@ export default function Traceability() {
   }, [filteredProducts]);
 
   return (
-    <div className="flex flex-col h-full bg-[#f5f5f7] dark:bg-black">
-      {/* iOS Segmented Control */}
-      <div className="px-4 pt-4 pb-3">
-        <div className="ios-segmented">
-          <button
-            onClick={() => setActiveTab('scanner')}
-            className={cn('ios-segmented-item', activeTab === 'scanner' && 'active')}
-          >
-            Scanner
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={cn('ios-segmented-item', activeTab === 'history' && 'active')}
-          >
-            Historique
-          </button>
+    <div className="flex flex-col h-full app-bg app-page-wrap pb-24">
+      <div className="app-hero-card space-y-3">
+        <div>
+          <h1 className="ios-title app-text">Tracabilite</h1>
+          <p className="text-[15px] app-muted">Lots, DLC et historique des produits.</p>
         </div>
+        <div className="app-kpi-grid">
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Produits charges</p>
+            <p className="app-kpi-value">{products.length}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Resultats filtres</p>
+            <p className="app-kpi-value">{filteredProducts.length}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">DLC critiques</p>
+            <p className="app-kpi-value">{urgentProducts}</p>
+          </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Fournisseurs</p>
+            <p className="app-kpi-value">{suppliers.length}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="ios-segmented">
+        <button
+          onClick={() => setActiveTab('scanner')}
+          className={cn('ios-segmented-item', activeTab === 'scanner' && 'active')}
+        >
+          Scanner
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={cn('ios-segmented-item', activeTab === 'history' && 'active')}
+        >
+          Historique
+        </button>
       </div>
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'scanner' && (
-          <div className="p-4">
+          <div className="py-2">
             {scannerStep === 'scan' ? (
               <BarcodeScanner
                 onScanComplete={handleScanComplete}
@@ -210,13 +292,13 @@ export default function Traceability() {
         )}
 
         {activeTab === 'history' && (
-          <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-3 py-2">
             {/* Export buttons */}
             <div className="flex gap-2">
               <button
                 onClick={handleExportPDF}
                 disabled={filteredProducts.length === 0}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#ff3b30] text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed active:opacity-70 transition-opacity"
+                className="flex items-center gap-1.5 px-3 py-2 app-accent-bg rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed active:opacity-70 transition-opacity"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -226,7 +308,7 @@ export default function Traceability() {
               <button
                 onClick={handleExportCSV}
                 disabled={filteredProducts.length === 0}
-                className="flex items-center gap-1.5 px-3 py-2 bg-[#34c759] text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed active:opacity-70 transition-opacity"
+                className="flex items-center gap-1.5 px-3 py-2 app-success-bg rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed active:opacity-70 transition-opacity"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -237,14 +319,14 @@ export default function Traceability() {
               <div className="flex-1" />
 
               {/* View toggle */}
-              <div className="flex items-center bg-[#e8e8ed] dark:bg-[#38383a] rounded-xl p-0.5">
+              <div className="flex items-center app-surface-2 rounded-xl p-0.5">
                 <button
                   onClick={() => setViewMode('grid')}
                   className={cn(
                     'p-1.5 rounded-lg transition-colors',
                     viewMode === 'grid'
-                      ? 'bg-white dark:bg-[#48484a] text-[#2997FF] shadow-sm'
-                      : 'text-[#86868b]'
+                      ? 'app-surface text-[color:var(--app-accent)] shadow-sm'
+                      : 'app-muted'
                   )}
                   aria-label="Vue grille"
                 >
@@ -257,8 +339,8 @@ export default function Traceability() {
                   className={cn(
                     'p-1.5 rounded-lg transition-colors',
                     viewMode === 'list'
-                      ? 'bg-white dark:bg-[#48484a] text-[#2997FF] shadow-sm'
-                      : 'text-[#86868b]'
+                      ? 'app-surface text-[color:var(--app-accent)] shadow-sm'
+                      : 'app-muted'
                   )}
                   aria-label="Vue liste"
                 >
@@ -270,10 +352,10 @@ export default function Traceability() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col gap-2 p-3 bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow">
+            <div className="flex flex-col gap-2 p-3 rounded-2xl app-panel">
               {/* Search */}
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 app-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
@@ -281,7 +363,7 @@ export default function Traceability() {
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Rechercher produit, fournisseur, lot..."
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF] dark:focus:ring-[#2997FF]"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl app-surface-2 app-text placeholder-[color:var(--app-muted)] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
               </div>
 
@@ -290,7 +372,7 @@ export default function Traceability() {
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="px-3 py-2.5 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF] dark:focus:ring-[#2997FF]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 >
                   <option value="">Toutes catégories</option>
                   {PRODUCT_CATEGORIES.map((cat) => (
@@ -302,7 +384,7 @@ export default function Traceability() {
                 <select
                   value={filterSupplier}
                   onChange={(e) => setFilterSupplier(e.target.value)}
-                  className="px-3 py-2.5 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF] dark:focus:ring-[#2997FF]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 >
                   <option value="">Tous fournisseurs</option>
                   {suppliers.map((s) => (
@@ -318,21 +400,21 @@ export default function Traceability() {
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   placeholder="Du"
-                  className="px-3 py-2.5 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF] dark:focus:ring-[#2997FF]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   placeholder="Au"
-                  className="px-3 py-2.5 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[#2997FF] dark:focus:ring-[#2997FF]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
               </div>
 
               {/* Active filter count */}
               {(searchText || filterCategory || filterSupplier || dateFrom || dateTo) && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-[#86868b]">
+                  <span className="text-[13px] app-muted">
                     {filteredProducts.length} résultat{filteredProducts.length !== 1 ? 's' : ''}
                   </span>
                   <button
@@ -343,7 +425,7 @@ export default function Traceability() {
                       setDateFrom('');
                       setDateTo('');
                     }}
-                    className="text-[13px] text-[#2997FF] font-medium active:opacity-70"
+                    className="text-[13px] text-[color:var(--app-accent)] font-medium active:opacity-70"
                   >
                     Effacer les filtres
                   </button>
@@ -363,11 +445,28 @@ export default function Traceability() {
                 onDelete={handleDeleteProduct}
               />
             ) : (
-              <ProductListView
-                products={filteredProducts}
-                onSelect={(p) => setSelectedProduct(p)}
-                onDelete={handleDeleteProduct}
-              />
+                <ProductListView
+                  products={filteredProducts}
+                  onSelect={(p) => setSelectedProduct(p)}
+                  onDelete={handleDeleteProduct}
+                />
+            )}
+
+            {!loading && hasMoreProducts && (
+              <div className="pt-2 flex justify-center">
+                <button
+                  onClick={() => {
+                    void loadMoreProducts();
+                  }}
+                  disabled={loadingMore}
+                  className={cn(
+                    'px-4 py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity',
+                    loadingMore ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-surface-2 app-text',
+                  )}
+                >
+                  {loadingMore ? 'Chargement...' : 'Charger plus'}
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -390,12 +489,12 @@ export default function Traceability() {
 
       {/* Edit product modal */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#f5f5f7] dark:bg-black">
-          <div className="flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-[#1d1d1f]/95 backdrop-blur-xl hairline-b">
-            <h2 className="ios-title3 text-[#1d1d1f] dark:text-[#f5f5f7]">Modifier le produit</h2>
+        <div className="fixed inset-0 z-50 flex flex-col app-bg">
+          <div className="flex items-center justify-between px-4 py-3 app-header hairline-b">
+            <h2 className="ios-title3 app-text">Modifier le produit</h2>
             <button
               onClick={() => setEditingProduct(null)}
-              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b] active:opacity-70"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full app-surface-2 app-muted active:opacity-70"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -429,10 +528,10 @@ function ProductListView({
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <svg className="w-16 h-16 text-[#d1d1d6] dark:text-[#38383a] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+        <svg className="w-16 h-16 app-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
-        <p className="ios-title3 text-[#86868b]">Aucun produit enregistré</p>
+        <p className="ios-title3 app-muted">Aucun produit enregistré</p>
       </div>
     );
   }
@@ -443,37 +542,37 @@ function ProductListView({
         const days = differenceInDays(new Date(product.expirationDate), new Date());
         const dlcColor =
           days < 0
-            ? 'text-[#ff3b30]'
+            ? 'text-[color:var(--app-danger)]'
             : days <= 3
-            ? 'text-[#ff9500]'
-            : 'text-[#34c759]';
+            ? 'text-[color:var(--app-warning)]'
+            : 'text-[color:var(--app-success)]';
 
         return (
           <div
             key={product.id}
             onClick={() => onSelect(product)}
-            className="flex items-center gap-3 p-3.5 bg-white dark:bg-[#1d1d1f] rounded-2xl ios-card-shadow cursor-pointer active:opacity-70 transition-opacity"
+            className="flex items-center gap-3 p-3.5 rounded-2xl app-card cursor-pointer active:opacity-70 transition-opacity"
           >
             {/* Icon */}
-            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#e8e8ed] dark:bg-[#38383a] flex items-center justify-center">
-              <svg className="w-5 h-5 text-[#86868b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl app-surface-2 flex items-center justify-center">
+              <svg className="w-5 h-5 app-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-[15px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+              <h3 className="text-[15px] font-semibold app-text truncate">
                 {product.productName}
               </h3>
-              <p className="text-[13px] text-[#86868b] truncate">
+              <p className="text-[13px] app-muted truncate">
                 {product.supplier} &middot; Lot {product.lotNumber}
               </p>
             </div>
 
             {/* DLC + category */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
-              <span className="px-2 py-0.5 text-[12px] font-medium rounded-full bg-[#2997FF]/10/15 text-[#2997FF]">
+              <span className="px-2 py-0.5 text-[12px] font-medium rounded-full app-chip">
                 {product.category}
               </span>
               <span className={cn('text-[12px] font-medium', dlcColor)}>
@@ -487,7 +586,7 @@ function ProductListView({
                 e.stopPropagation();
                 onDelete(product.id);
               }}
-              className="flex-shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl text-[#86868b] active:opacity-70 transition-opacity"
+              className="flex-shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl app-muted active:opacity-70 transition-opacity"
               aria-label="Supprimer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -500,3 +599,5 @@ function ProductListView({
     </div>
   );
 }
+
+

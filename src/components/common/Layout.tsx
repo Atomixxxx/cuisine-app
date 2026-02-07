@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useBadgeStore } from "../../stores/badgeStore";
+import { useAppStore } from "../../stores/appStore";
+import { STORAGE_KEYS } from "../../constants/storageKeys";
 
 /* ---------- Tab bar icons ---------- */
 
@@ -13,7 +15,7 @@ function HomeIcon({ active }: { active: boolean }) {
   );
 }
 
-function ThermometerIcon({ active }: { active: boolean }) {
+function ThermometerIcon({ active: _active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
@@ -21,7 +23,7 @@ function ThermometerIcon({ active }: { active: boolean }) {
   );
 }
 
-function PackageIcon({ active }: { active: boolean }) {
+function PackageIcon({ active: _active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -31,7 +33,7 @@ function PackageIcon({ active }: { active: boolean }) {
   );
 }
 
-function ChecklistIcon({ active }: { active: boolean }) {
+function ChecklistIcon({ active: _active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 11l3 3L22 4" />
@@ -40,12 +42,21 @@ function ChecklistIcon({ active }: { active: boolean }) {
   );
 }
 
-function ReceiptIcon({ active }: { active: boolean }) {
+function ReceiptIcon({ active: _active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 3 2V2l-3 2-3-2-3 2-3-2-3 2-3-2z" />
       <line x1="8" y1="10" x2="16" y2="10" />
       <line x1="8" y1="14" x2="16" y2="14" />
+    </svg>
+  );
+}
+
+function BookIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
     </svg>
   );
 }
@@ -60,13 +71,15 @@ interface TabDef {
 
 const tabs: TabDef[] = [
   { path: "/dashboard", label: "Accueil", icon: HomeIcon },
-  { path: "/temperature", label: "Temp.", icon: ThermometerIcon },
-  { path: "/traceability", label: "Traçabilité", icon: PackageIcon },
-  { path: "/tasks", label: "Tâches", icon: ChecklistIcon },
+  { path: "/temperature", label: "Controles", icon: ThermometerIcon },
+  { path: "/traceability", label: "Tracabilite", icon: PackageIcon },
+  { path: "/tasks", label: "Taches", icon: ChecklistIcon },
+  { path: "/recipes", label: "Fiches", icon: BookIcon },
   { path: "/invoices", label: "Factures", icon: ReceiptIcon },
 ];
 
 /* ---------- Layout ---------- */
+const LAST_BACKUP_KEY = STORAGE_KEYS.backupLastAt;
 
 function useOnlineStatus() {
   const [online, setOnline] = useState(navigator.onLine);
@@ -85,53 +98,98 @@ function useOnlineStatus() {
   return online;
 }
 
+function formatBackupStatus(lastBackupAt: string | null): string {
+  if (!lastBackupAt) return 'Backup: jamais';
+  const ts = new Date(lastBackupAt).getTime();
+  if (Number.isNaN(ts)) return 'Backup: inconnu';
+  const deltaMin = Math.floor((Date.now() - ts) / (1000 * 60));
+  if (deltaMin < 1) return 'Backup: a l instant';
+  if (deltaMin < 60) return `Backup: il y a ${deltaMin} min`;
+  const deltaHours = Math.floor(deltaMin / 60);
+  if (deltaHours < 24) return `Backup: il y a ${deltaHours} h`;
+  const deltaDays = Math.floor(deltaHours / 24);
+  return `Backup: il y a ${deltaDays} j`;
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const online = useOnlineStatus();
   const expiringCount = useBadgeStore(s => s.expiringCount);
-
-  const [dark, setDark] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("theme");
-      if (stored === "dark") return true;
-      if (stored === "light") return false;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches;
-    }
-    return false;
-  });
+  const darkMode = useAppStore((s) => s.darkMode);
+  const setDarkMode = useAppStore((s) => s.setDarkMode);
+  const loadSettings = useAppStore((s) => s.loadSettings);
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(() => localStorage.getItem(LAST_BACKUP_KEY));
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (dark) {
-      root.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      root.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [dark]);
+    void loadSettings();
+    localStorage.removeItem(STORAGE_KEYS.theme);
+  }, [loadSettings]);
+
+  useEffect(() => {
+    const refresh = () => setLastBackupAt(localStorage.getItem(LAST_BACKUP_KEY));
+    window.addEventListener('storage', refresh);
+    window.addEventListener('cuisine-backup-updated', refresh as EventListener);
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('cuisine-backup-updated', refresh as EventListener);
+    };
+  }, []);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] dark:bg-black text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col">
+    <div className="min-h-screen app-bg app-text flex flex-col">
       {/* Offline banner */}
       {!online && (
-        <div className="bg-[#ff9500] text-white text-xs font-medium text-center py-1.5 px-4">
-          Hors ligne — les fonctions IA sont indisponibles
+        <div className="app-warning-bg text-white text-xs font-medium text-center py-1.5 px-4">
+          Hors ligne - les fonctions IA sont indisponibles
         </div>
       )}
 
       {/* Header — minimal like apple.com nav */}
-      <header className="sticky top-0 z-40 bg-[#f5f5f7]/80 dark:bg-black/80 backdrop-blur-xl backdrop-saturate-150 px-5 py-3 flex items-center justify-between hairline-b">
-        <h1 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
+      <header className="sticky top-0 z-40 app-header px-5 py-3 flex items-center justify-between hairline-b">
+        <h1 className="text-[17px] font-semibold tracking-tight app-text">
           CuisineControl
         </h1>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full app-surface-2">
+            {online ? (
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="text-[color:var(--app-success)]"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
+              </svg>
+            ) : (
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="text-[color:var(--app-warning)]"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            )}
+            <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-[color:var(--app-success)]' : 'bg-[color:var(--app-warning)]'}`} />
+            <span className="text-[11px] app-muted">{online ? 'En ligne' : 'Hors ligne'}</span>
+          </div>
+          <div className="hidden md:block text-[11px] app-muted">
+            {formatBackupStatus(lastBackupAt)}
+          </div>
           <button
             onClick={() => navigate('/settings')}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#86868b] active:opacity-60 transition-opacity"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Parametres"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -140,11 +198,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
           <button
-            onClick={() => setDark(p => !p)}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-[#86868b] active:opacity-60 transition-opacity"
+            onClick={() => setDarkMode(!darkMode)}
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Basculer le mode sombre"
           >
-            {dark ? (
+            {darkMode ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
               </svg>
@@ -161,7 +219,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto pb-20">{children}</main>
 
       {/* Bottom tab bar */}
-      <nav aria-label="Navigation principale" className="fixed bottom-0 inset-x-0 z-40 bg-[#f5f5f7]/80 dark:bg-[#1d1d1f]/90 backdrop-blur-xl backdrop-saturate-150 hairline-t pb-safe">
+      <nav aria-label="Navigation principale" className="fixed bottom-0 inset-x-0 z-40 app-nav hairline-t pb-safe">
         <div className="flex items-stretch justify-around" role="tablist">
           {tabs.map((tab) => {
             const active = isActive(tab.path);
@@ -174,13 +232,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 onClick={() => navigate(tab.path)}
                 className={[
                   "flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[50px] transition-colors active:opacity-60",
-                  active ? "text-[#2997FF]" : "text-[#86868b]",
+                  active ? "text-[color:var(--app-accent)]" : "app-muted",
                 ].join(" ")}
               >
                 <span className="relative">
                   <tab.icon active={active} />
                   {tab.path === "/traceability" && expiringCount > 0 && (
-                    <span className="absolute -top-0.5 -right-1 w-[6px] h-[6px] rounded-full bg-[#ff3b30]" />
+                    <span
+                      className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 rounded-full bg-[color:var(--app-danger)] text-white text-[9px] leading-[14px] text-center font-semibold"
+                      aria-label={`${expiringCount} produits a verifier`}
+                      title={`${expiringCount} produits a verifier`}
+                    >
+                      {expiringCount > 9 ? '9+' : expiringCount}
+                    </span>
                   )}
                 </span>
                 <span className="text-[10px] font-medium">{tab.label}</span>

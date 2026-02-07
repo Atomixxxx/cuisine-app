@@ -16,6 +16,14 @@ export interface TemperatureRecord {
   signature?: string;
 }
 
+export interface OilChangeRecord {
+  id: string;
+  fryerId: string;
+  changedAt: Date;
+  action: 'changed';
+  operator?: string;
+}
+
 export interface ProductTrace {
   id: string;
   barcode?: string;
@@ -89,6 +97,64 @@ export interface AppSettings {
   onboardingDone: boolean;
   priceAlertThreshold: number;
   geminiApiKey?: string;
+}
+
+export type IngredientUnit = 'kg' | 'g' | 'l' | 'ml' | 'unite';
+export type RecipeUnit = IngredientUnit;
+
+export interface Ingredient {
+  id: string;
+  name: string;
+  unit: IngredientUnit;
+  unitPrice: number;
+  supplierId?: string;
+}
+
+export interface Recipe {
+  id: string;
+  title: string;
+  portions: number;
+  salePriceHT: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RecipeIngredient {
+  id: string;
+  recipeId: string;
+  ingredientId: string;
+  requiredQuantity: number;
+  requiredUnit: RecipeUnit;
+}
+
+export interface RecipeCostSummary {
+  totalCost: number;
+  grossMargin: number;
+  foodCostRate: number;
+  warningLevel: 'ok' | 'warning' | 'danger';
+}
+
+export interface SupplierProductMapping {
+  id: string;
+  supplierId: string;
+  supplierSku?: string;
+  supplierLabelNormalized: string;
+  templateRecipeId: string;
+  quantityRatio: number;
+  confidence: number;
+}
+
+export interface SupplierLineInput {
+  supplierId?: string;
+  supplierSku?: string;
+  label: string;
+}
+
+export interface SupplierLineResolution {
+  templateRecipeId: string;
+  quantityRatio: number;
+  confidence: number;
+  source: 'exact' | 'fuzzy';
 }
 
 export const CATEGORIES: Record<TaskCategory, string> = {

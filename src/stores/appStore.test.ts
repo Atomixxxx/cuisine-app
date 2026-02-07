@@ -12,6 +12,11 @@ beforeEach(async () => {
   await db.invoices.clear();
   await db.priceHistory.clear();
   await db.settings.clear();
+  await db.ingredients.clear();
+  await db.recipes.clear();
+  await db.recipeIngredients.clear();
+  await db.supplierProductMappings.clear();
+  await db.backupSnapshots.clear();
 
   // Reset store state
   useAppStore.setState({ settings: null, equipment: [], darkMode: false, activeTab: 'temperature' });

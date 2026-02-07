@@ -1,8 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import type { OCRResult } from '../../services/ocr';
 import type { Invoice, InvoiceItem } from '../../types';
-import { cn, vibrate } from '../../utils';
+import { cn, sanitizeInput, vibrate } from '../../utils';
+import { logger } from '../../services/logger';
+import { buildSupplierQuickPicks, canonicalizeSupplierName, isNewSupplier } from '../../services/suppliers';
 
 interface InvoiceFormProps {
   initialData: OCRResult;
@@ -34,10 +36,10 @@ export default function InvoiceForm({
   existingInvoice,
 }: InvoiceFormProps) {
   const [supplier, setSupplier] = useState(
-    existingInvoice?.supplier ?? initialData.supplier
+    sanitizeInput(existingInvoice?.supplier ?? initialData.supplier)
   );
   const [invoiceNumber, setInvoiceNumber] = useState(
-    existingInvoice?.invoiceNumber ?? initialData.invoiceNumber
+    sanitizeInput(existingInvoice?.invoiceNumber ?? initialData.invoiceNumber)
   );
   const [invoiceDate, setInvoiceDate] = useState(() => {
     if (existingInvoice?.invoiceDate) {
@@ -48,18 +50,56 @@ export default function InvoiceForm({
   });
   const [items, setItems] = useState<InvoiceItem[]>(
     existingInvoice?.items ?? initialData.items.length > 0
-      ? (existingInvoice?.items ?? initialData.items)
+      ? (existingInvoice?.items ?? initialData.items).map((item) => ({
+          ...item,
+          designation: sanitizeInput(item.designation),
+        }))
       : [{ designation: '', quantity: 1, unitPriceHT: 0, totalPriceHT: 0 }]
   );
   const [tagsInput, setTagsInput] = useState(
-    existingInvoice?.tags?.join(', ') ?? ''
+    sanitizeInput(existingInvoice?.tags?.join(', ') ?? '')
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [knownSuppliers, setKnownSuppliers] = useState<string[]>([]);
 
   const addInvoice = useAppStore((s) => s.addInvoice);
   const updateInvoice = useAppStore((s) => s.updateInvoice);
-  const updatePriceHistory = useAppStore((s) => s.updatePriceHistory);
+  const rebuildPriceHistory = useAppStore((s) => s.rebuildPriceHistory);
+  const getInvoices = useAppStore((s) => s.getInvoices);
+  const getPriceHistory = useAppStore((s) => s.getPriceHistory);
+  const supplierFieldId = 'invoice-supplier';
+  const numberFieldId = 'invoice-number';
+  const dateFieldId = 'invoice-date';
+  const tagsFieldId = 'invoice-tags';
+
+  useEffect(() => {
+    const loadKnownSuppliers = async () => {
+      try {
+        const [invoices, priceHistory] = await Promise.all([getInvoices(), getPriceHistory()]);
+        const dynamic = [
+          ...invoices.map((invoice) => invoice.supplier),
+          ...priceHistory.map((entry) => entry.supplier),
+        ]
+          .map((value) => value.trim())
+          .filter(Boolean);
+        setKnownSuppliers(dynamic);
+      } catch (err) {
+        logger.warn('Unable to load known suppliers for invoice form', { err });
+      }
+    };
+    void loadKnownSuppliers();
+  }, [getInvoices, getPriceHistory]);
+
+  const supplierQuickPicks = useMemo(() => buildSupplierQuickPicks(knownSuppliers), [knownSuppliers]);
+  const canonicalSupplier = useMemo(() => canonicalizeSupplierName(supplier.trim()), [supplier]);
+  const isDetectedNewSupplier = useMemo(
+    () =>
+      !existingInvoice &&
+      Boolean(canonicalSupplier) &&
+      isNewSupplier(canonicalSupplier, knownSuppliers),
+    [existingInvoice, canonicalSupplier, knownSuppliers],
+  );
 
   const totals = useMemo(() => {
     const totalHT = items.reduce((sum, item) => sum + (item.totalPriceHT || 0), 0);
@@ -79,7 +119,7 @@ export default function InvoiceForm({
         const item = { ...updated[index] };
 
         if (field === 'designation') {
-          item.designation = value as string;
+          item.designation = sanitizeInput(String(value));
         } else {
           const numVal = typeof value === 'string' ? parseFloat(value) || 0 : value;
           if (field === 'quantity') {
@@ -117,9 +157,16 @@ export default function InvoiceForm({
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!supplier.trim()) {
+    const supplierValue = canonicalizeSupplierName(supplier.trim());
+    if (!supplierValue) {
       setError('Le fournisseur est requis');
       return;
+    }
+    if (!existingInvoice && isNewSupplier(supplierValue, knownSuppliers)) {
+      const confirmed = window.confirm(
+        `Nouveau fournisseur detecte: "${supplierValue}".\nVoulez-vous le sauvegarder ?`,
+      );
+      if (!confirmed) return;
     }
     if (items.length === 0 || !items.some((it) => it.designation.trim())) {
       setError('Au moins un article est requis');
@@ -132,13 +179,13 @@ export default function InvoiceForm({
     try {
       const tags = tagsInput
         .split(',')
-        .map((t) => t.trim())
+        .map((t) => sanitizeInput(t).trim())
         .filter(Boolean);
 
       const invoice: Invoice = {
         id: existingInvoice?.id ?? crypto.randomUUID(),
         images,
-        supplier: supplier.trim(),
+        supplier: supplierValue,
         invoiceNumber: invoiceNumber.trim(),
         invoiceDate: new Date(invoiceDate),
         items: items.filter((it) => it.designation.trim()),
@@ -156,10 +203,10 @@ export default function InvoiceForm({
         await addInvoice(invoice);
       }
 
-      await updatePriceHistory(invoice);
+      await rebuildPriceHistory();
       onSave();
     } catch (err) {
-      console.error('Save error:', err);
+      logger.error('Invoice save error', { err });
       setError('Erreur lors de la sauvegarde. Veuillez reessayer.');
     } finally {
       setSaving(false);
@@ -174,9 +221,10 @@ export default function InvoiceForm({
     initialData.text,
     totals,
     existingInvoice,
+    knownSuppliers,
     addInvoice,
     updateInvoice,
-    updatePriceHistory,
+    rebuildPriceHistory,
     onSave,
   ]);
 
@@ -184,12 +232,12 @@ export default function InvoiceForm({
     <div className="p-4 space-y-4 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+        <h2 className="text-lg font-bold app-text">
           {existingInvoice ? 'Modifier la facture' : 'Verifier les donnees'}
         </h2>
         <button
           onClick={onCancel}
-          className="text-sm text-[#86868b] dark:text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#86868b]"
+          className="text-sm app-muted hover:text-[color:var(--app-accent)]"
         >
           Retour
         </button>
@@ -203,40 +251,74 @@ export default function InvoiceForm({
       {/* Supplier, invoice number, date */}
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-[#86868b] dark:text-[#86868b] mb-1">
+          <label htmlFor={supplierFieldId} className="block text-xs font-medium app-muted mb-1">
             Fournisseur *
           </label>
           <input
+            id={supplierFieldId}
             type="text"
             value={supplier}
-            onChange={(e) => setSupplier(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+            onChange={(e) => setSupplier(sanitizeInput(e.target.value))}
+            className="w-full px-3 py-2 rounded-lg border app-border app-surface app-text text-sm focus:ring-2 focus:ring-[color:var(--app-accent)] focus:border-transparent"
             placeholder="Nom du fournisseur"
           />
+          {canonicalSupplier && canonicalSupplier !== supplier.trim() && (
+            <button
+              type="button"
+              onClick={() => setSupplier(canonicalSupplier)}
+              className="mt-1 text-[11px] font-semibold text-[color:var(--app-accent)] active:opacity-70"
+            >
+              Utiliser le nom normalise: {canonicalSupplier}
+            </button>
+          )}
+          {isDetectedNewSupplier && (
+            <p className="mt-1 text-[11px] font-semibold text-[color:var(--app-warning)]">
+              Nouveau fournisseur detecte, verification recommandee avant sauvegarde.
+            </p>
+          )}
+          {supplierQuickPicks.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {supplierQuickPicks.map((pick) => (
+                <button
+                  key={`invoice-supplier-pick-${pick}`}
+                  type="button"
+                  onClick={() => setSupplier(pick)}
+                  className={cn(
+                    'px-2 py-1 rounded-full text-[11px] font-semibold active:opacity-70',
+                    canonicalSupplier.toLowerCase() === pick.toLowerCase() ? 'app-accent-bg' : 'app-surface-2 app-text',
+                  )}
+                >
+                  {pick}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-[#86868b] dark:text-[#86868b] mb-1">
+            <label htmlFor={numberFieldId} className="block text-xs font-medium app-muted mb-1">
               N. facture
             </label>
             <input
+              id={numberFieldId}
               type="text"
               value={invoiceNumber}
-              onChange={(e) => setInvoiceNumber(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+              onChange={(e) => setInvoiceNumber(sanitizeInput(e.target.value))}
+              className="w-full px-3 py-2 rounded-lg border app-border app-surface app-text text-sm focus:ring-2 focus:ring-[color:var(--app-accent)] focus:border-transparent"
               placeholder="FA-2024-001"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-[#86868b] dark:text-[#86868b] mb-1">
+            <label htmlFor={dateFieldId} className="block text-xs font-medium app-muted mb-1">
               Date
             </label>
             <input
+              id={dateFieldId}
               type="date"
               value={invoiceDate}
               onChange={(e) => setInvoiceDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+              className="w-full px-3 py-2 rounded-lg border app-border app-surface app-text text-sm focus:ring-2 focus:ring-[color:var(--app-accent)] focus:border-transparent"
             />
           </div>
         </div>
@@ -245,12 +327,12 @@ export default function InvoiceForm({
       {/* Items table */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#86868b]">
+          <h3 className="text-sm font-semibold app-text">
             Articles
           </h3>
           <button
             onClick={handleAddItem}
-            className="flex items-center gap-1 text-xs text-[#2997FF] dark:text-[#2997FF] hover:text-blue-700"
+            className="flex items-center gap-1 text-xs text-[color:var(--app-accent)] hover:opacity-80"
           >
             <PlusIcon />
             Ajouter
@@ -258,102 +340,118 @@ export default function InvoiceForm({
         </div>
 
         <div className="space-y-2">
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className="p-3 rounded-lg border border-[#e8e8ed] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] space-y-2"
-            >
-              <div className="flex items-start gap-2">
-                <input
-                  type="text"
-                  value={item.designation}
-                  onChange={(e) =>
-                    handleItemChange(index, 'designation', e.target.value)
-                  }
-                  className="flex-1 px-2 py-1.5 rounded border border-[#e8e8ed] dark:border-[#38383a] bg-[#f5f5f7] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-1 focus:ring-[#2997FF]"
-                  placeholder="Designation"
-                />
-                <button
-                  onClick={() => handleRemoveItem(index)}
-                  disabled={items.length <= 1}
-                  aria-label={`Supprimer l'article ${item.designation || index + 1}`}
-                  className={cn(
-                    'p-1.5 rounded text-[#ff3b30] active:opacity-70 dark:active:opacity-70',
-                    items.length <= 1 && 'opacity-30 cursor-not-allowed'
-                  )}
-                >
-                  <TrashIcon />
-                </button>
+          {items.map((item, index) => {
+            const designationId = `invoice-item-designation-${index}`;
+            const quantityId = `invoice-item-quantity-${index}`;
+            const unitPriceId = `invoice-item-unit-price-${index}`;
+            const totalPriceId = `invoice-item-total-price-${index}`;
+
+            return (
+              <div
+                key={index}
+                className="p-3 rounded-lg border app-border app-surface space-y-2"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <label htmlFor={designationId} className="sr-only">
+                      Designation article {index + 1}
+                    </label>
+                    <input
+                      id={designationId}
+                      type="text"
+                      value={item.designation}
+                      onChange={(e) =>
+                        handleItemChange(index, 'designation', e.target.value)
+                      }
+                      className="w-full px-2 py-1.5 rounded border app-border app-surface-2 app-text text-sm focus:ring-1 focus:ring-[color:var(--app-accent)]"
+                      placeholder="Designation"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleRemoveItem(index)}
+                    disabled={items.length <= 1}
+                    aria-label={`Supprimer l'article ${item.designation || index + 1}`}
+                    className={cn(
+                      'p-1.5 rounded text-[color:var(--app-danger)] active:opacity-70',
+                      items.length <= 1 && 'opacity-30 cursor-not-allowed'
+                    )}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label htmlFor={quantityId} className="block text-[10px] app-muted mb-0.5">
+                      Quantite
+                    </label>
+                    <input
+                      id={quantityId}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        handleItemChange(index, 'quantity', e.target.value)
+                      }
+                      className="w-full px-2 py-1.5 rounded border app-border app-surface-2 app-text text-sm focus:ring-1 focus:ring-[color:var(--app-accent)]"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={unitPriceId} className="block text-[10px] app-muted mb-0.5">
+                      Prix unit. HT
+                    </label>
+                    <input
+                      id={unitPriceId}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={item.unitPriceHT}
+                      onChange={(e) =>
+                        handleItemChange(index, 'unitPriceHT', e.target.value)
+                      }
+                      className="w-full px-2 py-1.5 rounded border app-border app-surface-2 app-text text-sm focus:ring-1 focus:ring-[color:var(--app-accent)]"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor={totalPriceId} className="block text-[10px] app-muted mb-0.5">
+                      Total HT
+                    </label>
+                    <input
+                      id={totalPriceId}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={item.totalPriceHT}
+                      onChange={(e) =>
+                        handleItemChange(index, 'totalPriceHT', e.target.value)
+                      }
+                      className="w-full px-2 py-1.5 rounded border app-border app-surface-2 app-text text-sm focus:ring-1 focus:ring-[color:var(--app-accent)]"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-[10px] text-[#86868b] dark:text-[#86868b] mb-0.5">
-                    Quantite
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      handleItemChange(index, 'quantity', e.target.value)
-                    }
-                    className="w-full px-2 py-1.5 rounded border border-[#e8e8ed] dark:border-[#38383a] bg-[#f5f5f7] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-1 focus:ring-[#2997FF]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-[#86868b] dark:text-[#86868b] mb-0.5">
-                    Prix unit. HT
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={item.unitPriceHT}
-                    onChange={(e) =>
-                      handleItemChange(index, 'unitPriceHT', e.target.value)
-                    }
-                    className="w-full px-2 py-1.5 rounded border border-[#e8e8ed] dark:border-[#38383a] bg-[#f5f5f7] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-1 focus:ring-[#2997FF]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-[#86868b] dark:text-[#86868b] mb-0.5">
-                    Total HT
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={item.totalPriceHT}
-                    onChange={(e) =>
-                      handleItemChange(index, 'totalPriceHT', e.target.value)
-                    }
-                    className="w-full px-2 py-1.5 rounded border border-[#e8e8ed] dark:border-[#38383a] bg-[#f5f5f7] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-1 focus:ring-[#2997FF]"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Totals */}
-      <div className="p-3 rounded-lg bg-[#e8e8ed] dark:bg-[#1d1d1f] space-y-1.5">
+      <div className="p-3 rounded-lg app-surface-2 space-y-1.5">
         <div className="flex justify-between text-sm">
-          <span className="text-[#86868b] dark:text-[#86868b]">Total HT</span>
-          <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+          <span className="app-muted">Total HT</span>
+          <span className="font-medium app-text">
             {totals.totalHT.toFixed(2)} EUR
           </span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-[#86868b] dark:text-[#86868b]">TVA (20%)</span>
-          <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+          <span className="app-muted">TVA (20%)</span>
+          <span className="font-medium app-text">
             {totals.totalTVA.toFixed(2)} EUR
           </span>
         </div>
-        <div className="flex justify-between text-sm font-bold border-t border-[#d1d1d6] dark:border-[#38383a] pt-1.5">
-          <span className="text-[#1d1d1f] dark:text-[#f5f5f7]">Total TTC</span>
-          <span className="text-[#2997FF] dark:text-[#2997FF]">
+        <div className="flex justify-between text-sm font-bold border-t app-border pt-1.5">
+          <span className="app-text">Total TTC</span>
+          <span className="text-[color:var(--app-accent)]">
             {totals.totalTTC.toFixed(2)} EUR
           </span>
         </div>
@@ -361,24 +459,25 @@ export default function InvoiceForm({
 
       {/* OCR Raw Text (collapsible) */}
       <details className="group">
-        <summary className="text-xs font-medium text-[#86868b] dark:text-[#86868b] cursor-pointer hover:text-[#1d1d1f] dark:hover:text-[#86868b]">
+        <summary className="text-xs font-medium app-muted cursor-pointer hover:text-[color:var(--app-accent)]">
           Voir le texte OCR brut
         </summary>
-        <pre className="mt-2 p-3 rounded-lg bg-[#e8e8ed] dark:bg-[#1d1d1f] border border-[#e8e8ed] dark:border-[#38383a] text-[11px] text-[#86868b] dark:text-[#86868b] overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
+        <pre className="mt-2 p-3 rounded-lg app-surface-2 border app-border text-[11px] app-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
           {initialData.text}
         </pre>
       </details>
 
       {/* Tags */}
       <div>
-        <label className="block text-xs font-medium text-[#86868b] dark:text-[#86868b] mb-1">
+        <label htmlFor={tagsFieldId} className="block text-xs font-medium app-muted mb-1">
           Tags (séparés par des virgules)
         </label>
         <input
+          id={tagsFieldId}
           type="text"
           value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border border-[#d1d1d6] dark:border-[#38383a] bg-white dark:bg-[#1d1d1f] text-[#1d1d1f] dark:text-[#f5f5f7] text-sm focus:ring-2 focus:ring-[#2997FF] focus:border-transparent"
+          onChange={(e) => setTagsInput(sanitizeInput(e.target.value))}
+          className="w-full px-3 py-2 rounded-lg border app-border app-surface app-text text-sm focus:ring-2 focus:ring-[color:var(--app-accent)] focus:border-transparent"
           placeholder="viande, poisson, legumes..."
         />
       </div>
@@ -395,7 +494,7 @@ export default function InvoiceForm({
         <button
           onClick={onCancel}
           disabled={saving}
-          className="flex-1 py-3 px-4 rounded-xl border border-[#d1d1d6] dark:border-[#38383a] text-[#1d1d1f] dark:text-[#86868b] font-medium text-sm hover:bg-[#f5f5f7] dark:hover:bg-[#38383a] transition-colors"
+          className="flex-1 py-3 px-4 rounded-xl border app-border app-text font-medium text-sm hover:bg-[color:var(--app-surface-2)] transition-colors"
         >
           Annuler
         </button>
@@ -403,7 +502,7 @@ export default function InvoiceForm({
           onClick={handleSave}
           disabled={saving}
           className={cn(
-            'flex-1 py-3 px-4 rounded-xl bg-[#2997FF] hover:bg-[#2997FF] text-white font-medium text-sm transition-colors flex items-center justify-center gap-2',
+            'flex-1 py-3 px-4 rounded-xl app-accent-bg font-medium text-sm transition-colors flex items-center justify-center gap-2',
             saving && 'opacity-70 cursor-not-allowed'
           )}
         >

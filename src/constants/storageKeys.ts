@@ -1,0 +1,18 @@
+export const STORAGE_KEYS = {
+  theme: 'theme',
+  dashboardServiceMode: 'cuisine_service_mode',
+  pwaInstallDismissed: 'cuisine_pwa_install_dismissed',
+  notificationsLastExpiry: 'cuisine_last_expiry_notif',
+  backupLastAt: 'cuisine_last_backup_at',
+  backupAutoEnabled: 'cuisine_auto_backup_enabled',
+  backupLastAutoAt: 'cuisine_last_auto_backup_at',
+  backupAutoSnapshotLegacy: 'cuisine_auto_backup_snapshot',
+  pinHash: 'cuisine_pin_hash',
+  pinSalt: 'cuisine_pin_salt',
+  pinUnlocked: 'cuisine_pin_unlocked',
+  pinFailedAttempts: 'cuisine_pin_failed_attempts',
+  pinLockedUntil: 'cuisine_pin_locked_until',
+  pinLegacyCode: 'cuisine_pin_code',
+  geminiApiKeyLegacy: 'gemini_api_key',
+  textRepairMigrationVersion: 'cuisine_text_repair_migration_version',
+} as const;

@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Claude
+.claude/
+
+# Playwright artifacts
+playwright-report
+playwright/.cache
+test-results

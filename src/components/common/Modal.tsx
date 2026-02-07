@@ -78,7 +78,7 @@ export default function Modal({
     <div
       ref={overlayRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-[2px] p-2 sm:p-4"
     >
       <div
         ref={dialogRef}
@@ -88,23 +88,23 @@ export default function Modal({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={[
-          "animate-slide-up w-full rounded-t-[20px] sm:rounded-[20px] bg-white dark:bg-[#1d1d1f] ios-card-shadow outline-none",
+          "animate-slide-up w-full rounded-t-[20px] sm:rounded-[20px] app-card outline-none shadow-[0_18px_42px_rgba(15,23,42,0.35)]",
           sizeClasses[size],
         ].join(" ")}
       >
         {/* Handle bar (iOS sheet style) */}
         <div className="flex justify-center pt-2 pb-0 sm:hidden">
-          <div className="w-9 h-1 rounded-full bg-[#d1d1d6] dark:bg-[#38383a]" />
+          <div className="w-9 h-1 rounded-full app-surface-3" />
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4">
-          <h2 id={titleId} className="ios-title3 text-[#1d1d1f] dark:text-[#f5f5f7]">
+          <h2 id={titleId} className="ios-title3 app-text">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b] active:opacity-70 transition-opacity"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full app-surface-2 app-muted active:opacity-70 transition-opacity"
             aria-label="Fermer"
           >
             <svg

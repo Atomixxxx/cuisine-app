@@ -1,14 +1,18 @@
-import React, { Component, Suspense, lazy } from "react";
+import { Component, Suspense, lazy } from "react";
 import type { ReactNode, ErrorInfo } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/common/Layout";
 import ToastContainer from "./components/common/ToastContainer";
+import PinLockScreen from "./components/security/PinLockScreen";
+import { logger } from "./services/logger";
 
 /* Lazy-loaded page components */
 const TemperaturePage = lazy(() => import("./pages/TemperaturePage"));
 const TraceabilityPage = lazy(() => import("./pages/TraceabilityPage"));
 const TasksPage = lazy(() => import("./pages/TasksPage"));
 const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
+const RecipesPage = lazy(() => import("./pages/RecipesPage"));
+const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 
@@ -16,7 +20,7 @@ function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center h-64">
       <svg
-        className="animate-spin h-8 w-8 text-primary dark:text-primary-light"
+        className="animate-spin h-8 w-8 app-accent"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
@@ -52,24 +56,24 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('App crash:', error, info.componentStack);
+    logger.error('App crash', { error, componentStack: info.componentStack });
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-[#f5f5f7] dark:bg-[#1d1d1f] text-center">
-          <div className="w-16 h-16 mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#ff3b30]">
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 app-bg text-center">
+          <div className="w-16 h-16 mb-4 rounded-full bg-[color:var(--app-danger)]/10 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[color:var(--app-danger)]">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-[#1d1d1f] dark:text-[#f5f5f7] mb-2">
+          <h1 className="text-xl font-bold app-text mb-2">
             Une erreur est survenue
           </h1>
-          <p className="text-sm text-[#86868b] dark:text-[#86868b] mb-6 max-w-sm">
+          <p className="text-sm app-muted mb-6 max-w-sm">
             L'application a rencontre un probleme inattendu. Vos donnees sont intactes.
           </p>
           <button
@@ -77,14 +81,14 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
               this.setState({ hasError: false, error: null });
               window.location.href = '/dashboard';
             }}
-            className="px-6 py-2.5 bg-[#2997FF] hover:bg-[#2997FF] text-white rounded-lg font-medium text-sm transition-colors"
+            className="px-6 py-2.5 rounded-lg app-accent-bg font-medium text-sm transition-opacity active:opacity-70"
           >
             Revenir a l'accueil
           </button>
           {this.state.error && (
             <details className="mt-6 text-left w-full max-w-md">
-              <summary className="text-xs text-[#86868b] cursor-pointer">Details techniques</summary>
-              <pre className="mt-2 text-xs text-[#86868b] bg-[#e8e8ed] dark:bg-[#1d1d1f] rounded p-3 overflow-auto max-h-40">
+              <summary className="text-xs app-muted cursor-pointer">Details techniques</summary>
+              <pre className="mt-2 text-xs app-muted app-surface-2 app-border rounded p-3 overflow-auto max-h-40">
                 {this.state.error.message}
               </pre>
             </details>
@@ -100,19 +104,23 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastContainer />
-      <Layout>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/temperature" element={<TemperaturePage />} />
-            <Route path="/traceability" element={<TraceabilityPage />} />
-            <Route path="/tasks" element={<TasksPage />} />
-            <Route path="/invoices" element={<InvoicesPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
-        </Suspense>
-      </Layout>
+      <PinLockScreen>
+        <Layout>
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/temperature" element={<TemperaturePage />} />
+              <Route path="/traceability" element={<TraceabilityPage />} />
+              <Route path="/tasks" element={<TasksPage />} />
+              <Route path="/invoices" element={<InvoicesPage />} />
+              <Route path="/recipes" element={<RecipesPage />} />
+              <Route path="/assistant" element={<AssistantPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </Suspense>
+        </Layout>
+      </PinLockScreen>
     </ErrorBoundary>
   );
 }

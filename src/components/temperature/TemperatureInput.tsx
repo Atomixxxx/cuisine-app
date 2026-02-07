@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { showError } from '../../stores/toastStore';
 import { EQUIPMENT_TYPES } from '../../types';
@@ -72,23 +72,23 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="numpad-title"
-        className="w-full max-w-sm bg-white dark:bg-[#1d1d1f] rounded-t-[20px] sm:rounded-[20px] p-4 animate-slide-up ios-card-shadow"
+        className="w-full max-w-sm rounded-t-[20px] sm:rounded-[20px] p-4 animate-slide-up app-card"
         onClick={e => e.stopPropagation()}
       >
         {/* Handle bar */}
         <div className="flex justify-center pb-2 sm:hidden">
-          <div className="w-9 h-1 rounded-full bg-[#d1d1d6] dark:bg-[#38383a]" />
+          <div className="w-9 h-1 rounded-full app-surface-3" />
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 id="numpad-title" className="ios-title3 text-[#1d1d1f] dark:text-[#f5f5f7]">{equipment.name}</h3>
-            <p className="text-[13px] text-[#86868b]">
+            <h3 id="numpad-title" className="ios-title3 app-text">{equipment.name}</h3>
+            <p className="text-[13px] app-muted">
               {EQUIPMENT_TYPES[equipment.type]} &middot; {equipment.minTemp}°C ~ {equipment.maxTemp}°C
             </p>
           </div>
-          <button onClick={onClose} aria-label="Fermer" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full bg-[#e8e8ed] dark:bg-[#38383a] text-[#86868b] active:opacity-70">
+          <button onClick={onClose} aria-label="Fermer" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full app-surface-2 app-muted active:opacity-70">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -96,11 +96,11 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         </div>
 
         {/* Display */}
-        <div className="bg-[#e8e8ed] dark:bg-[#38383a] rounded-2xl p-5 mb-4 text-center">
-          <span className="text-5xl font-mono font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+        <div className="app-surface-2 rounded-2xl p-5 mb-4 text-center">
+          <span className="text-5xl font-mono font-bold app-text">
             {displayValue}
           </span>
-          <span className="text-2xl font-bold text-[#86868b] ml-1">°C</span>
+          <span className="text-2xl font-bold app-muted ml-1">°C</span>
         </div>
 
         {/* Keypad */}
@@ -113,8 +113,8 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
                 className={cn(
                   'min-h-[60px] min-w-[48px] rounded-2xl text-xl font-bold transition-opacity active:opacity-70',
                   key === '±'
-                    ? 'bg-[#ff9500]/15/15 text-[#ff9500]'
-                    : 'bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7]'
+                    ? 'bg-[color:var(--app-warning)]/15 text-[color:var(--app-warning)]'
+                    : 'app-surface-2 app-text'
                 )}
               >
                 {key === '±' ? (isNegative ? '+' : '−') : key}
@@ -126,7 +126,7 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => handleKey('backspace')}
-            className="min-h-[60px] rounded-2xl text-lg font-bold bg-[#e8e8ed] dark:bg-[#38383a] text-[#1d1d1f] dark:text-[#f5f5f7] active:opacity-70 flex items-center justify-center gap-2"
+            className="min-h-[60px] rounded-2xl text-lg font-bold app-surface-2 app-text active:opacity-70 flex items-center justify-center gap-2"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414-6.414A2 2 0 0110.828 5H21a1 1 0 011 1v12a1 1 0 01-1 1H10.828a2 2 0 01-1.414-.586L3 12z" />
@@ -137,7 +137,7 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
             onClick={() => handleKey('confirm')}
             disabled={saving}
             className={cn(
-              "min-h-[60px] rounded-2xl text-lg font-bold bg-[#2997FF] text-white active:opacity-70",
+              "min-h-[60px] rounded-2xl text-lg font-bold app-accent-bg active:opacity-70",
               saving && "opacity-40 cursor-not-allowed"
             )}
           >
@@ -228,11 +228,11 @@ export default function TemperatureInput() {
   if (equipment.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <svg className="w-16 h-16 text-[#d1d1d6] dark:text-[#38383a] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-16 h-16 app-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
-        <p className="ios-title3 text-[#86868b]">Aucun équipement</p>
-        <p className="text-[15px] text-[#86868b] mt-1">
+        <p className="ios-title3 app-muted">Aucun équipement</p>
+        <p className="text-[15px] app-muted mt-1">
           Ajoutez des équipements via le bouton Équipements
         </p>
       </div>
@@ -251,20 +251,20 @@ export default function TemperatureInput() {
             onClick={() => setSelectedEquipment(eq)}
             className={cn(
               'w-full text-left rounded-2xl p-4 transition-all duration-300 active:opacity-70',
-              flash === 'green' && 'bg-[#34c759]/10/10 ring-2 ring-[#34c759] dark:ring-[#34c759]',
-              flash === 'red' && 'bg-[#ff3b30]/10/10 ring-2 ring-[#ff3b30] dark:ring-[#ff3b30] animate-pulse',
-              !flash && 'bg-white dark:bg-[#1d1d1f] ios-card-shadow'
+              flash === 'green' && 'bg-[color:var(--app-success)]/12 ring-2 ring-[color:var(--app-success)]',
+              flash === 'red' && 'bg-[color:var(--app-danger)]/12 ring-2 ring-[color:var(--app-danger)] animate-pulse',
+              !flash && 'app-card'
             )}
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7] text-[17px]">{eq.name}</h3>
-                  <span className="text-[12px] px-2 py-0.5 rounded-full bg-[#2997FF]/10/15 text-[#2997FF] font-medium">
+                  <h3 className="font-bold app-text text-[17px]">{eq.name}</h3>
+                  <span className="text-[12px] px-2 py-0.5 rounded-full app-chip font-medium">
                     {EQUIPMENT_TYPES[eq.type]}
                   </span>
                 </div>
-                <p className="text-[13px] text-[#86868b] mt-0.5">
+                <p className="text-[13px] app-muted mt-0.5">
                   Plage : {eq.minTemp}°C ~ {eq.maxTemp}°C
                 </p>
               </div>
@@ -275,17 +275,17 @@ export default function TemperatureInput() {
                     <span
                       className={cn(
                         'text-2xl font-bold',
-                        recent.isCompliant ? 'text-[#34c759]' : 'text-[#ff3b30]'
+                        recent.isCompliant ? 'text-[color:var(--app-success)]' : 'text-[color:var(--app-danger)]'
                       )}
                     >
                       {recent.temperature}°C
                     </span>
-                    <p className="text-[12px] text-[#86868b] mt-0.5">
+                    <p className="text-[12px] app-muted mt-0.5">
                       {formatDate(recent.timestamp)}
                     </p>
                   </>
                 ) : (
-                  <span className="text-[15px] text-[#86868b] italic">
+                  <span className="text-[15px] app-muted italic">
                     Aucun relevé
                   </span>
                 )}
