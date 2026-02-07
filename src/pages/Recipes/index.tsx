@@ -2,15 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { showError, showSuccess } from '../../stores/toastStore';
-import type {
-  Ingredient,
-  IngredientUnit,
-  PriceHistory,
-  Recipe,
-  RecipeCostSummary,
-  RecipeIngredient,
-  RecipeUnit,
-  SupplierLineResolution,
+import {
+  EU_ALLERGENS,
+  type Ingredient,
+  type IngredientUnit,
+  type PriceHistory,
+  type Recipe,
+  type RecipeCostSummary,
+  type RecipeIngredient,
+  type RecipeUnit,
+  type SupplierLineResolution,
 } from '../../types';
 import { cn } from '../../utils';
 import { calculateRecipeCost, computeRecipeCostFromLines } from '../../services/recipeCost';
@@ -99,6 +100,7 @@ export default function RecipesPage() {
   const [title, setTitle] = useState('');
   const [portions, setPortions] = useState('1');
   const [salePriceHT, setSalePriceHT] = useState('0');
+  const [recipeAllergens, setRecipeAllergens] = useState<string[]>([]);
   const [createdAt, setCreatedAt] = useState<Date>(new Date());
   const [lines, setLines] = useState<RecipeLineDraft[]>([]);
 
@@ -222,6 +224,12 @@ export default function RecipesPage() {
 
   const clampConfidence = (value: number): number => Math.max(0, Math.min(1, value));
 
+  const toggleRecipeAllergen = useCallback((allergen: string) => {
+    setRecipeAllergens((prev) =>
+      prev.includes(allergen) ? prev.filter((value) => value !== allergen) : [...prev, allergen],
+    );
+  }, []);
+
   const scoreToConfidenceLabel = (score: number): string => {
     if (score >= 0.9) return 'Haute';
     if (score >= 0.75) return 'Moyenne';
@@ -233,6 +241,7 @@ export default function RecipesPage() {
     setTitle('');
     setPortions('1');
     setSalePriceHT('0');
+    setRecipeAllergens([]);
     setCreatedAt(new Date());
     setLines([]);
     setLastSavedSummary(DEFAULT_SUMMARY);
@@ -248,6 +257,7 @@ export default function RecipesPage() {
       setTitle(recipe.title);
       setPortions(String(recipe.portions));
       setSalePriceHT(String(recipe.salePriceHT));
+      setRecipeAllergens(recipe.allergens ?? []);
       setCreatedAt(new Date(recipe.createdAt));
 
       const linked = await getRecipeIngredients(recipe.id);
@@ -1023,6 +1033,7 @@ export default function RecipesPage() {
       setTitle(trimmedTitle);
       setPortions(String(Math.max(1, Math.round(reviewDraft.portions || 1))));
       setSalePriceHT(String(Math.max(0, reviewDraft.salePriceHT || 0)));
+      setRecipeAllergens([]);
       setLines(nextRecipeLines);
       setLastSavedSummary(DEFAULT_SUMMARY);
       setReviewDraft(null);
@@ -1081,6 +1092,7 @@ export default function RecipesPage() {
         salePriceHT: Math.max(0, reviewDraft.salePriceHT || 0),
         createdAt: now,
         updatedAt: now,
+        allergens: [],
       };
       const linkedLines: RecipeIngredient[] = nextRecipeLines.map((line) => ({
         id: crypto.randomUUID(),
@@ -1185,6 +1197,7 @@ export default function RecipesPage() {
       salePriceHT: parsedSalePrice,
       createdAt,
       updatedAt: now,
+      allergens: recipeAllergens,
     };
 
     const linkedLines: RecipeIngredient[] = lines
@@ -1809,6 +1822,43 @@ export default function RecipesPage() {
                   className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text text-[16px] border-0 focus:outline-none"
                 />
               </div>
+            </div>
+            <div className="ios-settings-separator" />
+            <div className="ios-settings-row flex-col items-stretch gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[14px] app-muted">Allergenes (UE 1169/2011)</label>
+                {recipeAllergens.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setRecipeAllergens([])}
+                    className="text-[12px] font-semibold text-[color:var(--app-accent)] active:opacity-70"
+                  >
+                    Effacer
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {EU_ALLERGENS.map((allergen) => {
+                  const selected = recipeAllergens.includes(allergen);
+                  return (
+                    <button
+                      key={`recipe-allergen-${allergen}`}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleRecipeAllergen(allergen)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-[12px] font-semibold active:opacity-70',
+                        selected ? 'app-accent-bg' : 'app-surface-2 app-text',
+                      )}
+                    >
+                      {allergen}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[12px] app-muted">
+                {recipeAllergens.length > 0 ? recipeAllergens.join(', ') : 'Aucun allergene selectionne'}
+              </p>
             </div>
           </div>
 

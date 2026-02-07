@@ -127,11 +127,13 @@ export default function Traceability() {
     return products.filter((p) => {
       if (searchText) {
         const q = searchText.toLowerCase();
+        const allergenText = (p.allergens ?? []).join(' ').toLowerCase();
         const match =
           p.productName.toLowerCase().includes(q) ||
           p.supplier.toLowerCase().includes(q) ||
           p.lotNumber.toLowerCase().includes(q) ||
-          (p.barcode && p.barcode.toLowerCase().includes(q));
+          (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+          allergenText.includes(q);
         if (!match) return false;
       }
       if (filterCategory && p.category !== filterCategory) return false;
@@ -362,7 +364,7 @@ export default function Traceability() {
                   type="text"
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Rechercher produit, fournisseur, lot..."
+                  placeholder="Rechercher produit, fournisseur, lot, allergene..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl app-surface-2 app-text placeholder-[color:var(--app-muted)] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
               </div>

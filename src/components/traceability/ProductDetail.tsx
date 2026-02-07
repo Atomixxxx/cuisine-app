@@ -188,6 +188,7 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
           <div className="grid gap-3">
             <InfoRow label="Fournisseur" value={product.supplier} />
             <InfoRow label="Numero de lot" value={product.lotNumber} />
+            <InfoRow label="Allergenes" value={product.allergens?.length ? product.allergens.join(', ') : 'Aucun renseigne'} />
             <InfoRow label="Catégorie" value={product.category} />
             <InfoRow
               label="Date de reception"

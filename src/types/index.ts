@@ -35,6 +35,7 @@ export interface ProductTrace {
   receptionDate: Date;
   expirationDate: Date;
   category: string;
+  allergens?: string[];
   scannedAt: Date;
 }
 
@@ -117,6 +118,7 @@ export interface Recipe {
   salePriceHT: number;
   createdAt: Date;
   updatedAt: Date;
+  allergens?: string[];
 }
 
 export interface RecipeIngredient {
@@ -177,6 +179,23 @@ export const PRODUCT_CATEGORIES = [
   'Surgelés',
   'Boissons',
   'Autre',
+];
+
+export const EU_ALLERGENS = [
+  'Gluten',
+  'Crustaces',
+  'Oeufs',
+  'Poissons',
+  'Arachides',
+  'Soja',
+  'Lait',
+  'Fruits a coque',
+  'Celeri',
+  'Moutarde',
+  'Graines de sesame',
+  'Sulfites',
+  'Lupin',
+  'Mollusques',
 ];
 
 export const EQUIPMENT_TYPES: Record<Equipment['type'], string> = {

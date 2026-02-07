@@ -55,6 +55,29 @@ describe('backup service', () => {
     expect(invalid).toBeNull();
   });
 
+  it('imports and sanitizes product allergens from backup payload', () => {
+    const valid = validateBackupImportPayload({
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      productTraces: [
+        {
+          id: 'p-1',
+          productName: 'Lait',
+          supplier: 'Metro',
+          lotNumber: 'LOT-1',
+          receptionDate: '2026-02-01T00:00:00.000Z',
+          expirationDate: '2026-02-10T00:00:00.000Z',
+          category: 'Produits laitiers',
+          scannedAt: '2026-02-01T08:00:00.000Z',
+          allergens: ['Lait', '  Lait  ', '<b>Soja</b>', 42],
+        },
+      ],
+    });
+
+    expect(valid).not.toBeNull();
+    expect(valid?.productTraces[0].allergens).toEqual(['Lait', 'Soja']);
+  });
+
   it('stores weekly auto-backup snapshot in IndexedDB and skips on second run', async () => {
     const first = await runWeeklyAutoBackup();
     const second = await runWeeklyAutoBackup();

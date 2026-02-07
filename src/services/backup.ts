@@ -53,6 +53,17 @@ function toOptionalSanitizedString(value: unknown): string | undefined {
   return cleaned.length > 0 ? cleaned : undefined;
 }
 
+function toSanitizedStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .map((entry) => toOptionalSanitizedString(entry))
+        .filter((entry): entry is string => Boolean(entry)),
+    ),
+  );
+}
+
 function toNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && value.trim() !== '') {
@@ -169,6 +180,7 @@ function parseProductTrace(value: unknown): ProductTrace | null {
   const scannedAt = toDate(value.scannedAt);
   const barcode = toOptionalSanitizedString(value.barcode);
   const photoUrl = toOptionalSanitizedString(value.photoUrl);
+  const allergens = toSanitizedStringArray(value.allergens);
   if (!id || !productName || !supplier || !lotNumber || !receptionDate || !expirationDate || !category || !scannedAt) {
     return null;
   }
@@ -183,6 +195,7 @@ function parseProductTrace(value: unknown): ProductTrace | null {
     scannedAt,
     barcode,
     photoUrl,
+    allergens,
   };
 }
 

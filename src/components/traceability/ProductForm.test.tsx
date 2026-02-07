@@ -39,6 +39,7 @@ describe('ProductForm', () => {
     await user.type(screen.getByPlaceholderText(/filet de saumon/i), 'Beurre');
     await user.type(screen.getByPlaceholderText(/pomona/i), 'Metro');
     await user.type(screen.getByPlaceholderText(/lot-2024/i), 'LOT-001');
+    await user.click(screen.getByRole('button', { name: /gluten/i }));
 
     // Set expiration date — query by input type since label association is implicit
     const dateInputs = screen.getAllByDisplayValue('');
@@ -58,6 +59,7 @@ describe('ProductForm', () => {
     expect(savedProduct.productName).toBe('Beurre');
     expect(savedProduct.supplier).toBe('Metro');
     expect(savedProduct.lotNumber).toBe('LOT-001');
+    expect(savedProduct.allergens).toEqual(['Gluten']);
   });
 
   it('calls onCancel when cancel button clicked', () => {
@@ -76,6 +78,7 @@ describe('ProductForm', () => {
           supplier: 'Pomona',
           lotNumber: 'LOT-99',
           category: 'Poisson',
+          allergens: ['Poissons', 'Mollusques'],
           receptionDate: new Date('2026-01-15'),
           expirationDate: new Date('2026-02-15'),
           scannedAt: new Date(),
@@ -87,6 +90,7 @@ describe('ProductForm', () => {
     expect(screen.getByDisplayValue('Saumon')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Pomona')).toBeInTheDocument();
     expect(screen.getByDisplayValue('LOT-99')).toBeInTheDocument();
+    expect(screen.getByText(/poissons, mollusques/i)).toBeInTheDocument();
   });
 
   it('has aria-required on required inputs', () => {

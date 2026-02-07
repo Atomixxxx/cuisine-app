@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { db } from '../services/db';
-import { sanitize } from '../utils';
+import { compressImage, sanitize } from '../utils';
 import type {
   AppSettings,
   Equipment,
@@ -88,6 +88,32 @@ const normalizeKeyPart = (value: string): string =>
 
 const buildPriceKey = (itemName: string, supplier: string): string =>
   `${normalizeKeyPart(itemName)}_${normalizeKeyPart(supplier)}`;
+
+const sanitizeAllergens = (allergens?: string[]): string[] | undefined => {
+  if (!allergens || allergens.length === 0) return undefined;
+  const deduplicated = Array.from(
+    new Set(
+      allergens
+        .map((allergen) => sanitize(allergen).trim())
+        .filter(Boolean),
+    ),
+  );
+  return deduplicated.length > 0 ? deduplicated : undefined;
+};
+
+const INVOICE_IMAGE_COMPRESSION_THRESHOLD_BYTES = 350 * 1024;
+const INVOICE_IMAGE_MAX_WIDTH = 1600;
+const INVOICE_IMAGE_QUALITY = 0.82;
+
+const compressInvoiceImages = async (images: Blob[]): Promise<Blob[]> => {
+  if (images.length === 0) return [];
+  return Promise.all(
+    images.map(async (image) => {
+      if (image.size < INVOICE_IMAGE_COMPRESSION_THRESHOLD_BYTES) return image;
+      return compressImage(image, INVOICE_IMAGE_MAX_WIDTH, INVOICE_IMAGE_QUALITY);
+    }),
+  );
+};
 
 export const useAppStore = create<AppState>((set, _get) => ({
   settings: null,
@@ -314,6 +340,7 @@ export const useAppStore = create<AppState>((set, _get) => ({
       lotNumber: sanitize(p.lotNumber),
       category: sanitize(p.category),
       barcode: p.barcode ? sanitize(p.barcode) : undefined,
+      allergens: sanitizeAllergens(p.allergens),
     });
   },
 
@@ -325,6 +352,7 @@ export const useAppStore = create<AppState>((set, _get) => ({
       lotNumber: sanitize(p.lotNumber),
       category: sanitize(p.category),
       barcode: p.barcode ? sanitize(p.barcode) : undefined,
+      allergens: sanitizeAllergens(p.allergens),
     });
   },
 
@@ -342,8 +370,10 @@ export const useAppStore = create<AppState>((set, _get) => ({
   },
 
   addInvoice: async (i) => {
+    const compressedImages = await compressInvoiceImages(i.images);
     await db.invoices.add({
       ...i,
+      images: compressedImages,
       supplier: sanitize(i.supplier),
       invoiceNumber: sanitize(i.invoiceNumber),
       ocrText: sanitize(i.ocrText),
@@ -353,8 +383,10 @@ export const useAppStore = create<AppState>((set, _get) => ({
   },
 
   updateInvoice: async (i) => {
+    const compressedImages = await compressInvoiceImages(i.images);
     await db.invoices.put({
       ...i,
+      images: compressedImages,
       supplier: sanitize(i.supplier),
       invoiceNumber: sanitize(i.invoiceNumber),
       ocrText: sanitize(i.ocrText),
@@ -405,6 +437,7 @@ export const useAppStore = create<AppState>((set, _get) => ({
       await db.recipes.put({
         ...recipe,
         title: sanitize(recipe.title),
+        allergens: sanitizeAllergens(recipe.allergens),
       });
 
       await db.recipeIngredients.where('recipeId').equals(recipe.id).delete();

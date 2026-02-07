@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { PRODUCT_CATEGORIES } from '../../types';
-import type { ProductTrace } from '../../types';
+import { EU_ALLERGENS, PRODUCT_CATEGORIES, type ProductTrace } from '../../types';
 import { cn, fileToBlob, blobToUrl, compressImage } from '../../utils';
 
 interface ProductFormProps {
@@ -23,6 +22,7 @@ export default function ProductForm({ barcode, photo, existingProduct, onSave, o
     existingProduct ? format(new Date(existingProduct.expirationDate), 'yyyy-MM-dd') : ''
   );
   const [category, setCategory] = useState(existingProduct?.category ?? PRODUCT_CATEGORIES[0]);
+  const [allergens, setAllergens] = useState<string[]>(existingProduct?.allergens ?? []);
   const [currentPhoto, setCurrentPhoto] = useState<Blob | undefined>(existingProduct?.photo ?? photo);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,6 +66,12 @@ export default function ProductForm({ barcode, photo, existingProduct, onSave, o
 
   const [saving, setSaving] = useState(false);
 
+  const toggleAllergen = useCallback((allergen: string) => {
+    setAllergens((prev) =>
+      prev.includes(allergen) ? prev.filter((value) => value !== allergen) : [...prev, allergen],
+    );
+  }, []);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -84,6 +90,7 @@ export default function ProductForm({ barcode, photo, existingProduct, onSave, o
           receptionDate: new Date(receptionDate),
           expirationDate: new Date(expirationDate),
           category,
+          allergens,
           scannedAt: existingProduct?.scannedAt ?? new Date(),
         };
 
@@ -92,7 +99,7 @@ export default function ProductForm({ barcode, photo, existingProduct, onSave, o
         setSaving(false);
       }
     },
-    [validate, saving, existingProduct, barcode, currentPhoto, photoUrl, productName, supplier, lotNumber, receptionDate, expirationDate, category, onSave]
+    [validate, saving, existingProduct, barcode, currentPhoto, photoUrl, productName, supplier, lotNumber, receptionDate, expirationDate, category, allergens, onSave]
   );
 
   const inputClass = (field: string) =>
@@ -235,6 +242,45 @@ export default function ProductForm({ barcode, photo, existingProduct, onSave, o
             </option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium app-muted mb-1">
+            Allergenes (UE 1169/2011)
+          </label>
+          {allergens.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setAllergens([])}
+              className="text-xs font-medium text-[color:var(--app-accent)] active:opacity-70"
+            >
+              Effacer
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {EU_ALLERGENS.map((allergen) => {
+            const selected = allergens.includes(allergen);
+            return (
+              <button
+                key={allergen}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => toggleAllergen(allergen)}
+                className={cn(
+                  'px-2.5 py-1 rounded-full text-xs font-semibold active:opacity-70',
+                  selected ? 'app-accent-bg' : 'app-surface-2 app-text',
+                )}
+              >
+                {allergen}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-1 text-xs app-muted">
+          {allergens.length > 0 ? allergens.join(', ') : 'Aucun allergene selectionne'}
+        </p>
       </div>
 
       {/* Dates */}

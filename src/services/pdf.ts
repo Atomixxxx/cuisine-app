@@ -199,6 +199,7 @@ export function generateTraceabilityPDF(
       t.supplier,
       t.lotNumber,
       t.category,
+      t.allergens?.join(' / ') || '-',
       format(new Date(t.receptionDate), 'dd/MM/yyyy', { locale: fr }),
       format(new Date(t.expirationDate), 'dd/MM/yyyy', { locale: fr }),
       t.barcode ?? '-',
@@ -206,7 +207,7 @@ export function generateTraceabilityPDF(
 
   autoTable(doc, {
     startY: 42,
-    head: [['Produit', 'Fournisseur', 'N° Lot', 'Catégorie', 'Réception', 'DLC/DDM', 'Code-barres']],
+    head: [['Produit', 'Fournisseur', 'No Lot', 'Categorie', 'Allergenes', 'Reception', 'DLC/DDM', 'Code-barres']],
     body: tableData,
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [30, 64, 175] },
@@ -217,12 +218,13 @@ export function generateTraceabilityPDF(
 }
 
 export function generateTraceabilityCSV(traces: ProductTrace[]): string {
-  const headers = ['Produit', 'Fournisseur', 'N° Lot', 'Catégorie', 'Date réception', 'DLC/DDM', 'Code-barres'];
+  const headers = ['Produit', 'Fournisseur', 'No Lot', 'Categorie', 'Allergenes', 'Date reception', 'DLC/DDM', 'Code-barres'];
   const rows = traces.map(t => [
     t.productName,
     t.supplier,
     t.lotNumber,
     t.category,
+    t.allergens?.join(' / ') || '',
     format(new Date(t.receptionDate), 'dd/MM/yyyy'),
     format(new Date(t.expirationDate), 'dd/MM/yyyy'),
     t.barcode ?? '',
