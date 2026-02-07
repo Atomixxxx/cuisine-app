@@ -76,7 +76,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="app-page-wrap pb-28 pl-16 sm:pl-20">
+    <div className="app-page-wrap pb-28 md:pl-20">
       {showInstall && (
         <div className="flex items-center gap-3 p-4 rounded-2xl app-panel">
           <div className="flex-1">
@@ -123,10 +123,10 @@ export default function Dashboard() {
         </div>
         <button
           onClick={handleSosHygiene}
-          className="w-full rounded-2xl p-5 text-left app-danger-bg text-white active:opacity-80 transition-opacity shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
+          className="w-full rounded-2xl p-4 sm:p-5 text-left app-danger-bg text-white active:opacity-80 transition-opacity shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
         >
-          <p className="text-[20px] font-bold leading-tight">SOS Hygiene</p>
-          <p className="text-[13px] text-white/90 mt-1">Lancer le protocole rapide en 1 geste</p>
+          <p className="text-[18px] sm:text-[20px] font-bold leading-tight">SOS Hygiene</p>
+          <p className="text-[12px] sm:text-[13px] text-white/90 mt-1">Lancer le protocole rapide en 1 geste</p>
         </button>
       </section>
 
@@ -135,7 +135,7 @@ export default function Dashboard() {
 
       <button
         onClick={() => navigate('/assistant')}
-        className="fixed bottom-24 right-5 z-30 h-14 w-14 rounded-full active:opacity-85 transition-opacity flex items-center justify-center"
+        className="fixed bottom-20 right-3 sm:bottom-24 sm:right-5 z-30 h-12 w-12 sm:h-14 sm:w-14 rounded-full active:opacity-85 transition-opacity flex items-center justify-center"
         aria-label="Ouvrir l'assistant IA"
         title="Assistant IA"
       >
@@ -177,7 +177,7 @@ function AlertPanel({
 
   return (
     <div className="app-panel">
-      <h2 className="text-[18px] font-semibold mb-3 app-text">Alertes prioritaires</h2>
+      <h2 className="text-[16px] sm:text-[18px] font-semibold mb-2 sm:mb-3 app-text">Alertes prioritaires</h2>
       <div className="space-y-2">
         {alerts.map((alert) => (
           <button
@@ -187,8 +187,8 @@ function AlertPanel({
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[14px] font-semibold app-text">{alert.title}</p>
-                <p className="text-[13px] app-muted mt-0.5">{alert.description}</p>
+                <p className="text-[13px] sm:text-[14px] font-semibold app-text">{alert.title}</p>
+                <p className="text-[12px] sm:text-[13px] app-muted mt-0.5">{alert.description}</p>
               </div>
               <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${alertStyles[alert.severity].badge}`}>
                 {alert.severity.toUpperCase()}
@@ -258,24 +258,46 @@ function QuickActions({ onNavigate }: { onNavigate: (path: string) => void }) {
   ];
 
   return (
-    <div
-      className="fixed left-2 top-24 z-30 flex flex-col gap-2 rounded-2xl border border-[color:var(--app-border)] p-2 app-surface-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)]"
-      aria-label="Actions rapides"
-    >
-      {actions.map((action) => (
-        <button
-          key={action.label}
-          onClick={() => onNavigate(action.path)}
-          className="h-11 w-11 rounded-xl app-bg border border-[color:var(--app-border)] active:opacity-80 transition-opacity flex items-center justify-center"
-          title={action.label}
-          aria-label={action.label}
-        >
-          <span className={action.color}>{action.icon}</span>
-        </button>
-      ))}
-      <div className="px-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] app-muted text-center">Actions</p>
+    <>
+      <div className="app-panel md:hidden">
+        <h2 className="text-[14px] sm:text-[16px] font-semibold mb-2 app-text">Actions rapides</h2>
+        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              onClick={() => onNavigate(action.path)}
+              className="shrink-0 min-w-[80px] sm:min-w-[92px] rounded-xl app-surface-2 border border-[color:var(--app-border)] px-2 py-2 sm:px-2.5 sm:py-2.5 active:opacity-80 transition-opacity"
+              title={action.label}
+              aria-label={action.label}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <span className={action.color}>{action.icon}</span>
+                <span className="text-[10px] sm:text-[11px] font-semibold app-text text-center leading-tight">{action.label}</span>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+
+      <div
+        className="hidden md:flex fixed left-2 top-24 z-30 flex-col gap-2 rounded-2xl border border-[color:var(--app-border)] p-2 app-surface-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)]"
+        aria-label="Actions rapides"
+      >
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            onClick={() => onNavigate(action.path)}
+            className="h-11 w-11 rounded-xl app-bg border border-[color:var(--app-border)] active:opacity-80 transition-opacity flex items-center justify-center"
+            title={action.label}
+            aria-label={action.label}
+          >
+            <span className={action.color}>{action.icon}</span>
+          </button>
+        ))}
+        <div className="px-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] app-muted text-center">Actions</p>
+        </div>
+      </div>
+    </>
   );
 }

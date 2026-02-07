@@ -98,7 +98,7 @@ export default function Modal({
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <h2 id={titleId} className="ios-title3 app-text">
             {title}
           </h2>
@@ -122,7 +122,7 @@ export default function Modal({
           </button>
         </div>
         {/* Body */}
-        <div className="px-6 pb-6">{children}</div>
+        <div className="px-4 pb-4 sm:px-6 sm:pb-6 overflow-y-auto max-h-[70vh]">{children}</div>
       </div>
     </div>
   );

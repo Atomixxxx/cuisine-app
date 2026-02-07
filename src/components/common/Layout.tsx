@@ -148,12 +148,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Header — minimal like apple.com nav */}
-      <header className="sticky top-0 z-40 app-header px-5 py-3 flex items-center justify-between hairline-b">
-        <h1 className="text-[17px] font-semibold tracking-tight app-text">
+      <header className="sticky top-0 z-40 app-header px-3 py-2 sm:px-5 sm:py-3 flex items-center justify-between hairline-b">
+        <h1 className="text-[15px] sm:text-[17px] font-semibold tracking-tight app-text truncate">
           CuisineControl
         </h1>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full app-surface-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full app-surface-2">
             {online ? (
               <svg
                 width="12"
@@ -189,7 +189,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <button
             onClick={() => navigate('/settings')}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+            className="min-h-[36px] min-w-[36px] sm:min-h-[44px] sm:min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Parametres"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -199,7 +199,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+            className="min-h-[36px] min-w-[36px] sm:min-h-[44px] sm:min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Basculer le mode sombre"
           >
             {darkMode ? (
@@ -231,7 +231,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 aria-current={active ? "page" : undefined}
                 onClick={() => navigate(tab.path)}
                 className={[
-                  "flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[50px] transition-colors active:opacity-60",
+                  "flex flex-col items-center justify-center gap-0 flex-1 min-h-[46px] sm:min-h-[50px] px-0.5 transition-colors active:opacity-60",
                   active ? "text-[color:var(--app-accent)]" : "app-muted",
                 ].join(" ")}
               >
@@ -247,7 +247,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </span>
                   )}
                 </span>
-                <span className="text-[10px] font-medium">{tab.label}</span>
+                <span className="text-[9px] sm:text-[10px] font-medium leading-tight">{tab.label}</span>
               </button>
             );
           })}

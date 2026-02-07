@@ -98,7 +98,7 @@ export default function TemperaturePage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="ios-title app-text">Controles</h1>
-              <p className="text-[14px] app-muted">
+              <p className="text-[12px] sm:text-[14px] app-muted">
                 {activeCategory === 'cold'
                   ? 'Controle des temperatures de froid et export HACCP.'
                   : 'Controle des changements d huile de friture (HACCP).'}
@@ -120,7 +120,7 @@ export default function TemperaturePage() {
                 <button
                   onClick={() => setShowExportPanel((p) => !p)}
                   className={cn(
-                    'flex items-center gap-1.5 px-4 py-2 rounded-xl text-[15px] font-semibold transition-opacity active:opacity-70',
+                    'flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-[13px] sm:text-[15px] font-semibold transition-opacity active:opacity-70',
                     'app-accent-bg',
                   )}
                 >
@@ -142,34 +142,34 @@ export default function TemperaturePage() {
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Vue active</p>
-                  <p className="app-kpi-value text-[16px] font-semibold">{SUB_VIEWS.find((sv) => sv.key === activeView)?.label}</p>
+                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">{SUB_VIEWS.find((sv) => sv.key === activeView)?.label}</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Debut export</p>
-                  <p className="app-kpi-value text-[15px] font-semibold">{exportFrom}</p>
+                  <p className="app-kpi-value !text-[13px] sm:!text-[15px] font-semibold truncate">{exportFrom}</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Fin export</p>
-                  <p className="app-kpi-value text-[15px] font-semibold">{exportTo}</p>
+                  <p className="app-kpi-value !text-[13px] sm:!text-[15px] font-semibold truncate">{exportTo}</p>
                 </div>
               </>
             ) : (
               <>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Categorie</p>
-                  <p className="app-kpi-value text-[16px] font-semibold">Huile</p>
+                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">Huile</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Saisie</p>
-                  <p className="app-kpi-value text-[16px] font-semibold">Par calendrier</p>
+                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">Par calendrier</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Trace</p>
-                  <p className="app-kpi-value text-[16px] font-semibold">Historique</p>
+                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">Historique</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Export</p>
-                  <p className="app-kpi-value text-[16px] font-semibold">PDF</p>
+                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">PDF</p>
                 </div>
               </>
             )}

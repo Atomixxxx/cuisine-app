@@ -116,17 +116,29 @@ body {
 
 /* Typography — Apple style */
 .ios-title {
-  font-size: 40px;
+  font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.015em;
   line-height: 1.1;
 }
 
+@media (min-width: 768px) {
+  .ios-title {
+    font-size: 40px;
+  }
+}
+
 .ios-headline {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.015em;
   line-height: 1.15;
+}
+
+@media (min-width: 768px) {
+  .ios-headline {
+    font-size: 28px;
+  }
 }
 
 .ios-title3 {
@@ -268,10 +280,17 @@ body {
 .app-page-wrap {
   width: min(1100px, 100%);
   margin-inline: auto;
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+}
+
+@media (min-width: 480px) {
+  .app-page-wrap {
+    padding: 16px;
+    gap: 12px;
+  }
 }
 
 @media (min-width: 768px) {
@@ -283,8 +302,8 @@ body {
 
 .app-hero-card {
   border: 1px solid var(--app-border);
-  border-radius: 20px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 14px;
   background:
     radial-gradient(120% 120% at 0% 0%, rgba(41, 151, 255, 0.2) 0%, rgba(41, 151, 255, 0.04) 42%, transparent 68%),
     var(--app-surface);
@@ -313,32 +332,59 @@ body {
 
 .app-kpi-card {
   border: 1px solid var(--app-border);
-  border-radius: 14px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 8px 10px;
   background: color-mix(in srgb, var(--app-surface) 88%, transparent);
 }
 
+@media (min-width: 480px) {
+  .app-kpi-card {
+    border-radius: 14px;
+    padding: 10px 12px;
+  }
+}
+
 .app-kpi-label {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.2;
   color: var(--app-muted);
 }
 
+@media (min-width: 480px) {
+  .app-kpi-label {
+    font-size: 12px;
+  }
+}
+
 .app-kpi-value {
-  margin-top: 4px;
-  font-size: 20px;
+  margin-top: 2px;
+  font-size: 18px;
   line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--app-text);
 }
 
+@media (min-width: 480px) {
+  .app-kpi-value {
+    margin-top: 4px;
+    font-size: 20px;
+  }
+}
+
 .app-panel {
   border: 1px solid var(--app-border);
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--app-surface);
-  padding: 12px;
+  padding: 10px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+@media (min-width: 480px) {
+  .app-panel {
+    border-radius: 18px;
+    padding: 12px;
+  }
 }
 
 .dark .app-panel {
