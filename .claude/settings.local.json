@@ -33,7 +33,14 @@
       "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
       "Bash(gh auth login:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit - CuisineControl HACCP PWA\n\nApplication de gestion HACCP pour la restauration avec design Apple.com.\nReact 19 + TypeScript + Vite + Tailwind CSS 4 + Dexie \\(IndexedDB\\).\n\nFeatures: temperatures, tracabilite, taches, factures, export PDF/CSV.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh repo create:*)",
+      "Bash(git reset:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add recipes, assistant, security, suppliers, smart alerts and tests\n\n- Add recipe management with AI-powered suggestions and cost calculation\n- Add AI assistant page for HACCP guidance\n- Add PIN lock screen for security\n- Add oil change tracker for temperature module\n- Add supplier mapping and management services\n- Add smart alerts service\n- Add backup/restore functionality\n- Add OCR, recipe AI, and supplier tests\n- Add e2e tests with Playwright\n- Add CI workflow, icons, and documentation\n- Update all existing components and services\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "WebFetch(domain:cuisine-app-tau.vercel.app)",
+      "Bash(git commit:*)"
     ]
   }
 }

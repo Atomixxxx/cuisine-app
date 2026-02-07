@@ -15,4 +15,5 @@ export const STORAGE_KEYS = {
   pinLegacyCode: 'cuisine_pin_code',
   geminiApiKeyLegacy: 'gemini_api_key',
   textRepairMigrationVersion: 'cuisine_text_repair_migration_version',
+  oilFryerPresets: 'cuisine_oil_fryer_presets',
 } as const;

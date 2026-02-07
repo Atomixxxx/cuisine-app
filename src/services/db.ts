@@ -13,6 +13,7 @@ import type {
   SupplierProductMapping,
   OilChangeRecord,
 } from '../types';
+import { GINEYS_CATALOG_ITEMS } from '../data/gineysCatalog';
 
 class CuisineDB extends Dexie {
   equipment!: Table<Equipment>;
@@ -106,6 +107,21 @@ class CuisineDB extends Dexie {
 
 export const db = new CuisineDB();
 
+const GINEYS_SUPPLIER_NAME = "Giney's";
+
+function normalizeKeyPart(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildPriceHistoryKey(itemName: string, supplier: string): string {
+  return `${normalizeKeyPart(itemName)}_${normalizeKeyPart(supplier)}`;
+}
+
 export async function initDefaultData() {
   const settingsCount = await db.settings.count();
   if (settingsCount === 0) {
@@ -126,5 +142,19 @@ export async function initDefaultData() {
       { id: crypto.randomUUID(), name: 'Congelateur', type: 'freezer', minTemp: -25, maxTemp: -18, order: 2 },
       { id: crypto.randomUUID(), name: 'Chambre froide', type: 'cold_room', minTemp: 0, maxTemp: 3, order: 3 },
     ]);
+  }
+
+  const hasGineysCatalog = await db.priceHistory.where('supplier').equals(GINEYS_SUPPLIER_NAME).count();
+  if (hasGineysCatalog === 0) {
+    const seededRows = GINEYS_CATALOG_ITEMS.map((itemName) => ({
+      id: buildPriceHistoryKey(itemName, GINEYS_SUPPLIER_NAME),
+      itemName,
+      supplier: GINEYS_SUPPLIER_NAME,
+      prices: [] as { date: Date; price: number }[],
+      averagePrice: 0,
+      minPrice: 0,
+      maxPrice: 0,
+    }));
+    await db.priceHistory.bulkPut(seededRows);
   }
 }

@@ -5,6 +5,7 @@ describe('suppliers service', () => {
   it('normalizes supplier aliases', () => {
     expect(canonicalizeSupplierName('trans gourmet france sas')).toBe('Transgourmet');
     expect(canonicalizeSupplierName('METRO france')).toBe('Metro');
+    expect(canonicalizeSupplierName('GINEYS SAS')).toBe("Giney's");
     expect(normalizeSupplierKey('Pro-a-Pro SAS')).toBe('proapro');
   });
 
@@ -13,4 +14,3 @@ describe('suppliers service', () => {
     expect(isNewSupplier('Transgourmet france', ['Metro'])).toBe(false);
   });
 });
-

@@ -15,7 +15,8 @@ import { useAppStore } from '../../stores/appStore';
 import type { OilChangeRecord } from '../../types';
 import { showError, showSuccess } from '../../stores/toastStore';
 import { generateOilChangePDF } from '../../services/pdf';
-import { cn } from '../../utils';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
+import { cn, sanitize } from '../../utils';
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const DEFAULT_FRYERS = ['Friteuse N1', 'Friteuse N2', 'Friteuse N3'];
@@ -31,6 +32,8 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
 
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedFryer, setSelectedFryer] = useState<string>('Friteuse N1');
+  const [customFryers, setCustomFryers] = useState<string[]>([]);
+  const [newFryerName, setNewFryerName] = useState('');
   const [operator, setOperator] = useState('');
   const [records, setRecords] = useState<OilChangeRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,11 +57,28 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     void loadRecords();
   }, [loadRecords]);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.oilFryerPresets);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      const cleaned = parsed
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => sanitize(value).trim().replace(/\s+/g, ' '))
+        .filter(Boolean);
+      setCustomFryers(Array.from(new Set(cleaned)));
+    } catch {
+      // Ignore local storage read errors to keep tracking operational.
+    }
+  }, []);
+
   const fryerOptions = useMemo(() => {
     const known = new Set(DEFAULT_FRYERS);
+    customFryers.forEach((fryer) => known.add(fryer));
     records.forEach((record) => known.add(record.fryerId));
     return Array.from(known);
-  }, [records]);
+  }, [customFryers, records]);
 
   const calendarDays = useMemo(() => {
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -121,6 +141,34 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     generateOilChangePDF(selectedRecords, establishmentName || 'Mon etablissement', periodLabel);
   };
 
+  const handleAddFryer = () => {
+    const nextName = sanitize(newFryerName).trim().replace(/\s+/g, ' ');
+    if (!nextName) {
+      showError('Nom de friteuse requis');
+      return;
+    }
+
+    const alreadyExists = fryerOptions.some((fryer) => fryer.toLowerCase() === nextName.toLowerCase());
+    if (alreadyExists) {
+      setSelectedFryer(fryerOptions.find((fryer) => fryer.toLowerCase() === nextName.toLowerCase()) || nextName);
+      showError('Cette friteuse existe deja');
+      return;
+    }
+
+    const updated = [...customFryers, nextName];
+    setCustomFryers(updated);
+    setSelectedFryer(nextName);
+    setNewFryerName('');
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.oilFryerPresets, JSON.stringify(updated));
+    } catch {
+      // Keep the in-memory addition even if persistence fails.
+    }
+
+    showSuccess(`Friteuse ajoutee: ${nextName}`);
+  };
+
   return (
     <div className="space-y-3">
       <div className="app-panel space-y-3">
@@ -157,6 +205,19 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
           />
           <button onClick={handleExportPdf} className="px-4 py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70">
             Export PDF
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto] gap-2">
+          <input
+            type="text"
+            value={newFryerName}
+            onChange={(e) => setNewFryerName(e.target.value)}
+            placeholder="Nouvelle friteuse (ex: Friteuse N4)"
+            className="app-input"
+          />
+          <button onClick={handleAddFryer} className="px-4 py-2.5 rounded-xl app-surface-2 app-text text-[14px] font-semibold active:opacity-70">
+            + Ajouter une friteuse
           </button>
         </div>
 

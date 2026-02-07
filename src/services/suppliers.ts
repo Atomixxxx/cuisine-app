@@ -1,6 +1,6 @@
 const LEGAL_SUFFIXES = ['sas', 'sasu', 'sarl', 'sa', 'eurl', 'sci', 'snc', 'inc', 'llc', 'ltd'];
 
-export const KNOWN_SUPPLIERS = ['Metro', 'Pomona', 'Transgourmet', 'Sysco', 'PassionFroid', 'Pro a Pro', 'Brake France'];
+export const KNOWN_SUPPLIERS = ['Metro', 'Pomona', 'Transgourmet', 'Sysco', 'PassionFroid', 'Pro a Pro', 'Brake France', "Giney's"];
 
 const SUPPLIER_ALIASES: Record<string, string> = {
   metro: 'Metro',
@@ -15,6 +15,9 @@ const SUPPLIER_ALIASES: Record<string, string> = {
   proapro: 'Pro a Pro',
   brake: 'Brake France',
   brakefrance: 'Brake France',
+  gineys: "Giney's",
+  giney: "Giney's",
+  gineyssas: "Giney's",
 };
 
 export function normalizeSupplierKey(value: string): string {
@@ -80,4 +83,3 @@ export function isNewSupplier(candidate: string, knownSuppliers: string[]): bool
   );
   return !knownSet.has(normalizedCandidate);
 }
-
