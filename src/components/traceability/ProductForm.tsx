@@ -1,31 +1,42 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { EU_ALLERGENS, PRODUCT_CATEGORIES, type ProductTrace } from '../../types';
+import type { ProductFormPrefill } from '../../services/productScan';
 import { cn, fileToBlob, blobToUrl, compressImage } from '../../utils';
 
 interface ProductFormProps {
   barcode?: string;
   photo?: Blob;
+  prefill?: ProductFormPrefill;
   existingProduct?: ProductTrace;
   onSave: (product: ProductTrace) => void | Promise<void>;
   onCancel: () => void;
 }
 
-export default function ProductForm({ barcode, photo, existingProduct, onSave, onCancel }: ProductFormProps) {
-  const [productName, setProductName] = useState(existingProduct?.productName ?? '');
-  const [supplier, setSupplier] = useState(existingProduct?.supplier ?? '');
-  const [lotNumber, setLotNumber] = useState(existingProduct?.lotNumber ?? '');
+export default function ProductForm({ barcode, photo, prefill, existingProduct, onSave, onCancel }: ProductFormProps) {
+  const [productName, setProductName] = useState(existingProduct?.productName ?? prefill?.productName ?? '');
+  const [supplier, setSupplier] = useState(existingProduct?.supplier ?? prefill?.supplier ?? '');
+  const [lotNumber, setLotNumber] = useState(existingProduct?.lotNumber ?? prefill?.lotNumber ?? '');
   const [receptionDate, setReceptionDate] = useState(
-    existingProduct ? format(new Date(existingProduct.receptionDate), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
+    existingProduct
+      ? format(new Date(existingProduct.receptionDate), 'yyyy-MM-dd')
+      : format(new Date(), 'yyyy-MM-dd')
   );
   const [expirationDate, setExpirationDate] = useState(
-    existingProduct ? format(new Date(existingProduct.expirationDate), 'yyyy-MM-dd') : ''
+    existingProduct
+      ? format(new Date(existingProduct.expirationDate), 'yyyy-MM-dd')
+      : prefill?.expirationDate
+        ? format(new Date(prefill.expirationDate), 'yyyy-MM-dd')
+        : ''
   );
-  const [category, setCategory] = useState(existingProduct?.category ?? PRODUCT_CATEGORIES[0]);
-  const [allergens, setAllergens] = useState<string[]>(existingProduct?.allergens ?? []);
+  const [category, setCategory] = useState(existingProduct?.category ?? prefill?.category ?? PRODUCT_CATEGORIES[0]);
+  const [allergens, setAllergens] = useState<string[]>(existingProduct?.allergens ?? prefill?.allergens ?? []);
   const [currentPhoto, setCurrentPhoto] = useState<Blob | undefined>(existingProduct?.photo ?? photo);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const hasAutoPrefill = !existingProduct && Boolean(
+    prefill?.productName || prefill?.supplier || prefill?.lotNumber || prefill?.expirationDate || prefill?.category || prefill?.allergens?.length
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -163,6 +174,12 @@ export default function ProductForm({ barcode, photo, existingProduct, onSave, o
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
           </svg>
           <span className="text-sm font-mono app-text">{barcode}</span>
+        </div>
+      )}
+
+      {hasAutoPrefill && (
+        <div className="p-3 rounded-lg border border-[color:var(--app-accent)]/30 bg-[color:var(--app-accent)]/10 text-sm app-text">
+          Champs pre-remplis depuis le scan et l'historique. Verifiez avant enregistrement.
         </div>
       )}
 

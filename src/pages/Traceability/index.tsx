@@ -9,6 +9,7 @@ import { cn, vibrate } from '../../utils';
 import { showError } from '../../stores/toastStore';
 import { useBadgeStore } from '../../stores/badgeStore';
 import { generateTraceabilityPDF, generateTraceabilityCSV, downloadCSV } from '../../services/pdf';
+import { buildProductFormPrefill, type ProductFormPrefill } from '../../services/productScan';
 import BarcodeScanner from '../../components/traceability/BarcodeScanner';
 import ProductForm from '../../components/traceability/ProductForm';
 import ProductGallery from '../../components/traceability/ProductGallery';
@@ -22,6 +23,7 @@ const PAGE_SIZE = 50;
 
 export default function Traceability() {
   const getProducts = useAppStore(s => s.getProducts);
+  const getLatestProductByBarcode = useAppStore(s => s.getLatestProductByBarcode);
   const addProduct = useAppStore(s => s.addProduct);
   const updateProduct = useAppStore(s => s.updateProduct);
   const deleteProduct = useAppStore(s => s.deleteProduct);
@@ -39,6 +41,7 @@ export default function Traceability() {
   const [scannerStep, setScannerStep] = useState<ScannerStep>('scan');
   const [scannedBarcode, setScannedBarcode] = useState<string | undefined>();
   const [capturedPhoto, setCapturedPhoto] = useState<Blob | undefined>();
+  const [scanPrefill, setScanPrefill] = useState<ProductFormPrefill | undefined>();
 
   // Detail state
   const [selectedProduct, setSelectedProduct] = useState<ProductTrace | null>(null);
@@ -161,11 +164,22 @@ export default function Traceability() {
   );
 
   // Handlers
-  const handleScanComplete = useCallback((barcode: string | undefined, photo: Blob | undefined) => {
-    setScannedBarcode(barcode);
-    setCapturedPhoto(photo);
-    setScannerStep('form');
-  }, []);
+  const handleScanComplete = useCallback(
+    async (barcode: string | undefined, photo: Blob | undefined) => {
+      setScannedBarcode(barcode);
+      setCapturedPhoto(photo);
+
+      try {
+        const latestProduct = barcode ? await getLatestProductByBarcode(barcode) : null;
+        setScanPrefill(buildProductFormPrefill({ barcode, latestProduct }));
+      } catch {
+        setScanPrefill(buildProductFormPrefill({ barcode }));
+      }
+
+      setScannerStep('form');
+    },
+    [getLatestProductByBarcode]
+  );
 
   const handleSaveProduct = useCallback(
     async (product: ProductTrace) => {
@@ -175,6 +189,7 @@ export default function Traceability() {
         setScannerStep('scan');
         setScannedBarcode(undefined);
         setCapturedPhoto(undefined);
+        setScanPrefill(undefined);
         await loadInitialProducts();
       } catch {
         showError('Impossible de sauvegarder le produit');
@@ -187,6 +202,7 @@ export default function Traceability() {
     setScannerStep('scan');
     setScannedBarcode(undefined);
     setCapturedPhoto(undefined);
+    setScanPrefill(undefined);
   }, []);
 
   const handleDeleteProduct = useCallback(
@@ -286,6 +302,7 @@ export default function Traceability() {
               <ProductForm
                 barcode={scannedBarcode}
                 photo={capturedPhoto}
+                prefill={scanPrefill}
                 onSave={handleSaveProduct}
                 onCancel={handleCancelForm}
               />

@@ -69,6 +69,30 @@ describe('ProductForm', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it('pre-fills form from scanner suggestions', () => {
+    render(
+      <ProductForm
+        prefill={{
+          productName: 'Yaourt nature',
+          supplier: 'Metro',
+          lotNumber: 'LOT-X9',
+          category: 'Produits laitiers',
+          allergens: ['Lait'],
+          expirationDate: new Date(2026, 2, 5),
+        }}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByDisplayValue('Yaourt nature')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Metro')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('LOT-X9')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Produits laitiers')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('2026-03-05')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lait' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('pre-fills form when editing existing product', () => {
     render(
       <ProductForm

@@ -40,7 +40,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add recipes, assistant, security, suppliers, smart alerts and tests\n\n- Add recipe management with AI-powered suggestions and cost calculation\n- Add AI assistant page for HACCP guidance\n- Add PIN lock screen for security\n- Add oil change tracker for temperature module\n- Add supplier mapping and management services\n- Add smart alerts service\n- Add backup/restore functionality\n- Add OCR, recipe AI, and supplier tests\n- Add e2e tests with Playwright\n- Add CI workflow, icons, and documentation\n- Update all existing components and services\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
       "WebFetch(domain:cuisine-app-tau.vercel.app)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebFetch(domain:cuisine-cw3yga05n-revelju-5925s-projects.vercel.app)"
     ]
   }
 }

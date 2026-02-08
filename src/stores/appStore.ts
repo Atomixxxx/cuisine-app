@@ -47,6 +47,7 @@ interface AppState {
 
   // Products
   getProducts: (options?: { limit?: number; offset?: number }) => Promise<ProductTrace[]>;
+  getLatestProductByBarcode: (barcode: string) => Promise<ProductTrace | null>;
   addProduct: (p: ProductTrace) => Promise<void>;
   updateProduct: (p: ProductTrace) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -330,6 +331,18 @@ export const useAppStore = create<AppState>((set, _get) => ({
     if (offset > 0) query = query.offset(offset);
     if (typeof limit === 'number') query = query.limit(limit);
     return query.toArray();
+  },
+
+  getLatestProductByBarcode: async (barcode) => {
+    const sanitizedBarcode = sanitize(barcode).trim();
+    if (!sanitizedBarcode) return null;
+    const matches = await db.productTraces
+      .where('barcode')
+      .equals(sanitizedBarcode)
+      .reverse()
+      .limit(1)
+      .toArray();
+    return matches[0] ?? null;
   },
 
   addProduct: async (p) => {
