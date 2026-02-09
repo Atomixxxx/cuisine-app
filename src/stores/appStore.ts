@@ -111,6 +111,8 @@ interface AppState {
   updatePriceHistory: (invoice: Invoice) => Promise<void>;
   rebuildPriceHistory: () => Promise<void>;
   getPriceHistory: () => Promise<PriceHistory[]>;
+  deletePriceHistoryItem: (id: string) => Promise<void>;
+  clearAllPriceHistory: () => Promise<void>;
 }
 
 const normalizeKeyPart = (value: string): string =>
@@ -916,5 +918,20 @@ export const useAppStore = create<AppState>((set, _get) => ({
     }
 
     return db.priceHistory.toArray();
+  },
+
+  deletePriceHistoryItem: async (id) => {
+    await db.priceHistory.delete(id);
+    await runCloudTask('price-history:replace', async () => {
+      const remaining = await db.priceHistory.toArray();
+      await replaceRemotePriceHistory(remaining);
+    });
+  },
+
+  clearAllPriceHistory: async () => {
+    await db.priceHistory.clear();
+    await runCloudTask('price-history:replace', async () => {
+      await replaceRemotePriceHistory([]);
+    });
   },
 }));

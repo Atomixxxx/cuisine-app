@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAppStore } from '../../stores/appStore';
-import { showError } from '../../stores/toastStore';
+import { showError, showSuccess } from '../../stores/toastStore';
 import type { PriceHistory } from '../../types';
 import { cn, formatDateShort, generateSupplierColor } from '../../utils';
 import { Skeleton } from '../common/Skeleton';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 type SortOption = 'name' | 'avg' | 'max' | 'variation' | 'entries';
 
@@ -50,17 +51,43 @@ export default function PriceTracker() {
   const [loading, setLoading] = useState(true);
 
   const getPriceHistory = useAppStore((s) => s.getPriceHistory);
+  const deletePriceHistoryItem = useAppStore((s) => s.deletePriceHistoryItem);
+  const clearAllPriceHistory = useAppStore((s) => s.clearAllPriceHistory);
   const settings = useAppStore((s) => s.settings);
   const threshold = settings?.priceAlertThreshold ?? 10;
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
 
-  useEffect(() => {
+  const reload = useCallback(() => {
+    setLoading(true);
     getPriceHistory()
-      .then((data) => {
-        setPriceData(data);
-      })
+      .then((data) => setPriceData(data))
       .catch(() => showError('Impossible de charger le cadencier de prix'))
       .finally(() => setLoading(false));
   }, [getPriceHistory]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const handleDeleteItem = useCallback(async (id: string) => {
+    try {
+      await deletePriceHistoryItem(id);
+      setPriceData((prev) => prev.filter((item) => item.id !== id));
+      setSelectedItem(null);
+      showSuccess('Entrée supprimée');
+    } catch {
+      showError('Impossible de supprimer');
+    }
+  }, [deletePriceHistoryItem]);
+
+  const handleClearAll = useCallback(async () => {
+    try {
+      await clearAllPriceHistory();
+      setPriceData([]);
+      setSelectedItem(null);
+      showSuccess('Cadencier effacé');
+    } catch {
+      showError('Impossible d\'effacer le cadencier');
+    }
+  }, [clearAllPriceHistory]);
 
   const duplicateCountByName = useMemo(() => {
     const map = new Map<string, number>();
@@ -112,7 +139,7 @@ export default function PriceTracker() {
   }, [duplicateCountByName, filtered, threshold]);
 
   if (selectedItem) {
-    return <PriceChart item={selectedItem} onBack={() => setSelectedItem(null)} threshold={threshold} />;
+    return <PriceChart item={selectedItem} onBack={() => setSelectedItem(null)} threshold={threshold} onDelete={() => handleDeleteItem(selectedItem.id)} />;
   }
 
   return (
@@ -211,6 +238,25 @@ export default function PriceTracker() {
           <p className="text-xs mt-1">Les donnees apparaitront apres ajout de factures</p>
         </div>
       )}
+
+      {!loading && priceData.length > 0 && (
+        <button
+          onClick={() => setConfirmClearAll(true)}
+          className="w-full py-2.5 rounded-xl text-[14px] font-semibold text-[color:var(--app-danger)] bg-[color:var(--app-danger)]/10 active:opacity-70"
+        >
+          Effacer tout le cadencier
+        </button>
+      )}
+
+      <ConfirmDialog
+        isOpen={confirmClearAll}
+        title="Effacer le cadencier"
+        message="Toutes les données de suivi de prix seront supprimées. Cette action est irréversible."
+        confirmText="Effacer tout"
+        variant="danger"
+        onConfirm={() => { setConfirmClearAll(false); handleClearAll(); }}
+        onCancel={() => setConfirmClearAll(false)}
+      />
 
       {!loading && filtered.length > 0 && (
         <div className="space-y-2.5">
@@ -326,11 +372,14 @@ function PriceChart({
   item,
   onBack,
   threshold,
+  onDelete,
 }: {
   item: PriceHistory;
   onBack: () => void;
   threshold: number;
+  onDelete: () => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const variation = getVariation(item);
   const isAlert = variation > threshold;
 
@@ -359,14 +408,33 @@ function PriceChart({
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="font-semibold app-text truncate">{item.itemName}</h3>
           <div className="flex items-center gap-1.5 mt-1">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: generateSupplierColor(item.supplier) }} />
             <p className="text-xs app-muted truncate">{item.supplier}</p>
           </div>
         </div>
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full bg-[color:var(--app-danger)]/12 text-[color:var(--app-danger)] active:opacity-70"
+          aria-label="Supprimer cette entrée"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        title="Supprimer cette entrée"
+        message={`Supprimer "${item.itemName}" (${item.supplier}) du cadencier ?`}
+        confirmText="Supprimer"
+        variant="danger"
+        onConfirm={() => { setConfirmDelete(false); onDelete(); }}
+        onCancel={() => setConfirmDelete(false)}
+      />
 
       <div className="grid grid-cols-2 gap-2">
         <StatPanel label="Prix moyen" value={formatMoney(item.averagePrice)} tone="info" />
