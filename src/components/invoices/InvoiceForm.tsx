@@ -2,9 +2,10 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import type { OCRResult } from '../../services/ocr';
 import type { Invoice, InvoiceItem } from '../../types';
-import { cn, sanitizeInput, vibrate } from '../../utils';
+import { cn, sanitizeInput, vibrate, validateRange } from '../../utils';
 import { logger } from '../../services/logger';
 import { buildSupplierQuickPicks, canonicalizeSupplierName, isNewSupplier } from '../../services/suppliers';
+import { syncInvoiceToIngredients } from '../../services/invoiceIngredientSync';
 
 interface InvoiceFormProps {
   initialData: OCRResult;
@@ -120,8 +121,11 @@ export default function InvoiceForm({
 
         if (field === 'designation') {
           item.designation = sanitizeInput(String(value));
+        } else if (field === 'conditioningQuantity') {
+          const numVal = typeof value === 'string' ? parseFloat(value) || 0 : (value as number);
+          item.conditioningQuantity = numVal > 1 ? numVal : undefined;
         } else {
-          const numVal = typeof value === 'string' ? parseFloat(value) || 0 : value;
+          const numVal = typeof value === 'string' ? parseFloat(value) || 0 : (value as number);
           if (field === 'quantity') {
             item.quantity = numVal;
             item.totalPriceHT = Math.round(numVal * item.unitPriceHT * 100) / 100;
@@ -172,6 +176,14 @@ export default function InvoiceForm({
       setError('Au moins un article est requis');
       return;
     }
+    for (const item of items) {
+      if (item.designation.trim()) {
+        const qErr = validateRange(item.quantity, 0, 99999, 'La quantite');
+        if (qErr) { setError(`${item.designation}: ${qErr}`); return; }
+        const pErr = validateRange(item.unitPriceHT, 0, 99999, 'Le prix unitaire');
+        if (pErr) { setError(`${item.designation}: ${pErr}`); return; }
+      }
+    }
 
     setSaving(true);
     setError(null);
@@ -185,6 +197,7 @@ export default function InvoiceForm({
       const invoice: Invoice = {
         id: existingInvoice?.id ?? crypto.randomUUID(),
         images,
+        imageUrls: existingInvoice?.imageUrls,
         supplier: supplierValue,
         invoiceNumber: invoiceNumber.trim(),
         invoiceDate: new Date(invoiceDate),
@@ -201,6 +214,16 @@ export default function InvoiceForm({
         await updateInvoice(invoice);
       } else {
         await addInvoice(invoice);
+      }
+
+      // Auto-sync invoice items → ingredients (price + conditioning)
+      try {
+        const syncResult = await syncInvoiceToIngredients(invoice);
+        if (syncResult.updated > 0) {
+          logger.info(`Auto-synced ${syncResult.updated} ingredient(s) from invoice`, { invoiceId: invoice.id });
+        }
+      } catch (err) {
+        logger.warn('Invoice→ingredient sync failed (non-blocking)', { err });
       }
 
       await rebuildPriceHistory();
@@ -428,6 +451,29 @@ export default function InvoiceForm({
                       className="w-full px-2 py-1.5 rounded border app-border app-surface-2 app-text text-sm focus:ring-1 focus:ring-[color:var(--app-accent)]"
                     />
                   </div>
+                </div>
+                {/* Colisage */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor={`invoice-item-cond-${index}`} className="text-[10px] app-muted whitespace-nowrap">
+                    Colisage
+                  </label>
+                  <input
+                    id={`invoice-item-cond-${index}`}
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={item.conditioningQuantity || ''}
+                    onChange={(e) =>
+                      handleItemChange(index, 'conditioningQuantity', e.target.value)
+                    }
+                    placeholder="ex: 90"
+                    className="w-20 px-2 py-1 rounded border app-border app-surface-2 app-text text-xs focus:ring-1 focus:ring-[color:var(--app-accent)]"
+                  />
+                  {item.conditioningQuantity && item.conditioningQuantity > 1 && item.unitPriceHT > 0 && (
+                    <span className="text-[10px] app-accent font-medium">
+                      = {(item.unitPriceHT / item.conditioningQuantity).toFixed(4)} EUR/u
+                    </span>
+                  )}
                 </div>
               </div>
             );

@@ -15,13 +15,12 @@ afterEach(() => {
 });
 
 describe('ocr service', () => {
-  it('uses VITE_GEMINI_API_KEY fallback when no stored key exists', async () => {
-    vi.stubEnv('VITE_GEMINI_API_KEY', 'env-fallback-key');
+  it('returns empty string when no stored key exists', async () => {
     resetOcrApiKeyCache();
 
     const key = await getApiKey();
 
-    expect(key).toBe('env-fallback-key');
+    expect(key).toBe('');
   });
 
   it('retries transient API failure and succeeds', async () => {

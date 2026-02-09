@@ -6,7 +6,7 @@ export async function getExpiringProductsCount(withinDays = 3): Promise<number> 
   const now = Date.now();
   return products.filter(p => {
     const daysLeft = Math.ceil((new Date(p.expirationDate).getTime() - now) / (1000 * 60 * 60 * 24));
-    return daysLeft >= 0 && daysLeft <= withinDays;
+    return daysLeft <= withinDays;
   }).length;
 }
 

@@ -79,6 +79,8 @@ export interface InvoiceItem {
   quantity: number;
   unitPriceHT: number;
   totalPriceHT: number;
+  conditioningQuantity?: number;
+  conditioningUnit?: IngredientUnit;
 }
 
 export interface PriceHistory {
@@ -108,6 +110,7 @@ export interface Ingredient {
   name: string;
   unit: IngredientUnit;
   unitPrice: number;
+  conditioningQuantity?: number;
   supplierId?: string;
 }
 

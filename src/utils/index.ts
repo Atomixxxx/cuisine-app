@@ -120,6 +120,17 @@ export async function compressImage(blob: Blob, maxWidth = 1200, quality = 0.7):
   return compressed.size < blob.size ? compressed : blob;
 }
 
+/**
+ * Validates that a numeric value is within [min, max].
+ * Returns null if valid, or a French error message string if invalid.
+ */
+export function validateRange(value: number, min: number, max: number, label?: string): string | null {
+  if (!Number.isFinite(value)) return `${label || 'La valeur'} doit etre un nombre valide`;
+  if (value < min) return `${label || 'La valeur'} doit etre au minimum ${min}`;
+  if (value > max) return `${label || 'La valeur'} doit etre au maximum ${max}`;
+  return null;
+}
+
 export function generateSupplierColor(supplier: string): string {
   let hash = 0;
   for (let i = 0; i < supplier.length; i++) {

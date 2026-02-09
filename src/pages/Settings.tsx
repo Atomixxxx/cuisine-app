@@ -22,6 +22,12 @@ import {
   verifyPinCode,
 } from '../services/pin';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import {
+  getSupabaseSession,
+  isSupabaseAuthConfigured,
+  signInSupabase,
+  signOutSupabase,
+} from '../services/supabaseAuth';
 
 export default function Settings() {
   const settings = useAppStore((s) => s.settings);
@@ -41,8 +47,14 @@ export default function Settings() {
   const [confirmImportOpen, setConfirmImportOpen] = useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [restoringBackup, setRestoringBackup] = useState(false);
+  const [supabaseEmail, setSupabaseEmail] = useState('');
+  const [supabasePassword, setSupabasePassword] = useState('');
+  const [supabaseUserEmail, setSupabaseUserEmail] = useState<string | null>(null);
+  const [supabaseSigningIn, setSupabaseSigningIn] = useState(false);
+  const [supabaseSigningOut, setSupabaseSigningOut] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const supabaseAuthConfigured = isSupabaseAuthConfigured();
 
   useEffect(() => {
     loadSettings();
@@ -57,6 +69,8 @@ export default function Settings() {
     setPinEnabled(isPinConfigured());
     getApiKey().then((k) => setGeminiKey(k));
     hasApiKey().then((v) => setGeminiConnected(v));
+    const session = getSupabaseSession();
+    setSupabaseUserEmail(session?.email ?? null);
   }, [settings]);
 
   const handleSaveSettings = useCallback(async () => {
@@ -82,6 +96,42 @@ export default function Settings() {
     if (trimmed) showSuccess('Cle API Gemini enregistree');
     else showSuccess('Cle API Gemini supprimee');
   }, [geminiKey]);
+
+  const handleSupabaseLogin = useCallback(async () => {
+    const email = supabaseEmail.trim();
+    const password = supabasePassword.trim();
+    if (!email || !password) {
+      showError('Email et mot de passe requis');
+      return;
+    }
+
+    setSupabaseSigningIn(true);
+    try {
+      const session = await signInSupabase(email, password);
+      setSupabaseUserEmail(session.email ?? email);
+      setSupabasePassword('');
+      await loadSettings();
+      showSuccess('Connexion Supabase reussie');
+    } catch {
+      showError('Connexion Supabase impossible');
+    } finally {
+      setSupabaseSigningIn(false);
+    }
+  }, [supabaseEmail, supabasePassword, loadSettings]);
+
+  const handleSupabaseLogout = useCallback(async () => {
+    setSupabaseSigningOut(true);
+    try {
+      await signOutSupabase();
+      setSupabaseUserEmail(null);
+      setSupabasePassword('');
+      showSuccess('Session Supabase deconnectee');
+    } catch {
+      showError('Deconnexion Supabase impossible');
+    } finally {
+      setSupabaseSigningOut(false);
+    }
+  }, []);
 
   const handleExport = useCallback(async () => {
     try {
@@ -284,6 +334,12 @@ export default function Settings() {
             <p className="app-kpi-label">Code PIN</p>
             <p className="app-kpi-value text-[16px] font-semibold">{pinEnabled ? 'Actif' : 'Off'}</p>
           </div>
+          <div className="app-kpi-card">
+            <p className="app-kpi-label">Cloud</p>
+            <p className="app-kpi-value text-[16px] font-semibold">
+              {supabaseAuthConfigured ? (supabaseUserEmail ? 'Connecte' : 'Pret') : 'Non configure'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -367,6 +423,72 @@ export default function Settings() {
             >
               Enregistrer la cle
             </button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="ios-caption-upper app-muted mb-2">Cloud Supabase</h2>
+        <div className="rounded-2xl app-panel overflow-hidden">
+          <div className="ios-settings-row">
+            <span className="text-[17px] app-text">Configuration</span>
+            <span className={cn('text-[15px] font-medium', supabaseAuthConfigured ? 'text-[color:var(--app-success)]' : 'app-muted')}>
+              {supabaseAuthConfigured ? 'Variables OK' : 'Variables manquantes'}
+            </span>
+          </div>
+          <div className="ios-settings-separator" />
+          <div className="ios-settings-row">
+            <span className="text-[17px] app-text">Session</span>
+            <span className={cn('text-[15px] font-medium', supabaseUserEmail ? 'text-[color:var(--app-success)]' : 'app-muted')}>
+              {supabaseUserEmail ?? 'Non connecte'}
+            </span>
+          </div>
+          <div className="ios-settings-separator" />
+          <div className="ios-settings-row flex-col items-stretch gap-1.5">
+            <label className="text-[17px] app-text">Email Supabase</label>
+            <input
+              type="email"
+              value={supabaseEmail}
+              onChange={(e) => setSupabaseEmail(e.target.value)}
+              placeholder="utilisateur@domaine.com"
+              className={inputClass}
+            />
+          </div>
+          <div className="ios-settings-separator" />
+          <div className="ios-settings-row flex-col items-stretch gap-1.5">
+            <label className="text-[17px] app-text">Mot de passe Supabase</label>
+            <input
+              type="password"
+              value={supabasePassword}
+              onChange={(e) => setSupabasePassword(e.target.value)}
+              placeholder="••••••••"
+              className={inputClass}
+            />
+          </div>
+          <div className="px-4 py-3 flex gap-3">
+            <button
+              onClick={handleSupabaseLogin}
+              disabled={!supabaseAuthConfigured || supabaseSigningIn}
+              className={cn(
+                'flex-1 py-3 rounded-xl text-[16px] font-semibold active:opacity-70 transition-opacity',
+                !supabaseAuthConfigured || supabaseSigningIn ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
+              )}
+            >
+              {supabaseSigningIn ? 'Connexion...' : 'Se connecter'}
+            </button>
+            <button
+              onClick={handleSupabaseLogout}
+              disabled={!supabaseUserEmail || supabaseSigningOut}
+              className={cn(
+                'flex-1 py-3 rounded-xl text-[16px] font-semibold active:opacity-70 transition-opacity',
+                !supabaseUserEmail || supabaseSigningOut ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-danger-bg',
+              )}
+            >
+              {supabaseSigningOut ? 'Deconnexion...' : 'Se deconnecter'}
+            </button>
+          </div>
+          <div className="px-4 pb-4 text-[13px] app-muted">
+            Utilise ce login pour le mode securise RLS. En mode simple, la synchro peut fonctionner sans login.
           </div>
         </div>
       </div>

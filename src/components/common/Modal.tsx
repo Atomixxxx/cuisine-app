@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback } from "react";
 
-type ModalSize = "sm" | "md" | "lg";
+type ModalSize = "sm" | "md" | "lg" | "xl" | "full";
 
 interface ModalProps {
   isOpen: boolean;
@@ -14,6 +14,8 @@ const sizeClasses: Record<ModalSize, string> = {
   sm: "max-w-sm",
   md: "max-w-md",
   lg: "max-w-lg",
+  xl: "max-w-2xl",
+  full: "max-w-none sm:max-w-4xl",
 };
 
 export default function Modal({
@@ -122,7 +124,7 @@ export default function Modal({
           </button>
         </div>
         {/* Body */}
-        <div className="px-4 pb-4 sm:px-6 sm:pb-6 overflow-y-auto max-h-[70vh]">{children}</div>
+        <div className={`px-4 pb-4 sm:px-6 sm:pb-6 overflow-y-auto ${size === 'full' ? 'max-h-[85vh]' : 'max-h-[70vh]'}`}>{children}</div>
       </div>
     </div>
   );

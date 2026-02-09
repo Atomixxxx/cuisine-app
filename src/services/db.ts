@@ -102,6 +102,13 @@ class CuisineDB extends Dexie {
         'id, supplierId, supplierSku, supplierLabelNormalized, templateRecipeId, [supplierId+supplierSku], [supplierId+supplierLabelNormalized]',
       backupSnapshots: 'id, createdAt',
     });
+
+    // Version 6: add conditioningQuantity to ingredients (optional field, no index change needed)
+    this.version(6).stores({});
+
+    // Version 7: confirm indexes for expirationDate (productTraces) and supplier (invoices)
+    // Both indexes already existed since version 1; this bump is a no-schema-change version.
+    this.version(7).stores({});
   }
 }
 

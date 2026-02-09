@@ -2,6 +2,59 @@ import type { RecipeUnit } from '../types';
 import { sanitize } from '../utils';
 import { getApiKey } from './ocr';
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+async function callGemini(
+  apiKey: string,
+  parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }>,
+  options?: { temperature?: number; maxOutputTokens?: number },
+): Promise<string | null> {
+  const body = {
+    contents: [{ parts }],
+    generationConfig: {
+      temperature: options?.temperature ?? 0.2,
+      maxOutputTokens: options?.maxOutputTokens ?? 2048,
+    },
+  };
+  const response = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!response.ok) return null;
+  const data = await response.json();
+  return (data?.candidates?.[0]?.content?.parts?.[0]?.text as string) || null;
+}
+
+function extractJson(text: string): Record<string, unknown> {
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  return JSON.parse(match ? match[0] : cleaned) as Record<string, unknown>;
+}
+
+function parseIngredientsList(parsed: Record<string, unknown>): GeneratedRecipeIngredient[] {
+  const raw = Array.isArray(parsed.ingredients) ? (parsed.ingredients as Record<string, unknown>[]) : [];
+  return raw
+    .map((line) => ({
+      name: sanitize(String(line.name || '').trim()),
+      quantity: Math.max(0, Number(line.quantity) || 0),
+      unit: normalizeUnit(String(line.unit || 'unite')),
+    }))
+    .filter((line) => line.name.length > 0 && line.quantity > 0)
+    .slice(0, 20);
+}
+
 export interface GeneratedRecipeIngredient {
   name: string;
   quantity: number;
@@ -135,52 +188,12 @@ export async function generateRecipeTemplateFromLine(
 
   const prompt = buildRecipePrompt(trimmed, options);
 
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: 2048,
-    },
-  };
-
   try {
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(body),
-      },
-    );
-
-    if (!response.ok) {
-      return fallbackTemplateFromLabel(trimmed, options);
-    }
-
-    const data = await response.json();
-    const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined;
+    const textContent = await callGemini(apiKey, [{ text: prompt }]);
     if (!textContent) return fallbackTemplateFromLabel(trimmed, options);
 
-    const jsonStr = textContent
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```\s*$/, '')
-      .trim();
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : jsonStr) as Record<string, unknown>;
-
-    const ingredientsRaw = Array.isArray(parsed.ingredients) ? (parsed.ingredients as Record<string, unknown>[]) : [];
-    const ingredients: GeneratedRecipeIngredient[] = ingredientsRaw
-      .map((line) => ({
-        name: sanitize(String(line.name || '').trim()),
-        quantity: Math.max(0, Number(line.quantity) || 0),
-        unit: normalizeUnit(String(line.unit || 'unite')),
-      }))
-      .filter((line) => line.name.length > 0 && line.quantity > 0)
-      .slice(0, 15);
-
+    const parsed = extractJson(textContent);
+    const ingredients = parseIngredientsList(parsed);
     if (ingredients.length === 0) return fallbackTemplateFromLabel(trimmed, options);
 
     const parsedSalePrice = Math.max(0, Number(parsed.salePriceHT) || 0);
@@ -193,5 +206,189 @@ export async function generateRecipeTemplateFromLine(
     };
   } catch {
     return fallbackTemplateFromLabel(trimmed, options);
+  }
+}
+
+/**
+ * Parse a free-text recipe (pasted or typed) into structured ingredients.
+ * Example input: "Pate a crepes 1L: 250g farine, 4 oeufs, 500ml lait, 50g beurre fondu, 1 pincee sel"
+ */
+export async function parseRecipeFromText(
+  text: string,
+  catalog?: RecipeAiCatalogIngredient[],
+): Promise<GeneratedRecipeTemplate> {
+  const trimmed = text.trim();
+  if (!trimmed) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
+
+  const apiKey = await getApiKey();
+  if (!apiKey) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
+
+  const catalogPreview = (catalog || [])
+    .filter((i) => i.unitPrice > 0)
+    .slice(0, 40)
+    .map((i) => `- ${i.name} | ${i.unitPrice.toFixed(4)} EUR/${i.unit}`)
+    .join('\n');
+
+  const prompt = `Tu es un chef executif expert en fiches techniques.
+L'utilisateur a colle ou ecrit une recette en texte libre. Analyse-la et structure-la.
+
+Texte de la recette:
+"""
+${trimmed}
+"""
+
+${catalogPreview ? `Cadencier disponible (utilise ces noms exacts quand possible):\n${catalogPreview}\n` : ''}
+
+Reponds UNIQUEMENT avec un JSON valide (pas de markdown):
+{
+  "title": "Nom de la recette",
+  "portions": 1,
+  "salePriceHT": 0,
+  "ingredients": [
+    { "name": "Nom ingredient", "quantity": 1, "unit": "kg|g|l|ml|unite" }
+  ]
+}
+
+Regles:
+- Deduis le titre de la recette du texte.
+- Extrais TOUS les ingredients avec leurs quantites et unites.
+- Convertis les quantites informelles: "1 pincee" -> 2g, "1 c.a.s" -> 15ml, "1 c.a.c" -> 5ml, "1 verre" -> 200ml
+- Si le texte dit "pour X personnes/portions/litres", utilise ca pour portions.
+- Si tu reconnais un prix de vente potentiel, renseigne salePriceHT sinon 0.
+- unit strictement parmi: kg,g,l,ml,unite`;
+
+  try {
+    const textContent = await callGemini(apiKey, [{ text: prompt }]);
+    if (!textContent) return { title: trimmed.slice(0, 50), portions: 1, salePriceHT: 0, ingredients: [] };
+
+    const parsed = extractJson(textContent);
+    const ingredients = parseIngredientsList(parsed);
+    return {
+      title: sanitize(String(parsed.title || trimmed.slice(0, 50))),
+      portions: Math.max(1, Math.round(Number(parsed.portions) || 1)),
+      salePriceHT: Math.max(0, Number(parsed.salePriceHT) || 0),
+      ingredients,
+    };
+  } catch {
+    return { title: trimmed.slice(0, 50), portions: 1, salePriceHT: 0, ingredients: [] };
+  }
+}
+
+/**
+ * Parse a recipe from a photo (OCR) into structured ingredients.
+ */
+export async function parseRecipeFromImage(
+  imageBlob: Blob,
+  catalog?: RecipeAiCatalogIngredient[],
+): Promise<GeneratedRecipeTemplate> {
+  const apiKey = await getApiKey();
+  if (!apiKey) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
+
+  const base64 = await blobToBase64(imageBlob);
+  const mimeType = imageBlob.type || 'image/jpeg';
+
+  const catalogPreview = (catalog || [])
+    .filter((i) => i.unitPrice > 0)
+    .slice(0, 40)
+    .map((i) => `- ${i.name} | ${i.unitPrice.toFixed(4)} EUR/${i.unit}`)
+    .join('\n');
+
+  const prompt = `Tu es un chef executif expert en fiches techniques.
+L'utilisateur a pris en photo une recette (manuscrite, imprimee, ou ecran). Analyse l'image et structure la recette.
+
+${catalogPreview ? `Cadencier disponible (utilise ces noms exacts quand possible):\n${catalogPreview}\n` : ''}
+
+Reponds UNIQUEMENT avec un JSON valide (pas de markdown):
+{
+  "title": "Nom de la recette",
+  "portions": 1,
+  "salePriceHT": 0,
+  "ingredients": [
+    { "name": "Nom ingredient", "quantity": 1, "unit": "kg|g|l|ml|unite" }
+  ]
+}
+
+Regles:
+- Lis le texte de la photo et extrais TOUS les ingredients avec leurs quantites.
+- Convertis les quantites informelles en unites standard.
+- Deduis le titre de la recette.
+- unit strictement parmi: kg,g,l,ml,unite`;
+
+  try {
+    const textContent = await callGemini(apiKey, [
+      { text: prompt },
+      { inline_data: { mime_type: mimeType, data: base64 } },
+    ], { maxOutputTokens: 4096 });
+    if (!textContent) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
+
+    const parsed = extractJson(textContent);
+    const ingredients = parseIngredientsList(parsed);
+    return {
+      title: sanitize(String(parsed.title || 'Recette photo')),
+      portions: Math.max(1, Math.round(Number(parsed.portions) || 1)),
+      salePriceHT: Math.max(0, Number(parsed.salePriceHT) || 0),
+      ingredients,
+    };
+  } catch {
+    return { title: 'Recette photo', portions: 1, salePriceHT: 0, ingredients: [] };
+  }
+}
+
+export interface IngredientPriceEstimate {
+  name: string;
+  unit: RecipeUnit;
+  estimatedPrice: number;
+  source: string;
+}
+
+/**
+ * Search for average market prices of ingredients via Gemini.
+ * Used when ingredients are not in the local cadencier.
+ */
+export async function searchIngredientPrices(
+  ingredientNames: Array<{ name: string; unit: RecipeUnit }>,
+): Promise<IngredientPriceEstimate[]> {
+  if (ingredientNames.length === 0) return [];
+
+  const apiKey = await getApiKey();
+  if (!apiKey) return [];
+
+  const list = ingredientNames.map((i) => `- ${i.name} (${i.unit})`).join('\n');
+
+  const prompt = `Tu es un expert en achat pour la restauration professionnelle en France.
+Donne-moi le prix moyen professionnel (prix fournisseur, pas grande surface) pour chaque ingredient.
+
+Ingredients a estimer:
+${list}
+
+Reponds UNIQUEMENT avec un JSON valide (pas de markdown):
+{
+  "prices": [
+    { "name": "Nom ingredient", "unit": "kg|g|l|ml|unite", "estimatedPrice": 0.00, "source": "estimation marche pro France 2025" }
+  ]
+}
+
+Regles:
+- Prix en EUR, par unite indiquee (ex: prix au kg si unite=kg).
+- Utilise des prix moyens professionnels realistes (Metro, Transgourmet, Pomona).
+- Si tu n'es pas sur, donne une fourchette basse plutot que haute.
+- "source" doit indiquer la base de ton estimation.`;
+
+  try {
+    const textContent = await callGemini(apiKey, [{ text: prompt }], { temperature: 0.3 });
+    if (!textContent) return [];
+
+    const parsed = extractJson(textContent);
+    const prices = Array.isArray(parsed.prices) ? (parsed.prices as Record<string, unknown>[]) : [];
+    return prices
+      .map((p) => ({
+        name: sanitize(String(p.name || '')),
+        unit: normalizeUnit(String(p.unit || 'kg')),
+        estimatedPrice: Math.max(0, Number(p.estimatedPrice) || 0),
+        source: sanitize(String(p.source || 'estimation IA')),
+      }))
+      .filter((p) => p.name && p.estimatedPrice > 0);
+  } catch {
+    return [];
   }
 }

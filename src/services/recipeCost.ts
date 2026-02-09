@@ -11,6 +11,13 @@ function normalizeUnit(unit: RecipeUnit): RecipeUnit {
   return unit.toLowerCase() as RecipeUnit;
 }
 
+/** Prix unitaire effectif = prix d'achat / conditionnement */
+export function getEffectiveUnitPrice(ingredient: Ingredient): number {
+  const cq = ingredient.conditioningQuantity;
+  if (cq && cq > 1) return ingredient.unitPrice / cq;
+  return ingredient.unitPrice;
+}
+
 function convertQuantity(value: number, fromUnit: RecipeUnit, toUnit: RecipeUnit): number | null {
   const from = normalizeUnit(fromUnit);
   const to = normalizeUnit(toUnit);
@@ -37,7 +44,7 @@ export function computeRecipeCostFromLines(
     if (convertedQty === null) return sum;
     if (!Number.isFinite(convertedQty) || convertedQty < 0) return sum;
 
-    return sum + convertedQty * ingredient.unitPrice;
+    return sum + convertedQty * getEffectiveUnitPrice(ingredient);
   }, 0);
 
   const safeSalePrice = Number.isFinite(salePriceHT) && salePriceHT > 0 ? salePriceHT : 0;

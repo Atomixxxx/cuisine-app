@@ -5,17 +5,20 @@ import { cn, vibrate, fileToBlob } from '../../utils';
 interface BarcodeScannerProps {
   onScanComplete: (barcode: string | undefined, photo: Blob | undefined) => void;
   onCancel: () => void;
+  onAnalyzeLabel?: (photo: Blob) => Promise<void>;
 }
 
 const SCANNER_REGION_ID = 'barcode-scanner-region';
 
-export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScannerProps) {
+export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabel }: BarcodeScannerProps) {
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [manualBarcode, setManualBarcode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<Blob | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [analyzingLabel, setAnalyzingLabel] = useState(false);
+  const [labelAnalyzed, setLabelAnalyzed] = useState(false);
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerStartedRef = useRef(false);
@@ -104,7 +107,20 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
     setCapturedPhoto(blob);
     if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
     setPhotoPreviewUrl(URL.createObjectURL(blob));
-  }, [photoPreviewUrl]);
+
+    // Auto-trigger OCR analysis when a photo is taken
+    if (onAnalyzeLabel) {
+      setAnalyzingLabel(true);
+      try {
+        await onAnalyzeLabel(blob);
+        setLabelAnalyzed(true);
+      } catch {
+        // Silent fail — user can retry manually
+      } finally {
+        setAnalyzingLabel(false);
+      }
+    }
+  }, [photoPreviewUrl, onAnalyzeLabel]);
 
   const handleContinue = useCallback(() => {
     const barcode = scannedBarcode || manualBarcode || undefined;
@@ -205,6 +221,55 @@ export default function BarcodeScanner({ onScanComplete, onCancel }: BarcodeScan
           </button>
         )}
       </div>
+
+      {/* Analyze label OCR */}
+      {capturedPhoto && onAnalyzeLabel && (
+        <button
+          type="button"
+          disabled={analyzingLabel}
+          onClick={async () => {
+            setAnalyzingLabel(true);
+            try {
+              await onAnalyzeLabel(capturedPhoto);
+              setLabelAnalyzed(true);
+            } finally {
+              setAnalyzingLabel(false);
+            }
+          }}
+          className={cn(
+            'w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors',
+            labelAnalyzed
+              ? 'border border-[color:var(--app-success)]/30 bg-[color:var(--app-success)]/10 text-[color:var(--app-success)]'
+              : 'app-accent-bg',
+            analyzingLabel && 'opacity-60 cursor-not-allowed'
+          )}
+        >
+          {analyzingLabel ? (
+            <>
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Analyse en cours...
+            </>
+          ) : labelAnalyzed ? (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Etiquette analysee
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Analyser l'etiquette (OCR)
+            </>
+          )}
+        </button>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">

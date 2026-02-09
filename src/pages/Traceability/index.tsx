@@ -9,7 +9,8 @@ import { cn, vibrate } from '../../utils';
 import { showError } from '../../stores/toastStore';
 import { useBadgeStore } from '../../stores/badgeStore';
 import { generateTraceabilityPDF, generateTraceabilityCSV, downloadCSV } from '../../services/pdf';
-import { buildProductFormPrefill, type ProductFormPrefill } from '../../services/productScan';
+import { buildProductFormPrefill, mapLabelOcrToPrefill, mergePrefills, type ProductFormPrefill } from '../../services/productScan';
+import { analyzeLabelImage, hasApiKey } from '../../services/ocr';
 import BarcodeScanner from '../../components/traceability/BarcodeScanner';
 import ProductForm from '../../components/traceability/ProductForm';
 import ProductGallery from '../../components/traceability/ProductGallery';
@@ -43,6 +44,10 @@ export default function Traceability() {
   const [capturedPhoto, setCapturedPhoto] = useState<Blob | undefined>();
   const [scanPrefill, setScanPrefill] = useState<ProductFormPrefill | undefined>();
 
+  // Label OCR state
+  const [labelOcrPrefill, setLabelOcrPrefill] = useState<ProductFormPrefill | undefined>();
+  const [ocrAvailable, setOcrAvailable] = useState(false);
+
   // Detail state
   const [selectedProduct, setSelectedProduct] = useState<ProductTrace | null>(null);
   const [editingProduct, setEditingProduct] = useState<ProductTrace | null>(null);
@@ -75,6 +80,10 @@ export default function Traceability() {
   useEffect(() => {
     loadInitialProducts();
   }, [loadInitialProducts]);
+
+  useEffect(() => {
+    hasApiKey().then(setOcrAvailable).catch(() => setOcrAvailable(false));
+  }, []);
 
   const loadMoreProducts = useCallback(async () => {
     if (loading || loadingMore || !hasMoreProducts) return;
@@ -164,6 +173,19 @@ export default function Traceability() {
   );
 
   // Handlers
+  const handleAnalyzeLabel = useCallback(
+    async (photo: Blob) => {
+      try {
+        const ocrResult = await analyzeLabelImage(photo);
+        const ocrPrefill = mapLabelOcrToPrefill(ocrResult);
+        setLabelOcrPrefill(ocrPrefill);
+      } catch {
+        showError("Echec de l'analyse OCR. Vous pouvez remplir manuellement.");
+      }
+    },
+    []
+  );
+
   const handleScanComplete = useCallback(
     async (barcode: string | undefined, photo: Blob | undefined) => {
       setScannedBarcode(barcode);
@@ -171,14 +193,23 @@ export default function Traceability() {
 
       try {
         const latestProduct = barcode ? await getLatestProductByBarcode(barcode) : null;
-        setScanPrefill(buildProductFormPrefill({ barcode, latestProduct }));
+        const barcodePrefill = buildProductFormPrefill({ barcode, latestProduct });
+        const finalPrefill = labelOcrPrefill
+          ? mergePrefills(barcodePrefill, labelOcrPrefill)
+          : barcodePrefill;
+        setScanPrefill(finalPrefill);
       } catch {
-        setScanPrefill(buildProductFormPrefill({ barcode }));
+        const barcodePrefill = buildProductFormPrefill({ barcode });
+        const finalPrefill = labelOcrPrefill
+          ? mergePrefills(barcodePrefill, labelOcrPrefill)
+          : barcodePrefill;
+        setScanPrefill(finalPrefill);
       }
 
+      setLabelOcrPrefill(undefined);
       setScannerStep('form');
     },
-    [getLatestProductByBarcode]
+    [getLatestProductByBarcode, labelOcrPrefill]
   );
 
   const handleSaveProduct = useCallback(
@@ -203,6 +234,7 @@ export default function Traceability() {
     setScannedBarcode(undefined);
     setCapturedPhoto(undefined);
     setScanPrefill(undefined);
+    setLabelOcrPrefill(undefined);
   }, []);
 
   const handleDeleteProduct = useCallback(
@@ -297,6 +329,7 @@ export default function Traceability() {
               <BarcodeScanner
                 onScanComplete={handleScanComplete}
                 onCancel={() => setActiveTab('history')}
+                onAnalyzeLabel={ocrAvailable ? handleAnalyzeLabel : undefined}
               />
             ) : (
               <ProductForm

@@ -8,6 +8,7 @@ interface ButtonProps {
   size?: ButtonSize;
   fullWidth?: boolean;
   disabled?: boolean;
+  loading?: boolean;
   children: React.ReactNode;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   className?: string;
@@ -31,33 +32,52 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: "px-6 py-3.5 text-[17px]",
 };
 
+const spinnerSizes: Record<ButtonSize, string> = {
+  sm: "w-4 h-4 border-2",
+  md: "w-5 h-5 border-2",
+  lg: "w-5 h-5 border-[2.5px]",
+};
+
 export default function Button({
   variant = "primary",
   size = "md",
   fullWidth = false,
   disabled = false,
+  loading = false,
   children,
   onClick,
   className = "",
   type = "button",
 }: ButtonProps) {
+  const isDisabled = disabled || loading;
+
   return (
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
+      disabled={isDisabled}
+      aria-busy={loading || undefined}
       className={[
-        "inline-flex items-center justify-center rounded-xl font-semibold transition-opacity duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black",
+        "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-opacity duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent)] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black",
         "min-h-[44px] min-w-[44px]",
         variantClasses[variant],
         sizeClasses[size],
         fullWidth ? "w-full" : "",
-        disabled ? "opacity-40 cursor-not-allowed pointer-events-none" : "cursor-pointer",
+        isDisabled ? "opacity-40 cursor-not-allowed pointer-events-none" : "cursor-pointer",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
     >
+      {loading && (
+        <span
+          className={[
+            spinnerSizes[size],
+            "border-current border-t-transparent rounded-full animate-spin shrink-0",
+          ].join(" ")}
+          aria-hidden="true"
+        />
+      )}
       {children}
     </button>
   );

@@ -19,9 +19,12 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
   const deleteInvoice = useAppStore((s) => s.deleteInvoice);
 
   const imageUrls = useMemo(() => {
-    if (!invoice.images || invoice.images.length === 0) return [];
-    return invoice.images.map((img) => (img instanceof Blob ? blobToUrl(img) : ''));
-  }, [invoice.images]);
+    const blobUrls = (invoice.images ?? [])
+      .map((img) => (img instanceof Blob ? blobToUrl(img) : ''))
+      .filter(Boolean);
+    if (blobUrls.length > 0) return blobUrls;
+    return invoice.imageUrls ?? [];
+  }, [invoice.images, invoice.imageUrls]);
 
   const handleDelete = useCallback(async () => {
     try {

@@ -221,8 +221,12 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
       setThumbnailUrl(url);
       return () => URL.revokeObjectURL(url);
     }
+    if (invoice.imageUrls && invoice.imageUrls.length > 0) {
+      setThumbnailUrl(invoice.imageUrls[0]);
+      return;
+    }
     setThumbnailUrl(null);
-  }, [invoice.images]);
+  }, [invoice.images, invoice.imageUrls]);
 
   return (
     <button onClick={onClick} className="w-full flex items-center gap-3 p-3.5 rounded-2xl app-card text-left active:opacity-70 transition-opacity">

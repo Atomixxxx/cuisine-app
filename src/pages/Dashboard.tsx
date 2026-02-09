@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -44,7 +44,7 @@ export default function Dashboard() {
   const [products, setProducts] = useState<ProductTrace[]>([]);
   const { canShow: showInstall, install: installPwa, dismiss: dismissInstall } = usePwaInstall();
 
-  useEffect(() => {
+  const refreshAll = useCallback(() => {
     loadEquipment();
     const today = new Date();
     getTemperatureRecords(startOfDay(today), endOfDay(today))
@@ -54,13 +54,29 @@ export default function Dashboard() {
     getProducts().then(setProducts).catch(() => showError('Impossible de charger les produits'));
   }, [loadEquipment, getTemperatureRecords, getTasks, getProducts]);
 
+  // Load on mount
+  useEffect(() => { refreshAll(); }, [refreshAll]);
+
+  // Refresh when user comes back to the tab or the app regains focus
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshAll();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', refreshAll);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', refreshAll);
+    };
+  }, [refreshAll]);
+
   const pendingTasks = tasks.filter((t) => !t.completed && !t.archived).length;
   const anomalies = todayRecords.filter((r) => !r.isCompliant).length;
   const checkedEquipment = new Set(todayRecords.map((r) => r.equipmentId)).size;
 
   const expiringProducts = products.filter((product) => {
     const daysLeft = Math.ceil((new Date(product.expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return daysLeft <= 3 && daysLeft >= 0;
+    return daysLeft <= 3;
   });
 
   const smartAlerts = useMemo(

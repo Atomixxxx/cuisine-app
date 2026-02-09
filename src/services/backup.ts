@@ -283,9 +283,9 @@ function parseSettings(value: unknown): AppSettings | null {
   const darkMode = toBoolean(value.darkMode);
   const onboardingDone = toBoolean(value.onboardingDone);
   const priceAlertThreshold = toNumber(value.priceAlertThreshold);
-  const geminiApiKey = toOptionalSanitizedString(value.geminiApiKey);
   if (!id || !establishmentName || darkMode === null || onboardingDone === null || priceAlertThreshold === null) return null;
-  return { id, establishmentName, darkMode, onboardingDone, priceAlertThreshold, geminiApiKey };
+  // Never restore geminiApiKey from backup — user must re-enter it
+  return { id, establishmentName, darkMode, onboardingDone, priceAlertThreshold };
 }
 
 function parseArray<T>(value: unknown, parser: (input: unknown) => T | null): T[] | null {
@@ -364,8 +364,50 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
       images: [],
     })),
     priceHistory: await db.priceHistory.toArray(),
-    settings: await db.settings.toArray(),
+    settings: (await db.settings.toArray()).map(({ geminiApiKey: _removed, ...rest }) => rest as AppSettings),
   };
+}
+
+// ---- AES-GCM encryption (Web Crypto, 0 dependencies) ----
+
+const ENCRYPTION_HEADER = 'CUISINE_ENC_V1';
+
+async function deriveKey(password: string, salt: ArrayBuffer): Promise<CryptoKey> {
+  const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100_000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+
+export async function encryptBackup(json: string, password: string): Promise<ArrayBuffer> {
+  const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+  const salt = saltBytes.buffer.slice(0);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, salt);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(json));
+  const header = new TextEncoder().encode(ENCRYPTION_HEADER);
+  const buf = new Uint8Array(header.length + saltBytes.length + iv.length + ciphertext.byteLength);
+  buf.set(header, 0);
+  buf.set(saltBytes, header.length);
+  buf.set(iv, header.length + saltBytes.length);
+  buf.set(new Uint8Array(ciphertext), header.length + saltBytes.length + iv.length);
+  return buf.buffer;
+}
+
+export function isEncryptedBackup(data: ArrayBuffer): boolean {
+  const header = new TextEncoder().encode(ENCRYPTION_HEADER);
+  if (data.byteLength < header.length) return false;
+  const prefix = new Uint8Array(data, 0, header.length);
+  return prefix.every((b, i) => b === header[i]);
+}
+
+export async function decryptBackup(data: ArrayBuffer, password: string): Promise<string> {
+  const header = new TextEncoder().encode(ENCRYPTION_HEADER);
+  const offset = header.length;
+  const salt = data.slice(offset, offset + 16);
+  const iv = new Uint8Array(data, offset + 16, 12);
+  const ciphertext = new Uint8Array(data, offset + 28);
+  const key = await deriveKey(password, salt);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+  return new TextDecoder().decode(plaintext);
 }
 
 export function downloadBackup(payload: BackupPayload, filenamePrefix = 'cuisine-backup'): void {
@@ -375,6 +417,19 @@ export function downloadBackup(payload: BackupPayload, filenamePrefix = 'cuisine
   const a = document.createElement('a');
   a.href = url;
   a.download = `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  markBackup(new Date().toISOString());
+}
+
+export async function downloadEncryptedBackup(payload: BackupPayload, password: string, filenamePrefix = 'cuisine-backup'): Promise<void> {
+  const json = JSON.stringify(payload, null, 2);
+  const encrypted = await encryptBackup(json, password);
+  const blob = new Blob([encrypted], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.enc`;
   a.click();
   URL.revokeObjectURL(url);
   markBackup(new Date().toISOString());

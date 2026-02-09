@@ -20,10 +20,6 @@ let _ocrAnalyzeLock = false;
 let _lastOcrAnalyzeAt = 0;
 const OCR_MIN_INTERVAL_MS = 1200;
 
-function getEnvApiKey(): string {
-  return (import.meta.env.VITE_GEMINI_API_KEY ?? '').trim();
-}
-
 export async function getApiKey(): Promise<string> {
   if (_cachedApiKey !== null) return _cachedApiKey;
   const settings = await db.settings.get('default');
@@ -34,10 +30,6 @@ export async function getApiKey(): Promise<string> {
     _cachedApiKey = legacyKey;
     await db.settings.update('default', { geminiApiKey: legacyKey });
     localStorage.removeItem(STORAGE_KEYS.geminiApiKeyLegacy);
-  }
-  const envApiKey = getEnvApiKey();
-  if (!_cachedApiKey && envApiKey) {
-    _cachedApiKey = envApiKey;
   }
   return _cachedApiKey;
 }
@@ -174,7 +166,9 @@ Format attendu:
       "designation": "Nom du produit (nettoyé, lisible)",
       "quantity": 1,
       "unitPriceHT": 0.00,
-      "totalPriceHT": 0.00
+      "totalPriceHT": 0.00,
+      "conditioningQuantity": 1,
+      "conditioningUnit": "kg"
     }
   ],
   "totalHT": 0.00,
@@ -189,7 +183,9 @@ Règles:
 - Pour les items, extrais le nom du produit de façon lisible et propre
 - Pour le fournisseur, c'est l'entreprise qui ÉMET la facture (pas le client)
 - Pour la date, convertis au format YYYY-MM-DD
-- Calcule totalTVA = totalTTC - totalHT si non explicite`;
+- Calcule totalTVA = totalTTC - totalHT si non explicite
+- conditioningQuantity = nombre d'unites dans le conditionnement. Ex: "carton 90 oeufs" → conditioningQuantity=90, conditioningUnit="unite". "Sac 25kg farine" → conditioningQuantity=25, conditioningUnit="kg". Si le produit est vendu a l'unite simple ou au poids, mettre 1.
+- conditioningUnit parmi: kg, g, l, ml, unite`;
 
   const body = {
     contents: [
@@ -265,12 +261,19 @@ Règles:
 
   // Map to OCRResult — sanitize all string fields from the AI response
   const items: InvoiceItem[] = Array.isArray(parsed.items)
-    ? (parsed.items as Record<string, unknown>[]).map((item) => ({
-        designation: sanitize(String(item.designation || '')),
-        quantity: Number(item.quantity) || 1,
-        unitPriceHT: Number(item.unitPriceHT) || 0,
-        totalPriceHT: Number(item.totalPriceHT) || 0,
-      }))
+    ? (parsed.items as Record<string, unknown>[]).map((item) => {
+        const cq = Number(item.conditioningQuantity) || 0;
+        const cuRaw = String(item.conditioningUnit || '').toLowerCase().trim();
+        const validUnits = ['kg', 'g', 'l', 'ml', 'unite'];
+        return {
+          designation: sanitize(String(item.designation || '')),
+          quantity: Number(item.quantity) || 1,
+          unitPriceHT: Number(item.unitPriceHT) || 0,
+          totalPriceHT: Number(item.totalPriceHT) || 0,
+          conditioningQuantity: cq > 1 ? cq : undefined,
+          conditioningUnit: cq > 1 && validUnits.includes(cuRaw) ? cuRaw as InvoiceItem['conditioningUnit'] : undefined,
+        };
+      })
     : [];
 
     return {
@@ -282,6 +285,145 @@ Règles:
       totalHT: Number(parsed.totalHT) || 0,
       totalTVA: Number(parsed.totalTVA) || 0,
       totalTTC: Number(parsed.totalTTC) || 0,
+    };
+  } finally {
+    _ocrAnalyzeLock = false;
+  }
+}
+
+/* ── Label / traceability OCR ── */
+
+export interface LabelOCRResult {
+  productName: string;
+  lotNumber: string;
+  expirationDate: string;
+  packagingDate: string;
+  estampilleSanitaire: string;
+  weight: string;
+  category: string;
+  rawText: string;
+}
+
+const LABEL_PROMPT = `Tu es un expert en lecture d'etiquettes alimentaires francaises (viande, volaille, poisson, charcuterie, etc.).
+Analyse cette photo d'etiquette et extrais les informations suivantes au format JSON strict.
+
+Reponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans backticks, sans texte avant ou apres.
+
+Format attendu:
+{
+  "productName": "Nom du produit (ex: 6 ESCALOPES DE DINDE)",
+  "lotNumber": "Numero de lot (champ 'Lot')",
+  "expirationDate": "Date limite de consommation au format YYYY-MM-DD (depuis 'A consommer jusqu'au' ou 'DLC' ou 'DDM')",
+  "packagingDate": "Date d'emballage au format YYYY-MM-DD (depuis 'Emballe le' ou 'Conditionne le')",
+  "estampilleSanitaire": "Estampille sanitaire ovale (ex: FR 61.096.020 CE)",
+  "weight": "Poids net (ex: 0,950 kg)",
+  "category": "Categorie parmi: Viande, Poisson, Legumes, Fruits, Produits laitiers, Epicerie seche, Surgeles, Boissons, Autre",
+  "rawText": "Resume du texte brut visible sur l'etiquette"
+}
+
+Regles:
+- Convertis toutes les dates au format YYYY-MM-DD (attention: les dates francaises sont JJ.MM.AA ou JJ/MM/AAAA)
+- Pour les annees a 2 chiffres, considere 00-79 comme 2000-2079 et 80-99 comme 1980-1999
+- Si un champ est introuvable, utilise une chaine vide ""
+- Pour la categorie, deduis-la du type de produit (ex: dinde/poulet/boeuf -> Viande, saumon/cabillaud -> Poisson)
+- L'estampille sanitaire est generalement dans un ovale avec FR ... CE`;
+
+export async function analyzeLabelImage(
+  imageBlob: Blob,
+  onProgress?: (progress: number) => void,
+): Promise<LabelOCRResult> {
+  const apiKey = await getApiKey();
+  if (!apiKey) {
+    throw new Error('Cle API Gemini non configuree. Ajoutez votre cle dans les parametres.');
+  }
+
+  await reserveOcrSlot();
+  try {
+    onProgress?.(10);
+
+    const base64 = await blobToBase64(imageBlob);
+    const mimeType = imageBlob.type || 'image/jpeg';
+
+    onProgress?.(30);
+
+    const body = {
+      contents: [
+        {
+          parts: [
+            { text: LABEL_PROMPT },
+            { inline_data: { mime_type: mimeType, data: base64 } },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 2048,
+      },
+    };
+
+    onProgress?.(40);
+
+    const response = await fetchWithRetry(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    onProgress?.(80);
+
+    if (!response.ok) {
+      const err = await response.text();
+      if (response.status === 400 && err.includes('API_KEY')) {
+        throw new Error('Cle API Gemini invalide. Verifiez votre cle dans les parametres.');
+      }
+      if (response.status === 429) {
+        throw new Error('Limite de requetes atteinte. Reessayez dans quelques secondes.');
+      }
+      throw new Error(`Erreur Gemini (${response.status}): ${err.substring(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textContent) {
+      throw new Error("Gemini n'a pas retourne de reponse. Reessayez.");
+    }
+
+    onProgress?.(90);
+
+    const jsonStr = textContent
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/, '')
+      .trim();
+
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("Impossible de lire la reponse de Gemini. Reessayez.");
+      }
+    }
+
+    onProgress?.(100);
+
+    return {
+      productName: sanitize(String(parsed.productName || '')),
+      lotNumber: sanitize(String(parsed.lotNumber || '')),
+      expirationDate: String(parsed.expirationDate || ''),
+      packagingDate: String(parsed.packagingDate || ''),
+      estampilleSanitaire: sanitize(String(parsed.estampilleSanitaire || '')),
+      weight: sanitize(String(parsed.weight || '')),
+      category: sanitize(String(parsed.category || '')),
+      rawText: sanitize(String(parsed.rawText || '')),
     };
   } finally {
     _ocrAnalyzeLock = false;

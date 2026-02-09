@@ -20,7 +20,9 @@ export default function ProductForm({ barcode, photo, prefill, existingProduct, 
   const [receptionDate, setReceptionDate] = useState(
     existingProduct
       ? format(new Date(existingProduct.receptionDate), 'yyyy-MM-dd')
-      : format(new Date(), 'yyyy-MM-dd')
+      : prefill?.receptionDate
+        ? format(new Date(prefill.receptionDate), 'yyyy-MM-dd')
+        : format(new Date(), 'yyyy-MM-dd')
   );
   const [expirationDate, setExpirationDate] = useState(
     existingProduct
@@ -32,13 +34,34 @@ export default function ProductForm({ barcode, photo, prefill, existingProduct, 
   const [category, setCategory] = useState(existingProduct?.category ?? prefill?.category ?? PRODUCT_CATEGORIES[0]);
   const [allergens, setAllergens] = useState<string[]>(existingProduct?.allergens ?? prefill?.allergens ?? []);
   const [currentPhoto, setCurrentPhoto] = useState<Blob | undefined>(existingProduct?.photo ?? photo);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(existingProduct?.photoUrl ?? null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const hasAutoPrefill = !existingProduct && Boolean(
-    prefill?.productName || prefill?.supplier || prefill?.lotNumber || prefill?.expirationDate || prefill?.category || prefill?.allergens?.length
+    prefill?.productName || prefill?.supplier || prefill?.lotNumber || prefill?.expirationDate || prefill?.receptionDate || prefill?.category || prefill?.allergens?.length
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const prefillAppliedRef = useRef(false);
+
+  // Apply prefill values when they arrive (e.g., OCR finishes after form mount)
+  useEffect(() => {
+    if (!prefill || prefillAppliedRef.current || existingProduct) return;
+    const hasData = prefill.productName || prefill.supplier || prefill.lotNumber || prefill.expirationDate || prefill.receptionDate || prefill.category || prefill.allergens?.length;
+    if (!hasData) return;
+    prefillAppliedRef.current = true;
+
+    if (prefill.productName && !productName) setProductName(prefill.productName);
+    if (prefill.supplier && !supplier) setSupplier(prefill.supplier);
+    if (prefill.lotNumber && !lotNumber) setLotNumber(prefill.lotNumber);
+    if (prefill.category) setCategory(prefill.category);
+    if (prefill.allergens?.length && allergens.length === 0) setAllergens(prefill.allergens);
+    if (prefill.expirationDate && !expirationDate) {
+      setExpirationDate(format(new Date(prefill.expirationDate), 'yyyy-MM-dd'));
+    }
+    if (prefill.receptionDate) {
+      setReceptionDate(format(new Date(prefill.receptionDate), 'yyyy-MM-dd'));
+    }
+  }, [prefill, existingProduct, productName, supplier, lotNumber, expirationDate, allergens]);
 
   useEffect(() => {
     if (currentPhoto) {
@@ -46,8 +69,8 @@ export default function ProductForm({ barcode, photo, prefill, existingProduct, 
       setPhotoUrl(url);
       return () => URL.revokeObjectURL(url);
     }
-    setPhotoUrl(null);
-  }, [currentPhoto]);
+    setPhotoUrl(existingProduct?.photoUrl ?? null);
+  }, [currentPhoto, existingProduct?.photoUrl]);
 
   const handlePhotoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -362,4 +385,3 @@ export default function ProductForm({ barcode, photo, prefill, existingProduct, 
     </form>
   );
 }
-

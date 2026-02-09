@@ -3,7 +3,7 @@ import { useAppStore } from '../../stores/appStore';
 import { showError } from '../../stores/toastStore';
 import { EQUIPMENT_TYPES } from '../../types';
 import type { Equipment, TemperatureRecord } from '../../types';
-import { formatDate, cn, vibrate } from '../../utils';
+import { formatDate, cn, vibrate, validateRange } from '../../utils';
 
 interface NumpadModalProps {
   equipment: Equipment;
@@ -16,6 +16,7 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
   const [hasDecimal, setHasDecimal] = useState(false);
   const [isNegative, setIsNegative] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [rangeError, setRangeError] = useState<string | null>(null);
 
   const handleKey = useCallback(async (key: string) => {
     switch (key) {
@@ -24,6 +25,7 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         const removed = display[display.length - 1];
         if (removed === '.') setHasDecimal(false);
         setDisplay(prev => prev.slice(0, -1));
+        setRangeError(null);
         break;
       }
       case '.': {
@@ -34,6 +36,7 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
       }
       case '±': {
         setIsNegative(prev => !prev);
+        setRangeError(null);
         break;
       }
       case 'confirm': {
@@ -41,6 +44,8 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         const raw = display.length === 0 ? '0' : display;
         const value = parseFloat((isNegative ? '-' : '') + raw);
         if (isNaN(value)) return;
+        const err = validateRange(value, -50, 300, 'La temperature');
+        if (err) { setRangeError(err); return; }
         setSaving(true);
         try {
           await onSubmit(value);
@@ -96,12 +101,20 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         </div>
 
         {/* Display */}
-        <div className="app-surface-2 rounded-2xl p-5 mb-4 text-center">
+        <div
+          className={cn("app-surface-2 rounded-2xl p-5 mb-4 text-center", rangeError && "ring-2 ring-[color:var(--app-danger)]")}
+          role="status"
+          aria-invalid={!!rangeError}
+          aria-describedby={rangeError ? "numpad-range-error" : undefined}
+        >
           <span className="text-5xl font-mono font-bold app-text">
             {displayValue}
           </span>
           <span className="text-2xl font-bold app-muted ml-1">°C</span>
         </div>
+        {rangeError && (
+          <p id="numpad-range-error" className="text-[13px] text-[color:var(--app-danger)] text-center -mt-2 mb-2">{rangeError}</p>
+        )}
 
         {/* Keypad */}
         <div className="grid grid-cols-3 gap-2 mb-3">

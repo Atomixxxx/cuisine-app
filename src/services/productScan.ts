@@ -1,5 +1,7 @@
 import { addDays, differenceInCalendarDays, startOfDay } from 'date-fns';
 import type { ProductTrace } from '../types';
+import { PRODUCT_CATEGORIES } from '../types';
+import type { LabelOCRResult } from './ocr';
 
 const GS1_GROUP_SEPARATOR = String.fromCharCode(29);
 const GS1_PREFIX_RE = /^\]C1/;
@@ -9,6 +11,7 @@ export interface ProductFormPrefill {
   supplier?: string;
   lotNumber?: string;
   expirationDate?: Date;
+  receptionDate?: Date;
   category?: string;
   allergens?: string[];
 }
@@ -159,4 +162,54 @@ export const buildProductFormPrefill = ({
   }
 
   return prefill;
+};
+
+/* ── Label OCR → prefill conversion ── */
+
+const parseDateString = (value: string): Date | undefined => {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (!Number.isFinite(d.getTime())) return undefined;
+  return d;
+};
+
+const matchCategory = (raw: string): string | undefined => {
+  if (!raw) return undefined;
+  const lower = raw.toLowerCase();
+  const match = PRODUCT_CATEGORIES.find((c) => c.toLowerCase() === lower);
+  if (match) return match;
+  // Fuzzy match: check if the OCR category contains a known category name
+  return PRODUCT_CATEGORIES.find((c) => lower.includes(c.toLowerCase())) ?? undefined;
+};
+
+export const mapLabelOcrToPrefill = (ocr: LabelOCRResult): ProductFormPrefill => {
+  const prefill: ProductFormPrefill = {};
+
+  if (ocr.productName) prefill.productName = ocr.productName;
+  if (ocr.lotNumber) prefill.lotNumber = ocr.lotNumber;
+  if (ocr.estampilleSanitaire) prefill.supplier = ocr.estampilleSanitaire;
+
+  const expDate = parseDateString(ocr.expirationDate);
+  if (expDate) prefill.expirationDate = expDate;
+
+  const pkgDate = parseDateString(ocr.packagingDate);
+  if (pkgDate) prefill.receptionDate = pkgDate;
+
+  const cat = matchCategory(ocr.category);
+  if (cat) prefill.category = cat;
+
+  return prefill;
+};
+
+export const mergePrefills = (
+  base: ProductFormPrefill,
+  overlay: ProductFormPrefill,
+): ProductFormPrefill => {
+  const result = { ...base };
+  for (const [key, value] of Object.entries(overlay)) {
+    if (value !== undefined && value !== '') {
+      (result as Record<string, unknown>)[key] = value;
+    }
+  }
+  return result;
 };
