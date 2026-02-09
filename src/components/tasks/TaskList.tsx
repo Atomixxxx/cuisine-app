@@ -56,7 +56,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, grouped, onToggle, onEdit, o
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
         </svg>
         <p className="ios-title3 app-muted">Aucune tache</p>
-        <p className="text-[15px] app-muted mt-1">Appuie sur + pour ajouter une tache</p>
+        <p className="ios-body app-muted mt-1">Appuie sur + pour ajouter une tache</p>
       </div>
     );
   }
@@ -116,3 +116,4 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, grouped, onToggle, onEdit, o
 };
 
 export default TaskList;
+

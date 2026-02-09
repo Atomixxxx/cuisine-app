@@ -1,15 +1,9 @@
 import type { RecipeUnit } from '../types';
-import { sanitize } from '../utils';
+import { blobToBase64, sanitize } from '../utils';
 import { getApiKey } from './ocr';
 
-async function blobToBase64(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
+function canUseOnlineApis(): boolean {
+  return typeof navigator === 'undefined' || navigator.onLine;
 }
 
 async function callGemini(
@@ -17,6 +11,8 @@ async function callGemini(
   parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }>,
   options?: { temperature?: number; maxOutputTokens?: number },
 ): Promise<string | null> {
+  if (!canUseOnlineApis()) return null;
+
   const body = {
     contents: [{ parts }],
     generationConfig: {
@@ -182,6 +178,7 @@ export async function generateRecipeTemplateFromLine(
 ): Promise<GeneratedRecipeTemplate> {
   const trimmed = label.trim();
   if (!trimmed) return fallbackTemplateFromLabel(label, options);
+  if (!canUseOnlineApis()) return fallbackTemplateFromLabel(trimmed, options);
 
   const apiKey = await getApiKey();
   if (!apiKey) return fallbackTemplateFromLabel(trimmed, options);
@@ -219,6 +216,7 @@ export async function parseRecipeFromText(
 ): Promise<GeneratedRecipeTemplate> {
   const trimmed = text.trim();
   if (!trimmed) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
+  if (!canUseOnlineApis()) return { title: trimmed.slice(0, 50), portions: 1, salePriceHT: 0, ingredients: [] };
 
   const apiKey = await getApiKey();
   if (!apiKey) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
@@ -281,6 +279,8 @@ export async function parseRecipeFromImage(
   imageBlob: Blob,
   catalog?: RecipeAiCatalogIngredient[],
 ): Promise<GeneratedRecipeTemplate> {
+  if (!canUseOnlineApis()) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
+
   const apiKey = await getApiKey();
   if (!apiKey) return { title: 'Recette', portions: 1, salePriceHT: 0, ingredients: [] };
 
@@ -349,6 +349,7 @@ export async function searchIngredientPrices(
   ingredientNames: Array<{ name: string; unit: RecipeUnit }>,
 ): Promise<IngredientPriceEstimate[]> {
   if (ingredientNames.length === 0) return [];
+  if (!canUseOnlineApis()) return [];
 
   const apiKey = await getApiKey();
   if (!apiKey) return [];

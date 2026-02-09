@@ -158,7 +158,7 @@ const TasksPage: React.FC = () => {
           </div>
           <button
             onClick={() => setShowArchive(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold app-surface-2 app-text active:opacity-70 transition-opacity"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl ios-caption font-semibold app-surface-2 app-text active:opacity-70 transition-opacity"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 8v13H3V8" />
@@ -191,8 +191,8 @@ const TasksPage: React.FC = () => {
         {todayTotal > 0 && (
           <div className="rounded-xl app-surface-2 p-3 border border-[color:var(--app-border)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[13px] app-muted">Progression du jour</span>
-              <span className="text-[13px] font-semibold app-text">
+              <span className="ios-caption app-muted">Progression du jour</span>
+              <span className="ios-caption font-semibold app-text">
                 {todayCompleted}/{todayTotal} ({progressPercent}%)
               </span>
             </div>
@@ -268,3 +268,4 @@ const TasksPage: React.FC = () => {
 };
 
 export default TasksPage;
+

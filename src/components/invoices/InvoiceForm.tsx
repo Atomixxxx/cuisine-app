@@ -289,13 +289,13 @@ export default function InvoiceForm({
             <button
               type="button"
               onClick={() => setSupplier(canonicalSupplier)}
-              className="mt-1 text-[11px] font-semibold text-[color:var(--app-accent)] active:opacity-70"
+              className="mt-1 ios-small font-semibold text-[color:var(--app-accent)] active:opacity-70"
             >
               Utiliser le nom normalise: {canonicalSupplier}
             </button>
           )}
           {isDetectedNewSupplier && (
-            <p className="mt-1 text-[11px] font-semibold text-[color:var(--app-warning)]">
+            <p className="mt-1 ios-small font-semibold text-[color:var(--app-warning)]">
               Nouveau fournisseur detecte, verification recommandee avant sauvegarde.
             </p>
           )}
@@ -307,7 +307,7 @@ export default function InvoiceForm({
                   type="button"
                   onClick={() => setSupplier(pick)}
                   className={cn(
-                    'px-2 py-1 rounded-full text-[11px] font-semibold active:opacity-70',
+                    'px-2 py-1 rounded-full ios-small font-semibold active:opacity-70',
                     canonicalSupplier.toLowerCase() === pick.toLowerCase() ? 'app-accent-bg' : 'app-surface-2 app-text',
                   )}
                 >
@@ -508,7 +508,7 @@ export default function InvoiceForm({
         <summary className="text-xs font-medium app-muted cursor-pointer hover:text-[color:var(--app-accent)]">
           Voir le texte OCR brut
         </summary>
-        <pre className="mt-2 p-3 rounded-lg app-surface-2 border app-border text-[11px] app-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
+        <pre className="mt-2 p-3 rounded-lg app-surface-2 border app-border ios-small app-muted overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
           {initialData.text}
         </pre>
       </details>
@@ -561,3 +561,4 @@ export default function InvoiceForm({
     </div>
   );
 }
+

@@ -89,7 +89,7 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 id="numpad-title" className="ios-title3 app-text">{equipment.name}</h3>
-            <p className="text-[13px] app-muted">
+            <p className="ios-caption app-muted">
               {EQUIPMENT_TYPES[equipment.type]} &middot; {equipment.minTemp}°C ~ {equipment.maxTemp}°C
             </p>
           </div>
@@ -113,7 +113,7 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
           <span className="text-2xl font-bold app-muted ml-1">°C</span>
         </div>
         {rangeError && (
-          <p id="numpad-range-error" className="text-[13px] text-[color:var(--app-danger)] text-center -mt-2 mb-2">{rangeError}</p>
+          <p id="numpad-range-error" className="ios-caption text-[color:var(--app-danger)] text-center -mt-2 mb-2">{rangeError}</p>
         )}
 
         {/* Keypad */}
@@ -245,7 +245,7 @@ export default function TemperatureInput() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
         <p className="ios-title3 app-muted">Aucun équipement</p>
-        <p className="text-[15px] app-muted mt-1">
+        <p className="ios-body app-muted mt-1">
           Ajoutez des équipements via le bouton Équipements
         </p>
       </div>
@@ -277,7 +277,7 @@ export default function TemperatureInput() {
                     {EQUIPMENT_TYPES[eq.type]}
                   </span>
                 </div>
-                <p className="text-[13px] app-muted mt-0.5">
+                <p className="ios-caption app-muted mt-0.5">
                   Plage : {eq.minTemp}°C ~ {eq.maxTemp}°C
                 </p>
               </div>
@@ -298,7 +298,7 @@ export default function TemperatureInput() {
                     </p>
                   </>
                 ) : (
-                  <span className="text-[15px] app-muted italic">
+                  <span className="ios-body app-muted italic">
                     Aucun relevé
                   </span>
                 )}
@@ -318,3 +318,4 @@ export default function TemperatureInput() {
     </div>
   );
 }
+

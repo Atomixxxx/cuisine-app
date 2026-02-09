@@ -55,7 +55,7 @@ export default function RecipeList({ recipes, costMap, onSelectRecipe, onNewReci
       {/* Hero */}
       <div className="app-hero-card space-y-2">
         <h1 className="ios-title app-text">Fiches techniques</h1>
-        <p className="text-[15px] app-muted">
+        <p className="ios-body app-muted">
           {recipes.length > 0
             ? `${recipes.length} fiche${recipes.length > 1 ? 's' : ''} · Food cost moyen: ${(avgFoodCost * 100).toFixed(1)}%`
             : 'Recettes, cout matiere et food cost en temps reel.'}
@@ -113,7 +113,7 @@ export default function RecipeList({ recipes, costMap, onSelectRecipe, onNewReci
           title="Aucune fiche technique"
           description="Cree ta premiere fiche pour suivre tes couts matiere."
           action={
-            <button onClick={onNewRecipe} className="px-6 py-3 rounded-xl app-accent-bg text-[15px] font-semibold active:opacity-70">
+            <button onClick={onNewRecipe} className="px-6 py-3 rounded-xl app-accent-bg ios-body font-semibold active:opacity-70">
               Creer une fiche
             </button>
           }
@@ -147,3 +147,4 @@ export default function RecipeList({ recipes, costMap, onSelectRecipe, onNewReci
     </div>
   );
 }
+

@@ -22,6 +22,7 @@ import {
 } from '../../services/recipeAi';
 import { autoFixSuspiciousPrices } from '../../services/conditioningDetect';
 import { normalizeName, nameSimilarity } from '../../services/ingredientMatch';
+import { computeAutoRecipeAllergens, mergeRecipeAllergens } from '../../services/recipeAllergens';
 import IngredientLineEditor from './IngredientLineEditor';
 import CostSummaryBar from './CostSummaryBar';
 
@@ -68,13 +69,14 @@ export default function RecipeEditor({
   const [title, setTitle] = useState(recipe?.title || '');
   const [portions, setPortions] = useState(String(recipe?.portions || 1));
   const [salePriceHT, setSalePriceHT] = useState(String(recipe?.salePriceHT || 0));
-  const [recipeAllergens, setRecipeAllergens] = useState<string[]>(recipe?.allergens ?? []);
+  const [manualAllergens, setManualAllergens] = useState<string[]>(recipe?.allergens ?? []);
   const [createdAt] = useState<Date>(recipe ? new Date(recipe.createdAt) : new Date());
   const [lines, setLines] = useState<RecipeLineDraft[]>([]);
   const [lastSavedSummary, setLastSavedSummary] = useState<RecipeCostSummary>(DEFAULT_SUMMARY);
   const [showAllergens, setShowAllergens] = useState(false);
   const [localIngredients, setLocalIngredients] = useState(ingredients);
   const [saving, setSaving] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
 
   const ingredientMap = useMemo(() => new Map(localIngredients.map((i) => [i.id, i])), [localIngredients]);
   const supplierQuickPicks = useMemo(() => {
@@ -92,6 +94,14 @@ export default function RecipeEditor({
 
   const parsedSalePrice = Number.parseFloat(salePriceHT) || 0;
   const parsedPortions = Math.max(1, Number.parseInt(portions, 10) || 1);
+  const autoDetectedAllergens = useMemo(() => {
+    const ingredientIds = lines.map((line) => line.ingredientId).filter(Boolean);
+    return computeAutoRecipeAllergens(ingredientIds, ingredientMap);
+  }, [lines, ingredientMap]);
+  const mergedAllergens = useMemo(
+    () => mergeRecipeAllergens(autoDetectedAllergens, manualAllergens),
+    [autoDetectedAllergens, manualAllergens],
+  );
 
   const liveSummary = useMemo(
     () =>
@@ -114,6 +124,17 @@ export default function RecipeEditor({
   }, [recipe, getRecipeIngredients]);
 
   useEffect(() => { setLocalIngredients(ingredients); }, [ingredients]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   const similarity = nameSimilarity;
 
@@ -210,6 +231,7 @@ export default function RecipeEditor({
   // --- Creation wizard handlers ---
   const handleParseText = async () => {
     if (!creationInput.trim()) { showError('Colle ou ecris ta recette'); return; }
+    if (!isOnline) { showError("Mode hors ligne: l'IA n'est pas disponible"); return; }
     setAnalyzing(true);
     setAnalyzeStatus('Analyse de la recette...');
     try {
@@ -222,6 +244,7 @@ export default function RecipeEditor({
   };
 
   const handleParsePhoto = async (file: File) => {
+    if (!isOnline) { showError("Mode hors ligne: l'IA n'est pas disponible"); return; }
     setAnalyzing(true);
     setAnalyzeStatus('Lecture de la photo...');
     try {
@@ -236,6 +259,7 @@ export default function RecipeEditor({
 
   const handleGenerate = async () => {
     if (!creationInput.trim()) { showError('Decris ce que tu veux (ex: pate a crepes 1L)'); return; }
+    if (!isOnline) { showError("Mode hors ligne: l'IA n'est pas disponible"); return; }
     setAnalyzing(true);
     setAnalyzeStatus('Generation de la recette...');
     try {
@@ -248,7 +272,7 @@ export default function RecipeEditor({
   };
 
   const toggleAllergen = useCallback((allergen: string) => {
-    setRecipeAllergens((prev) => prev.includes(allergen) ? prev.filter((v) => v !== allergen) : [...prev, allergen]);
+    setManualAllergens((prev) => prev.includes(allergen) ? prev.filter((v) => v !== allergen) : [...prev, allergen]);
   }, []);
 
   const addLine = () => {
@@ -279,7 +303,15 @@ export default function RecipeEditor({
     try {
       const now = new Date();
       const recipeId = recipe?.id || crypto.randomUUID();
-      const recipeData: Recipe = { id: recipeId, title: trimmedTitle, portions: parsedPortions, salePriceHT: parsedSalePrice, createdAt, updatedAt: now, allergens: recipeAllergens };
+      const recipeData: Recipe = {
+        id: recipeId,
+        title: trimmedTitle,
+        portions: parsedPortions,
+        salePriceHT: parsedSalePrice,
+        createdAt,
+        updatedAt: now,
+        allergens: mergedAllergens,
+      };
       const linkedLines: RecipeIngredient[] = lines
         .filter((l) => l.ingredientId && l.requiredQuantity > 0)
         .map((l) => ({ id: l.id || crypto.randomUUID(), recipeId, ingredientId: l.ingredientId, requiredQuantity: l.requiredQuantity, requiredUnit: l.requiredUnit }));
@@ -311,12 +343,12 @@ export default function RecipeEditor({
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
           </svg>
-          <span className="text-[15px]">Retour</span>
+          <span className="ios-body">Retour</span>
         </button>
         <h2 className="ios-title3 app-text">{recipe ? recipe.title : 'Nouvelle fiche'}</h2>
         {!showCreationWizard && (
           <button onClick={() => { void handleSave(); }} disabled={saving}
-            className={cn('min-h-[44px] px-4 text-[15px] font-semibold active:opacity-70', saving ? 'app-muted' : 'app-accent')}>
+            className={cn('min-h-[44px] px-4 ios-body font-semibold active:opacity-70', saving ? 'app-muted' : 'app-accent')}>
             {saving ? 'Sauvegarde...' : 'Sauver'}
           </button>
         )}
@@ -332,12 +364,17 @@ export default function RecipeEditor({
               <div className="text-center py-6">
                 <h2 className="text-[20px] font-bold app-text">Comment veux-tu creer ta fiche ?</h2>
                 <p className="text-[14px] app-muted mt-1">L'IA analyse et pre-remplit tout pour toi</p>
+                {!isOnline && <p className="ios-caption text-[color:var(--app-warning)] mt-1">Mode hors ligne: creation manuelle uniquement</p>}
               </div>
 
               {/* Option 1: Paste/write recipe */}
               <button
                 onClick={() => setCreationMode('text')}
-                className="w-full rounded-2xl app-card p-5 text-left active:opacity-70 space-y-1"
+                disabled={!isOnline}
+                className={cn(
+                  'w-full rounded-2xl app-card p-5 text-left active:opacity-70 space-y-1',
+                  !isOnline && 'opacity-50 cursor-not-allowed',
+                )}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl app-accent-bg flex items-center justify-center shrink-0">
@@ -347,7 +384,7 @@ export default function RecipeEditor({
                   </div>
                   <div>
                     <p className="text-[16px] font-semibold app-text">Coller / ecrire une recette</p>
-                    <p className="text-[13px] app-muted">Colle ta recette en texte, l'IA extrait les ingredients et les prix</p>
+                    <p className="ios-caption app-muted">Colle ta recette en texte, l'IA extrait les ingredients et les prix</p>
                   </div>
                 </div>
               </button>
@@ -355,7 +392,11 @@ export default function RecipeEditor({
               {/* Option 2: Photo */}
               <button
                 onClick={() => { setCreationMode('photo'); setTimeout(() => photoInputRef.current?.click(), 100); }}
-                className="w-full rounded-2xl app-card p-5 text-left active:opacity-70 space-y-1"
+                disabled={!isOnline}
+                className={cn(
+                  'w-full rounded-2xl app-card p-5 text-left active:opacity-70 space-y-1',
+                  !isOnline && 'opacity-50 cursor-not-allowed',
+                )}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl app-warning-bg flex items-center justify-center shrink-0">
@@ -366,7 +407,7 @@ export default function RecipeEditor({
                   </div>
                   <div>
                     <p className="text-[16px] font-semibold app-text">Photo d'une recette</p>
-                    <p className="text-[13px] app-muted">Prends en photo une recette papier ou ecran</p>
+                    <p className="ios-caption app-muted">Prends en photo une recette papier ou ecran</p>
                   </div>
                 </div>
               </button>
@@ -374,7 +415,11 @@ export default function RecipeEditor({
               {/* Option 3: AI generate */}
               <button
                 onClick={() => setCreationMode('generate')}
-                className="w-full rounded-2xl app-card p-5 text-left active:opacity-70 space-y-1"
+                disabled={!isOnline}
+                className={cn(
+                  'w-full rounded-2xl app-card p-5 text-left active:opacity-70 space-y-1',
+                  !isOnline && 'opacity-50 cursor-not-allowed',
+                )}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl app-success-bg flex items-center justify-center shrink-0">
@@ -384,7 +429,7 @@ export default function RecipeEditor({
                   </div>
                   <div>
                     <p className="text-[16px] font-semibold app-text">Generer par IA</p>
-                    <p className="text-[13px] app-muted">Ex: "pate a crepes 1L", "tiramisu 8 parts"</p>
+                    <p className="ios-caption app-muted">Ex: "pate a crepes 1L", "tiramisu 8 parts"</p>
                   </div>
                 </div>
               </button>
@@ -411,14 +456,17 @@ export default function RecipeEditor({
                 onChange={(e) => setCreationInput(e.target.value)}
                 rows={8}
                 placeholder={"Ex:\nPate a crepes (1 litre)\n250g farine\n4 oeufs\n500ml lait\n50g beurre fondu\n1 pincee de sel\n30g sucre"}
-                className="w-full px-4 py-3 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)] resize-y"
+                className="w-full px-4 py-3 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)] resize-y"
                 autoFocus
               />
-              {analyzeStatus && <p className="text-[13px] app-accent font-medium animate-pulse">{analyzeStatus}</p>}
+              {analyzeStatus && <p className="ios-caption app-accent font-medium animate-pulse">{analyzeStatus}</p>}
               <button
                 onClick={() => { void handleParseText(); }}
-                disabled={analyzing}
-                className={cn('w-full py-3 rounded-xl text-[16px] font-semibold active:opacity-70', analyzing ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}
+                disabled={analyzing || !isOnline}
+                className={cn(
+                  'w-full py-3 rounded-xl text-[16px] font-semibold active:opacity-70',
+                  (analyzing || !isOnline) ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
+                )}
               >
                 {analyzing ? 'Analyse en cours...' : 'Analyser la recette'}
               </button>
@@ -440,12 +488,15 @@ export default function RecipeEditor({
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleParsePhoto(f); e.target.value = ''; }}
                 className="hidden"
               />
-              {analyzeStatus && <p className="text-[13px] app-accent font-medium animate-pulse">{analyzeStatus}</p>}
+              {analyzeStatus && <p className="ios-caption app-accent font-medium animate-pulse">{analyzeStatus}</p>}
               <div className="flex gap-2">
                 <button
                   onClick={() => photoInputRef.current?.click()}
-                  disabled={analyzing}
-                  className={cn('flex-1 py-3 rounded-xl text-[15px] font-semibold active:opacity-70', analyzing ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}
+                  disabled={analyzing || !isOnline}
+                  className={cn(
+                    'flex-1 py-3 rounded-xl ios-body font-semibold active:opacity-70',
+                    (analyzing || !isOnline) ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
+                  )}
                 >
                   {analyzing ? 'Analyse...' : 'Prendre une photo'}
                 </button>
@@ -469,11 +520,14 @@ export default function RecipeEditor({
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') void handleGenerate(); }}
               />
-              {analyzeStatus && <p className="text-[13px] app-accent font-medium animate-pulse">{analyzeStatus}</p>}
+              {analyzeStatus && <p className="ios-caption app-accent font-medium animate-pulse">{analyzeStatus}</p>}
               <button
                 onClick={() => { void handleGenerate(); }}
-                disabled={analyzing}
-                className={cn('w-full py-3 rounded-xl text-[16px] font-semibold active:opacity-70', analyzing ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}
+                disabled={analyzing || !isOnline}
+                className={cn(
+                  'w-full py-3 rounded-xl text-[16px] font-semibold active:opacity-70',
+                  (analyzing || !isOnline) ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
+                )}
               >
                 {analyzing ? 'Generation en cours...' : 'Generer la recette'}
               </button>
@@ -509,30 +563,45 @@ export default function RecipeEditor({
               <div className="rounded-2xl app-card overflow-hidden">
                 <button onClick={() => setShowAllergens(!showAllergens)}
                   className="w-full ios-settings-row flex items-center justify-between active:opacity-70">
-                  <span className="text-[14px] app-muted">Allergenes {recipeAllergens.length > 0 ? `(${recipeAllergens.length})` : ''}</span>
+                  <span className="text-[14px] app-muted">
+                    Allergenes {mergedAllergens.length > 0 ? `(${mergedAllergens.length})` : ''}
+                  </span>
                   <svg xmlns="http://www.w3.org/2000/svg" className={cn('h-4 w-4 app-muted transition-transform', showAllergens && 'rotate-90')} viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
                 {showAllergens && (
                   <div className="px-4 pb-3 space-y-2">
+                    {autoDetectedAllergens.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[12px] app-muted">Auto-detectes</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {autoDetectedAllergens.map((allergen) => (
+                            <span key={`auto-${allergen}`} className="px-2.5 py-1 rounded-full text-[12px] font-semibold app-warning-bg">
+                              {allergen}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[12px] app-muted">Manuels</p>
                     <div className="flex flex-wrap gap-1.5">
                       {EU_ALLERGENS.map((allergen) => (
-                        <button key={allergen} type="button" aria-pressed={recipeAllergens.includes(allergen)}
+                        <button key={allergen} type="button" aria-pressed={manualAllergens.includes(allergen)}
                           onClick={() => toggleAllergen(allergen)}
-                          className={cn('px-2.5 py-1 rounded-full text-[12px] font-semibold active:opacity-70', recipeAllergens.includes(allergen) ? 'app-accent-bg' : 'app-surface-2 app-text')}>
+                          className={cn('px-2.5 py-1 rounded-full text-[12px] font-semibold active:opacity-70', manualAllergens.includes(allergen) ? 'app-accent-bg' : 'app-surface-2 app-text')}>
                           {allergen}
                         </button>
                       ))}
                     </div>
-                    {recipeAllergens.length > 0 && (
-                      <button type="button" onClick={() => setRecipeAllergens([])}
+                    {manualAllergens.length > 0 && (
+                      <button type="button" onClick={() => setManualAllergens([])}
                         className="text-[12px] font-semibold text-[color:var(--app-accent)] active:opacity-70">Effacer tout</button>
                     )}
                   </div>
                 )}
-                {!showAllergens && recipeAllergens.length > 0 && (
-                  <p className="px-4 pb-3 text-[12px] app-muted">{recipeAllergens.join(', ')}</p>
+                {!showAllergens && mergedAllergens.length > 0 && (
+                  <p className="px-4 pb-3 text-[12px] app-muted">{mergedAllergens.join(', ')}</p>
                 )}
               </div>
 
@@ -540,7 +609,7 @@ export default function RecipeEditor({
               <div className="rounded-2xl app-card p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-[17px] font-semibold app-text">Ingredients</h2>
-                  <button onClick={addLine} className="px-3 py-1.5 rounded-lg app-accent-bg text-[13px] font-semibold active:opacity-70">+ Ajouter</button>
+                  <button onClick={addLine} className="px-3 py-1.5 rounded-lg app-accent-bg ios-caption font-semibold active:opacity-70">+ Ajouter</button>
                 </div>
                 {lines.length === 0 && <p className="text-[14px] app-muted">Aucun ingredient pour le moment.</p>}
                 <div className="space-y-2">
@@ -564,7 +633,7 @@ export default function RecipeEditor({
                 </button>
                 {recipe && (
                   <button onClick={() => { void handleDelete(); }}
-                    className="px-4 py-3 rounded-xl app-danger-bg text-[15px] font-semibold active:opacity-70">Supprimer</button>
+                    className="px-4 py-3 rounded-xl app-danger-bg ios-body font-semibold active:opacity-70">Supprimer</button>
                 )}
               </div>
             </>
@@ -574,3 +643,4 @@ export default function RecipeEditor({
     </div>
   );
 }
+

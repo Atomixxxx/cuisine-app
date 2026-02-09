@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Invoice } from '../../types';
-import { cn, formatDateShort, generateSupplierColor, blobToUrl } from '../../utils';
+import { cn, formatDateShort, generateSupplierColor, blobToUrl, revokeUrl } from '../../utils';
 import InvoiceDetail from './InvoiceDetail';
 import { InvoiceCardSkeleton, ListSkeleton } from '../common/Skeleton';
 
@@ -20,6 +21,7 @@ const SORT_LABELS: Record<SortOption, string> = {
 };
 
 export default function InvoiceGallery({ invoices, loading, onRefresh }: InvoiceGalleryProps) {
+  const listParentRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
   const [groupBySupplier, setGroupBySupplier] = useState(false);
@@ -81,6 +83,12 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
   }, [filtered, groupBySupplier]);
 
   const filteredAmount = useMemo(() => filtered.reduce((sum, invoice) => sum + invoice.totalTTC, 0), [filtered]);
+  const listVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => listParentRef.current,
+    estimateSize: () => 112,
+    overscan: 8,
+  });
 
   if (selectedInvoice) {
     return <InvoiceDetail invoice={selectedInvoice} onClose={() => { setSelectedInvoice(null); onRefresh(); }} />;
@@ -145,7 +153,7 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
           <button
             onClick={() => setGroupBySupplier(!groupBySupplier)}
             className={cn(
-              'px-3 py-2.5 rounded-xl text-[13px] font-semibold shrink-0 active:opacity-70 transition-opacity',
+              'px-3 py-2.5 rounded-xl ios-caption font-semibold shrink-0 active:opacity-70 transition-opacity',
               groupBySupplier ? 'app-accent-bg' : 'app-surface-2 app-muted',
             )}
           >
@@ -162,7 +170,7 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
                 setDateFrom('');
                 setDateTo('');
               }}
-              className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[13px] font-semibold active:opacity-70"
+              className="px-3 py-2.5 rounded-xl app-surface-2 app-text ios-caption font-semibold active:opacity-70"
             >
               Effacer
             </button>
@@ -178,15 +186,34 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
           </svg>
           <p className="ios-title3 app-muted">Aucune facture</p>
-          <p className="text-[15px] app-muted mt-1">Scanne ta premiere facture</p>
+          <p className="ios-body app-muted mt-1">Scanne ta premiere facture</p>
         </div>
       )}
 
       {!loading && !groupBySupplier && (
-        <div className="grid grid-cols-1 gap-3">
-          {filtered.map((inv) => (
-            <InvoiceCard key={inv.id} invoice={inv} onClick={() => setSelectedInvoice(inv)} />
-          ))}
+        <div ref={listParentRef} className="h-[62vh] overflow-auto">
+          <div style={{ height: `${listVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+            {listVirtualizer.getVirtualItems().map((virtualRow) => {
+              const invoice = filtered[virtualRow.index];
+              if (!invoice) return null;
+              return (
+                <div
+                  key={virtualRow.key}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <div className="pb-3">
+                    <InvoiceCard invoice={invoice} onClick={() => setSelectedInvoice(invoice)} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -196,8 +223,8 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
             <div key={supplier} className="app-panel">
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: generateSupplierColor(supplier) }} />
-                <h3 className="text-[15px] font-semibold app-text">{supplier}</h3>
-                <span className="text-[13px] app-muted">({invs.length})</span>
+                <h3 className="ios-body font-semibold app-text">{supplier}</h3>
+                <span className="ios-caption app-muted">({invs.length})</span>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 {invs.map((inv) => (
@@ -219,7 +246,7 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
     if (invoice.images && invoice.images.length > 0 && invoice.images[0] instanceof Blob) {
       const url = blobToUrl(invoice.images[0]);
       setThumbnailUrl(url);
-      return () => URL.revokeObjectURL(url);
+      return () => revokeUrl(url);
     }
     if (invoice.imageUrls && invoice.imageUrls.length > 0) {
       setThumbnailUrl(invoice.imageUrls[0]);
@@ -243,9 +270,9 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: generateSupplierColor(invoice.supplier || 'unknown') }} />
-          <span className="text-[15px] font-semibold app-text truncate">{invoice.supplier || 'Fournisseur inconnu'}</span>
+          <span className="ios-body font-semibold app-text truncate">{invoice.supplier || 'Fournisseur inconnu'}</span>
         </div>
-        <p className="text-[13px] app-muted">
+        <p className="ios-caption app-muted">
           {invoice.invoiceNumber && `No ${invoice.invoiceNumber} - `}
           {formatDateShort(invoice.invoiceDate)}
         </p>
@@ -261,9 +288,10 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
       </div>
 
       <div className="text-right shrink-0">
-        <span className="inline-flex items-center rounded-full px-2 py-1 text-[13px] font-bold app-chip">{invoice.totalTTC.toFixed(2)} EUR</span>
+        <span className="inline-flex items-center rounded-full px-2 py-1 ios-caption font-bold app-chip">{invoice.totalTTC.toFixed(2)} EUR</span>
         <p className="text-[12px] app-muted mt-1">TTC</p>
       </div>
     </button>
   );
 }
+

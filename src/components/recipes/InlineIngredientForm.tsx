@@ -100,7 +100,7 @@ export default function InlineIngredientForm({ supplierQuickPicks, onCreated, on
         />
       </div>
       {Number(conditioning) > 1 && Number(unitPrice) > 0 && (
-        <p className="text-[11px] app-accent font-medium">
+        <p className="ios-small app-accent font-medium">
           Prix effectif: {(Number(unitPrice) / Number(conditioning)).toFixed(4)} EUR/{unit}
         </p>
       )}
@@ -119,7 +119,7 @@ export default function InlineIngredientForm({ supplierQuickPicks, onCreated, on
               type="button"
               onClick={() => setSupplier(canonicalizeSupplierName(s))}
               className={cn(
-                'px-2 py-0.5 rounded-full text-[11px] font-semibold active:opacity-70',
+                'px-2 py-0.5 rounded-full ios-small font-semibold active:opacity-70',
                 supplier.trim().toLowerCase() === s.toLowerCase() ? 'app-accent-bg' : 'app-surface-2 app-text',
               )}
             >
@@ -131,13 +131,13 @@ export default function InlineIngredientForm({ supplierQuickPicks, onCreated, on
       <div className="flex gap-2">
         <button
           onClick={() => { void handleSave(); }}
-          className="flex-1 py-2 rounded-lg app-accent-bg text-[13px] font-semibold active:opacity-70"
+          className="flex-1 py-2 rounded-lg app-accent-bg ios-caption font-semibold active:opacity-70"
         >
           Creer
         </button>
         <button
           onClick={onCancel}
-          className="px-4 py-2 rounded-lg app-surface-2 app-text text-[13px] font-semibold active:opacity-70"
+          className="px-4 py-2 rounded-lg app-surface-2 app-text ios-caption font-semibold active:opacity-70"
         >
           Annuler
         </button>
@@ -145,3 +145,4 @@ export default function InlineIngredientForm({ supplierQuickPicks, onCreated, on
     </div>
   );
 }
+

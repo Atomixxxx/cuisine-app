@@ -41,7 +41,13 @@
       "Bash(git push:*)",
       "WebFetch(domain:cuisine-app-tau.vercel.app)",
       "Bash(git commit:*)",
-      "WebFetch(domain:cuisine-cw3yga05n-revelju-5925s-projects.vercel.app)"
+      "WebFetch(domain:cuisine-cw3yga05n-revelju-5925s-projects.vercel.app)",
+      "Bash(ls -la \"C:\\\\Users\\\\Final\\\\Documents\\\\cuisine-app\\\\src\"\" | grep -E \"^. \")",
+      "Bash(find:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run list:*)",
+      "Bash(npm test:*)",
+      "Bash(npm audit fix:*)"
     ]
   }
 }

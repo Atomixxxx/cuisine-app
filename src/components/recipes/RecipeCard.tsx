@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { RecipeCostSummary } from '../../types';
 import { cn } from '../../utils';
 
@@ -14,7 +15,7 @@ interface RecipeCardProps {
   onClick: () => void;
 }
 
-export default function RecipeCard({ title, portions, salePriceHT, summary, allergens, onClick }: RecipeCardProps) {
+function RecipeCardComponent({ title, portions, salePriceHT, summary, allergens, onClick }: RecipeCardProps) {
   const badgeColor =
     summary.warningLevel === 'danger'
       ? 'bg-[color:var(--app-danger)] text-white'
@@ -33,7 +34,7 @@ export default function RecipeCard({ title, portions, salePriceHT, summary, alle
           {(summary.foodCostRate * 100).toFixed(0)}%
         </span>
       </div>
-      <p className="text-[13px] app-muted">
+      <p className="ios-caption app-muted">
         {portions} portion{portions > 1 ? 's' : ''} · {money(salePriceHT)} HT
       </p>
       <div className="flex gap-3 text-[12px] app-muted">
@@ -52,3 +53,8 @@ export default function RecipeCard({ title, portions, salePriceHT, summary, alle
     </button>
   );
 }
+
+const RecipeCard = memo(RecipeCardComponent);
+
+export default RecipeCard;
+

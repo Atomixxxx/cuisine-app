@@ -6,7 +6,7 @@ test.describe('Navigation smoke', () => {
 
     await expect(page.getByRole('heading', { name: 'CuisineControl' })).toBeVisible();
 
-    await page.getByRole('tab', { name: 'Temp.' }).click();
+    await page.getByRole('tab', { name: /Temp\.|Controles|Contrôles/i }).click();
     await expect(page).toHaveURL(/\/temperature/);
 
     await page.getByRole('tab', { name: 'Taches' }).click();

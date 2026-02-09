@@ -104,7 +104,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
         <h2 className="text-[17px] font-semibold app-text">
           Archives
         </h2>
-        <span className="text-[15px] app-muted">
+        <span className="ios-body app-muted">
           ({filteredTasks.length})
         </span>
       </div>
@@ -116,7 +116,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
           <button
             onClick={() => setFilterCategory('all')}
             className={cn(
-              'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70',
+              'flex-shrink-0 px-3.5 py-1.5 rounded-full ios-caption font-semibold transition-opacity active:opacity-70',
               filterCategory === 'all'
                 ? 'app-accent-bg'
                 : 'app-surface-2 app-muted'
@@ -129,7 +129,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
               key={key}
               onClick={() => setFilterCategory(key)}
               className={cn(
-                'flex-shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70 whitespace-nowrap',
+                'flex-shrink-0 px-3.5 py-1.5 rounded-full ios-caption font-semibold transition-opacity active:opacity-70 whitespace-nowrap',
                 filterCategory === key
                   ? 'app-accent-bg'
                   : 'app-surface-2 app-muted'
@@ -148,7 +148,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+              className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
             />
           </div>
           <div className="flex-1">
@@ -157,7 +157,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+              className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
             />
           </div>
         </div>
@@ -195,7 +195,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
                 >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium app-muted line-through">
+                    <p className="ios-body font-medium app-muted line-through">
                       {task.title}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -209,7 +209,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
                       )}
                     </div>
                     {task.notes && (
-                      <p className="text-[13px] app-muted mt-1 truncate">
+                      <p className="ios-caption app-muted mt-1 truncate">
                         {task.notes}
                       </p>
                     )}
@@ -256,4 +256,5 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
 };
 
 export default TaskArchive;
+
 

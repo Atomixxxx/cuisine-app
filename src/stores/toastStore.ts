@@ -3,12 +3,12 @@ import { create } from 'zustand';
 export interface Toast {
   id: string;
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'warning';
 }
 
 interface ToastState {
   toasts: Toast[];
-  addToast: (message: string, type: 'success' | 'error') => void;
+  addToast: (message: string, type: 'success' | 'error' | 'warning') => void;
   removeToast: (id: string) => void;
 }
 
@@ -34,4 +34,8 @@ export function showError(message: string) {
 
 export function showSuccess(message: string) {
   useToastStore.getState().addToast(message, 'success');
+}
+
+export function showWarning(message: string) {
+  useToastStore.getState().addToast(message, 'warning');
 }

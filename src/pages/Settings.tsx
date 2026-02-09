@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
-import { showError, showSuccess } from '../stores/toastStore';
+import { showError, showSuccess, showWarning } from '../stores/toastStore';
 import { getApiKey, setApiKey, hasApiKey } from '../services/ocr';
-import { db } from '../services/db';
+import { db, getStorageEstimate, type StorageEstimate } from '../services/db';
 import { cn } from '../utils';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import {
@@ -52,8 +52,10 @@ export default function Settings() {
   const [supabaseUserEmail, setSupabaseUserEmail] = useState<string | null>(null);
   const [supabaseSigningIn, setSupabaseSigningIn] = useState(false);
   const [supabaseSigningOut, setSupabaseSigningOut] = useState(false);
+  const [storageEstimate, setStorageEstimate] = useState<StorageEstimate | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const storageWarnedRef = useRef(false);
   const supabaseAuthConfigured = isSupabaseAuthConfigured();
 
   useEffect(() => {
@@ -72,6 +74,27 @@ export default function Settings() {
     const session = getSupabaseSession();
     setSupabaseUserEmail(session?.email ?? null);
   }, [settings]);
+
+  const refreshStorage = useCallback(async () => {
+    const estimate = await getStorageEstimate();
+    setStorageEstimate(estimate);
+    if (!estimate) return;
+    if (estimate.usagePercent >= 80 && !storageWarnedRef.current) {
+      showWarning('Stockage local utilise a plus de 80%');
+      storageWarnedRef.current = true;
+    }
+    if (estimate.usagePercent < 75) {
+      storageWarnedRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshStorage();
+    const timer = window.setInterval(() => {
+      void refreshStorage();
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [refreshStorage]);
 
   const handleSaveSettings = useCallback(async () => {
     if (saving) return;
@@ -179,6 +202,7 @@ export default function Settings() {
         );
 
         await loadSettings();
+        await refreshStorage();
         localStorage.setItem(STORAGE_KEYS.backupLastAt, new Date().toISOString());
         window.dispatchEvent(new Event('cuisine-backup-updated'));
         showSuccess('Sauvegarde restauree avec succes');
@@ -190,7 +214,7 @@ export default function Settings() {
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     },
-    [loadSettings],
+    [loadSettings, refreshStorage],
   );
 
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,6 +333,14 @@ export default function Settings() {
   }, [currentPin, newPin, confirmPin]);
 
   const inputClass = 'app-input text-[17px]';
+  const usagePercent = Math.min(100, Math.max(0, storageEstimate?.usagePercent ?? 0));
+
+  const formatStorageBytes = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
 
   return (
     <div className="app-page-wrap max-w-2xl pb-28 space-y-4">
@@ -367,7 +399,7 @@ export default function Settings() {
               onChange={(e) => setPriceThreshold(e.target.value)}
               className={inputClass}
             />
-            <p className="text-[13px] app-muted">Alerte si la variation de prix depasse ce pourcentage</p>
+            <p className="ios-caption app-muted">Alerte si la variation de prix depasse ce pourcentage</p>
           </div>
           <div className="px-4 py-3">
             <button
@@ -391,7 +423,7 @@ export default function Settings() {
             <span className="text-[17px] app-text">Statut</span>
             <span
               className={cn(
-                'flex items-center gap-1.5 text-[15px] font-medium',
+                'flex items-center gap-1.5 ios-body font-medium',
                 geminiConnected ? 'text-[color:var(--app-success)]' : 'app-muted',
               )}
             >
@@ -414,7 +446,7 @@ export default function Settings() {
               placeholder="AIza..."
               className={inputClass}
             />
-            <p className="text-[13px] app-muted">Necessaire pour l'analyse des factures par IA</p>
+            <p className="ios-caption app-muted">Necessaire pour l'analyse des factures par IA</p>
           </div>
           <div className="px-4 py-3">
             <button
@@ -432,14 +464,14 @@ export default function Settings() {
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
             <span className="text-[17px] app-text">Configuration</span>
-            <span className={cn('text-[15px] font-medium', supabaseAuthConfigured ? 'text-[color:var(--app-success)]' : 'app-muted')}>
+            <span className={cn('ios-body font-medium', supabaseAuthConfigured ? 'text-[color:var(--app-success)]' : 'app-muted')}>
               {supabaseAuthConfigured ? 'Variables OK' : 'Variables manquantes'}
             </span>
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row">
             <span className="text-[17px] app-text">Session</span>
-            <span className={cn('text-[15px] font-medium', supabaseUserEmail ? 'text-[color:var(--app-success)]' : 'app-muted')}>
+            <span className={cn('ios-body font-medium', supabaseUserEmail ? 'text-[color:var(--app-success)]' : 'app-muted')}>
               {supabaseUserEmail ?? 'Non connecte'}
             </span>
           </div>
@@ -487,7 +519,7 @@ export default function Settings() {
               {supabaseSigningOut ? 'Deconnexion...' : 'Se deconnecter'}
             </button>
           </div>
-          <div className="px-4 pb-4 text-[13px] app-muted">
+          <div className="px-4 pb-4 ios-caption app-muted">
             Utilise ce login pour le mode securise RLS. En mode simple, la synchro peut fonctionner sans login.
           </div>
         </div>
@@ -497,7 +529,7 @@ export default function Settings() {
         <h2 className="ios-caption-upper app-muted mb-2">Sauvegarde</h2>
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
-            <p className="text-[15px] app-muted">
+            <p className="ios-body app-muted">
               Exportez vos donnees pour les sauvegarder ou les transferer. Les photos ne sont pas incluses.
             </p>
           </div>
@@ -507,7 +539,7 @@ export default function Settings() {
             <button
               onClick={handleToggleAutoBackup}
               className={cn(
-                'px-3 py-1.5 rounded-full text-[13px] font-semibold transition-opacity active:opacity-70',
+                'px-3 py-1.5 rounded-full ios-caption font-semibold transition-opacity active:opacity-70',
                 autoBackup ? 'app-success-bg' : 'app-surface-2 app-muted',
               )}
             >
@@ -544,11 +576,43 @@ export default function Settings() {
       </div>
 
       <div>
+        <h2 className="ios-caption-upper app-muted mb-2">Stockage local</h2>
+        <div className="rounded-2xl app-panel overflow-hidden">
+          <div className="ios-settings-row flex-col items-stretch gap-2">
+            {storageEstimate ? (
+              <>
+                <div className="flex items-center justify-between text-[14px]">
+                  <span className="app-text">Utilisation</span>
+                  <span className={cn('font-semibold', usagePercent >= 80 ? 'text-[color:var(--app-warning)]' : 'app-muted')}>
+                    {usagePercent.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full app-surface-2 overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full transition-all',
+                      usagePercent >= 80 ? 'bg-[color:var(--app-warning)]' : 'bg-[color:var(--app-accent)]',
+                    )}
+                    style={{ width: `${usagePercent}%` }}
+                  />
+                </div>
+                <div className="ios-caption app-muted">
+                  {formatStorageBytes(storageEstimate.usage)} / {formatStorageBytes(storageEstimate.quota)}
+                </div>
+              </>
+            ) : (
+              <p className="text-[14px] app-muted">Estimation du stockage indisponible sur cet appareil.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div>
         <h2 className="ios-caption-upper app-muted mb-2">Securite</h2>
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
             <span className="text-[17px] app-text">Code PIN</span>
-            <span className={cn('text-[15px] font-medium', pinEnabled ? 'text-[color:var(--app-success)]' : 'app-muted')}>
+            <span className={cn('ios-body font-medium', pinEnabled ? 'text-[color:var(--app-success)]' : 'app-muted')}>
               {pinEnabled ? 'Active' : 'Desactive'}
             </span>
           </div>
@@ -623,7 +687,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="text-center text-[13px] app-muted py-4">
+      <div className="text-center ios-caption app-muted py-4">
         <p>CuisineControl v1.0</p>
         <p className="mt-1">Gestion HACCP pour la restauration</p>
       </div>
@@ -641,3 +705,4 @@ export default function Settings() {
     </div>
   );
 }
+

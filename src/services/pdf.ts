@@ -1,15 +1,31 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { TemperatureRecord, Equipment, ProductTrace, OilChangeRecord } from '../types';
 
-export function generateTemperaturePDF(
+type JsPdfCtor = (typeof import('jspdf'))['default'];
+type AutoTableFn = (typeof import('jspdf-autotable'))['default'];
+
+let pdfLibsPromise: Promise<{ jsPDF: JsPdfCtor; autoTable: AutoTableFn }> | null = null;
+
+async function loadPdfLibs(): Promise<{ jsPDF: JsPdfCtor; autoTable: AutoTableFn }> {
+  if (!pdfLibsPromise) {
+    pdfLibsPromise = Promise.all([import('jspdf'), import('jspdf-autotable')]).then(
+      ([jspdfModule, autoTableModule]) => ({
+        jsPDF: jspdfModule.default,
+        autoTable: autoTableModule.default,
+      }),
+    );
+  }
+  return pdfLibsPromise;
+}
+
+export async function generateTemperaturePDF(
   records: TemperatureRecord[],
   equipment: Equipment[],
   establishmentName: string,
   periodLabel: string
 ) {
+  const { jsPDF, autoTable } = await loadPdfLibs();
   const doc = new jsPDF();
   const equipMap = new Map(equipment.map(e => [e.id, e]));
 
@@ -128,11 +144,12 @@ export function generateTemperaturePDF(
   doc.save(`temperatures_haccp_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 }
 
-export function generateOilChangePDF(
+export async function generateOilChangePDF(
   records: OilChangeRecord[],
   establishmentName: string,
   periodLabel: string,
 ) {
+  const { jsPDF, autoTable } = await loadPdfLibs();
   const doc = new jsPDF();
 
   doc.setFontSize(18);
@@ -179,11 +196,12 @@ export function generateOilChangePDF(
   doc.save(`huile_friteuse_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 }
 
-export function generateTraceabilityPDF(
+export async function generateTraceabilityPDF(
   traces: ProductTrace[],
   establishmentName: string,
   periodLabel: string
 ) {
+  const { jsPDF, autoTable } = await loadPdfLibs();
   const doc = new jsPDF('landscape');
 
   doc.setFontSize(18);

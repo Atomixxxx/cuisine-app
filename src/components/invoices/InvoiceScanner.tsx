@@ -61,7 +61,7 @@ function isPdf(file: File): boolean {
   return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 }
 
-function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
+function ApiKeySetup({ onSaved, isOnline }: { onSaved: () => void; isOnline: boolean }) {
   const [key, setKey] = useState('');
 
   useEffect(() => {
@@ -71,6 +71,10 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
   const [testResult, setTestResult] = useState<string | null>(null);
 
   const handleSave = async () => {
+    if (!isOnline) {
+      setTestResult('error');
+      return;
+    }
     if (!key.trim()) return;
     setTesting(true);
     setTestResult(null);
@@ -119,14 +123,14 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
         <h3 className="ios-title3 app-text">
           Configuration Gemini
         </h3>
-        <p className="text-[15px] app-muted">
+        <p className="ios-body app-muted">
           Pour analyser vos factures avec precision, entrez votre cle API Google Gemini.
         </p>
         <a
           href="https://aistudio.google.com/apikey"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block text-[15px] text-[color:var(--app-accent)] font-medium"
+          className="inline-block ios-body text-[color:var(--app-accent)] font-medium"
         >
           Obtenir une cle gratuite
         </a>
@@ -142,22 +146,22 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
         />
 
         {testResult === 'invalid' && (
-          <p className="text-[13px] text-[color:var(--app-danger)]">Cle API invalide. Verifiez et reessayez.</p>
+          <p className="ios-caption text-[color:var(--app-danger)]">Cle API invalide. Verifiez et reessayez.</p>
         )}
         {testResult === 'error' && (
-          <p className="text-[13px] text-[color:var(--app-danger)]">Erreur de connexion. Verifiez votre internet.</p>
+          <p className="ios-caption text-[color:var(--app-danger)]">Erreur de connexion. Verifiez votre internet.</p>
         )}
         {testResult === 'ok' && (
-          <p className="text-[13px] text-[color:var(--app-success)]">Cle valide !</p>
+          <p className="ios-caption text-[color:var(--app-success)]">Cle valide !</p>
         )}
 
         <button
           onClick={handleSave}
-          disabled={!key.trim() || testing}
+          disabled={!key.trim() || testing || !isOnline}
           className={cn(
             'w-full py-3 rounded-xl font-semibold text-[17px] active:opacity-70 transition-opacity',
             'app-accent-bg',
-            (!key.trim() || testing) && 'opacity-40 cursor-not-allowed',
+            (!key.trim() || testing || !isOnline) && 'opacity-40 cursor-not-allowed',
           )}
         >
           {testing ? 'Verification...' : 'Valider la cle'}
@@ -177,6 +181,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
   const [showApiSetup, setShowApiSetup] = useState(true);
   const [apiKeyLoaded, setApiKeyLoaded] = useState(false);
   const [apiKeyExists, setApiKeyExists] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const pagesRef = useRef<PageImage[]>([]);
 
   useEffect(() => {
@@ -195,6 +200,18 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
       setApiKeyExists(has);
       setApiKeyLoaded(true);
     });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -287,6 +304,10 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
 
   const handleAnalyze = useCallback(async () => {
     if (pages.length === 0) return;
+    if (!isOnline) {
+      setError("Mode hors ligne: l'analyse OCR n'est pas disponible.");
+      return;
+    }
     const keyReady = await hasApiKey();
     if (!keyReady) {
       setShowApiSetup(true);
@@ -313,7 +334,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
     } finally {
       setIsProcessing(false);
     }
-  }, [pages]);
+  }, [isOnline, pages]);
 
   const handleReset = useCallback(() => {
     pages.forEach((p) => URL.revokeObjectURL(p.url));
@@ -345,12 +366,17 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
   if (showApiSetup) {
     return (
       <div>
-        <ApiKeySetup onSaved={() => { setShowApiSetup(false); setApiKeyExists(true); }} />
+        {!isOnline && (
+          <p className="px-4 pb-2 ios-caption text-[color:var(--app-warning)]">
+            Mode hors ligne: verification de cle indisponible
+          </p>
+        )}
+        <ApiKeySetup onSaved={() => { setShowApiSetup(false); setApiKeyExists(true); }} isOnline={isOnline} />
         {apiKeyExists && (
           <div className="px-4 pb-4">
             <button
               onClick={() => setShowApiSetup(false)}
-              className="w-full py-2 text-[15px] app-muted active:opacity-70"
+              className="w-full py-2 ios-body app-muted active:opacity-70"
             >
               Retour
             </button>
@@ -375,21 +401,27 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
   return (
     <div className="p-4 space-y-4">
       {/* API key status + settings */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[13px] app-muted">
-          <div className={cn(
-            'w-2 h-2 rounded-full',
-            apiKeyExists ? 'bg-[color:var(--app-success)]' : 'bg-[color:var(--app-danger)]'
-          )} />
-          <span>{apiKeyExists ? 'Gemini connecte' : 'Cle API manquante'}</span>
-        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 ios-caption app-muted">
+            <div className={cn(
+              'w-2 h-2 rounded-full',
+              apiKeyExists ? 'bg-[color:var(--app-success)]' : 'bg-[color:var(--app-danger)]'
+            )} />
+            <span>{apiKeyExists ? 'Gemini connecte' : 'Cle API manquante'}</span>
+          </div>
         <button
           onClick={() => setShowApiSetup(true)}
-          className="text-[13px] text-[color:var(--app-accent)] font-medium active:opacity-70"
+          className="ios-caption text-[color:var(--app-accent)] font-medium active:opacity-70"
         >
           {apiKeyExists ? 'Modifier la cle' : 'Configurer'}
         </button>
       </div>
+
+      {!isOnline && (
+        <div className="p-3 rounded-2xl bg-[color:var(--app-warning)]/12 text-[color:var(--app-warning)] ios-caption">
+          Hors ligne: scan IA indisponible jusqu'au retour de la connexion.
+        </div>
+      )}
 
       {/* Capture buttons */}
       <div className="grid grid-cols-2 gap-3">
@@ -407,7 +439,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
           )}
         >
           <CameraIcon />
-          <span className="text-[15px] font-semibold">Prendre photo</span>
+          <span className="ios-body font-semibold">Prendre photo</span>
         </button>
 
         <button
@@ -424,7 +456,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
           )}
         >
           <FileIcon />
-          <span className="text-[15px] font-semibold">Importer fichier</span>
+          <span className="ios-body font-semibold">Importer fichier</span>
           <span className="text-[12px] opacity-60">PDF, JPG, PNG</span>
         </button>
       </div>
@@ -451,7 +483,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
       {isImporting && (
         <div className="flex items-center gap-3 p-3 rounded-2xl app-card">
           <div className="w-6 h-6 border-2 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-[15px] app-text">
+          <p className="ios-body app-text">
             Import du fichier en cours...
           </p>
         </div>
@@ -461,13 +493,13 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
       {pages.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-[15px] font-semibold app-text">
+            <h3 className="ios-body font-semibold app-text">
               Pages capturees ({pages.length})
             </h3>
             <button
               onClick={handleReset}
               disabled={isProcessing || isImporting}
-              className="text-[13px] text-[color:var(--app-danger)] font-medium active:opacity-70"
+              className="ios-caption text-[color:var(--app-danger)] font-medium active:opacity-70"
             >
               Tout supprimer
             </button>
@@ -519,7 +551,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
 
       {/* Error message */}
       {error && (
-        <div className="p-3 rounded-2xl bg-[color:var(--app-danger)]/10 text-[color:var(--app-danger)] text-[15px]">
+        <div className="p-3 rounded-2xl bg-[color:var(--app-danger)]/10 text-[color:var(--app-danger)] ios-body">
           {error}
         </div>
       )}
@@ -530,10 +562,10 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 border-3 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
             <div>
-              <p className="text-[15px] font-semibold app-text">
+              <p className="ios-body font-semibold app-text">
                 Analyse en cours...
               </p>
-              <p className="text-[13px] app-muted">
+              <p className="ios-caption app-muted">
                 Lecture intelligente via Gemini
               </p>
             </div>
@@ -544,7 +576,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
               style={{ width: `${ocrProgress}%` }}
             />
           </div>
-          <p className="text-[13px] text-center app-muted">
+          <p className="ios-caption text-center app-muted">
             {ocrProgress}%
           </p>
         </div>
@@ -554,7 +586,11 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
       {pages.length > 0 && !isProcessing && !isImporting && (
         <button
           onClick={handleAnalyze}
-          className="w-full py-3 px-4 app-accent-bg font-semibold text-[17px] rounded-xl active:opacity-70 transition-opacity flex items-center justify-center gap-2"
+          disabled={!isOnline}
+          className={cn(
+            'w-full py-3 px-4 app-accent-bg font-semibold text-[17px] rounded-xl active:opacity-70 transition-opacity flex items-center justify-center gap-2',
+            !isOnline && 'opacity-45 cursor-not-allowed',
+          )}
         >
           <svg
             width="20"
@@ -594,7 +630,7 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
           <p className="ios-title3 app-muted">
             Prenez en photo ou importez vos factures
           </p>
-          <p className="text-[15px] app-muted mt-1">
+          <p className="ios-body app-muted mt-1">
             PDF, JPG, PNG — plusieurs pages possibles
           </p>
         </div>
@@ -602,3 +638,4 @@ export default function InvoiceScanner({ onComplete }: InvoiceScannerProps) {
     </div>
   );
 }
+

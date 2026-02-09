@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 
 type ModalSize = "sm" | "md" | "lg" | "xl" | "full";
 
@@ -25,10 +25,30 @@ export default function Modal({
   children,
   size = "md",
 }: ModalProps) {
+  const EXIT_ANIMATION_MS = 220;
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useRef(`modal-title-${Math.random().toString(36).slice(2, 8)}`).current;
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (!shouldRender) return;
+    setIsClosing(true);
+    const timeout = window.setTimeout(() => {
+      setShouldRender(false);
+      setIsClosing(false);
+    }, EXIT_ANIMATION_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [isOpen, shouldRender]);
 
   useEffect(() => {
     if (isOpen) {
@@ -68,7 +88,7 @@ export default function Modal({
     }
   }, [onClose]);
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === overlayRef.current) {
@@ -90,7 +110,7 @@ export default function Modal({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={[
-          "animate-slide-up w-full rounded-t-[20px] sm:rounded-[20px] app-card outline-none shadow-[0_18px_42px_rgba(15,23,42,0.35)]",
+          `${isClosing ? "animate-slide-down" : "animate-slide-up"} w-full rounded-t-[20px] sm:rounded-[20px] app-card outline-none shadow-[0_18px_42px_rgba(15,23,42,0.35)]`,
           sizeClasses[size],
         ].join(" ")}
       >

@@ -2,6 +2,8 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import DOMPurify from 'dompurify';
 
+const trackedObjectUrls = new Set<string>();
+
 function mojibakeScore(value: string): number {
   const matches = value.match(/[ÃÂâ]/g);
   return matches ? matches.length : 0;
@@ -44,11 +46,48 @@ export function vibrate(duration = 50) {
 }
 
 export function blobToUrl(blob: Blob): string {
-  return URL.createObjectURL(blob);
+  const url = URL.createObjectURL(blob);
+  trackedObjectUrls.add(url);
+  return url;
+}
+
+export async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+export function revokeUrl(url?: string | null): void {
+  if (!url) return;
+  if (trackedObjectUrls.has(url)) {
+    URL.revokeObjectURL(url);
+    trackedObjectUrls.delete(url);
+    return;
+  }
+  if (url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export function getTrackedObjectUrlCount(): number {
+  return trackedObjectUrls.size;
 }
 
 export async function fileToBlob(file: File): Promise<Blob> {
   return new Blob([await file.arrayBuffer()], { type: file.type });
+}
+
+export function normalizeKeyPart(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**

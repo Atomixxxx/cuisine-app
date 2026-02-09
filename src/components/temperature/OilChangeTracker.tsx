@@ -136,9 +136,9 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     const periodLabel = `${format(monthStart, 'dd/MM/yyyy', { locale: fr })} - ${format(monthEnd, 'dd/MM/yyyy', { locale: fr })}`;
-    generateOilChangePDF(selectedRecords, establishmentName || 'Mon etablissement', periodLabel);
+    await generateOilChangePDF(selectedRecords, establishmentName || 'Mon etablissement', periodLabel);
   };
 
   const handleAddFryer = () => {
@@ -173,11 +173,11 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     <div className="space-y-3">
       <div className="app-panel space-y-3">
         <h3 className="text-[16px] font-semibold app-text">Suivi huile friteuse (HACCP)</h3>
-        <p className="text-[13px] app-muted">
+        <p className="ios-caption app-muted">
           Une feuille de changement d huile est un document de suivi utilise en restauration pour controler la qualite et le renouvellement des huiles de friture,
           garantissant la securite alimentaire (normes HACCP).
         </p>
-        <div className="rounded-xl app-surface-2 p-3 text-[13px] app-muted space-y-1">
+        <div className="rounded-xl app-surface-2 p-3 ios-caption app-muted space-y-1">
           <p className="font-semibold app-text">Modele type</p>
           <p>Date et heure du changement</p>
           <p>Identifiant de la friteuse</p>
@@ -203,9 +203,9 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
             placeholder="Operateur (optionnel)"
             className="app-input"
           />
-          <button onClick={handleExportPdf} className="px-4 py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70">
-            Export PDF
-          </button>
+            <button onClick={() => { void handleExportPdf(); }} className="px-4 py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70">
+              Export PDF
+            </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto] gap-2">
@@ -270,12 +270,12 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
 
       <div className="app-panel">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-[15px] font-semibold app-text">Historique ({selectedRecords.length})</h4>
+          <h4 className="ios-body font-semibold app-text">Historique ({selectedRecords.length})</h4>
           {loading && <span className="text-[12px] app-muted">Chargement...</span>}
         </div>
 
         {selectedRecords.length === 0 ? (
-          <p className="text-[13px] app-muted">Aucun changement enregistre pour cette friteuse sur cette periode.</p>
+          <p className="ios-caption app-muted">Aucun changement enregistre pour cette friteuse sur cette periode.</p>
         ) : (
           <div className="space-y-2">
             {selectedRecords.map((record) => (
@@ -293,3 +293,4 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     </div>
   );
 }
+

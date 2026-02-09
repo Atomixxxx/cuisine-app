@@ -96,12 +96,12 @@ export default function Dashboard() {
       {showInstall && (
         <div className="flex items-center gap-3 p-4 rounded-2xl app-panel">
           <div className="flex-1">
-            <p className="text-[15px] font-semibold app-text">Installer CuisineControl</p>
-            <p className="text-[13px] app-muted mt-0.5">Acces rapide depuis l'ecran d'accueil</p>
+            <p className="ios-body font-semibold app-text">Installer CuisineControl</p>
+            <p className="ios-caption app-muted mt-0.5">Acces rapide depuis l'ecran d'accueil</p>
           </div>
           <button
             onClick={installPwa}
-            className="px-4 py-2 app-accent-bg rounded-full text-[13px] font-semibold active:opacity-70 shrink-0"
+            className="px-4 py-2 app-accent-bg rounded-full ios-caption font-semibold active:opacity-70 shrink-0"
           >
             Installer
           </button>
@@ -115,9 +115,9 @@ export default function Dashboard() {
 
       <section className="app-hero-card space-y-4">
         <div>
-          <p className="app-muted text-[13px] font-medium">{getGreeting()}</p>
+          <p className="app-muted ios-caption font-medium">{getGreeting()}</p>
           <h1 className="ios-title mt-1">{settings?.establishmentName || 'CuisineControl'}</h1>
-          <p className="app-muted text-[15px] mt-1">{format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}</p>
+          <p className="app-muted ios-body mt-1">{format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}</p>
         </div>
         <div className="app-kpi-grid">
           <div className="app-kpi-card">
@@ -142,7 +142,7 @@ export default function Dashboard() {
           className="w-full rounded-2xl p-4 sm:p-5 text-left app-danger-bg text-white active:opacity-80 transition-opacity shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
         >
           <p className="text-[18px] sm:text-[20px] font-bold leading-tight">SOS Hygiene</p>
-          <p className="text-[12px] sm:text-[13px] text-white/90 mt-1">Lancer le protocole rapide en 1 geste</p>
+          <p className="text-[12px] sm:[font-size:13px] text-white/90 mt-1">Lancer le protocole rapide en 1 geste</p>
         </button>
       </section>
 
@@ -203,10 +203,10 @@ function AlertPanel({
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[13px] sm:text-[14px] font-semibold app-text">{alert.title}</p>
-                <p className="text-[12px] sm:text-[13px] app-muted mt-0.5">{alert.description}</p>
+                <p className="ios-caption sm:text-[14px] font-semibold app-text">{alert.title}</p>
+                <p className="text-[12px] sm:[font-size:13px] app-muted mt-0.5">{alert.description}</p>
               </div>
-              <span className={`text-[11px] font-semibold px-2 py-1 rounded-full ${alertStyles[alert.severity].badge}`}>
+              <span className={`ios-small font-semibold px-2 py-1 rounded-full ${alertStyles[alert.severity].badge}`}>
                 {alert.severity.toUpperCase()}
               </span>
             </div>
@@ -288,7 +288,7 @@ function QuickActions({ onNavigate }: { onNavigate: (path: string) => void }) {
             >
               <div className="flex flex-col items-center gap-1">
                 <span className={action.color}>{action.icon}</span>
-                <span className="text-[10px] sm:text-[11px] font-semibold app-text text-center leading-tight">{action.label}</span>
+                <span className="text-[10px] sm:[font-size:11px] font-semibold app-text text-center leading-tight">{action.label}</span>
               </div>
             </button>
           ))}
@@ -317,3 +317,4 @@ function QuickActions({ onNavigate }: { onNavigate: (path: string) => void }) {
     </>
   );
 }
+

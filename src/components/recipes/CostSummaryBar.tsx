@@ -36,12 +36,12 @@ export default function CostSummaryBar({ summary, portions, lastSavedRate, stick
         <span className="app-muted">Marge brute</span>
         <span className="font-semibold app-text">{money(summary.grossMargin)}</span>
       </div>
-      <div className="flex justify-between text-[15px]">
+      <div className="flex justify-between ios-body">
         <span className="font-semibold app-text">Food cost</span>
         <span className="font-bold app-text">{(summary.foodCostRate * 100).toFixed(1)}%</span>
       </div>
       {summary.foodCostRate > 0.3 && (
-        <p className="text-[13px] font-semibold text-[color:var(--app-danger)]">
+        <p className="ios-caption font-semibold text-[color:var(--app-danger)]">
           Alerte: le food cost depasse 30% du prix de vente.
         </p>
       )}
@@ -53,3 +53,4 @@ export default function CostSummaryBar({ summary, portions, lastSavedRate, stick
     </div>
   );
 }
+

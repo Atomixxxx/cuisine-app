@@ -112,10 +112,10 @@ export default function PinLockScreen({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen app-bg app-text flex items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-3xl app-card p-6">
-        <p className="text-[13px] app-muted text-center">Securite</p>
+        <p className="ios-caption app-muted text-center">Securite</p>
         <h1 className="text-[24px] font-semibold text-center mt-1">Entrez votre PIN</h1>
         {lockRemainingMs > 0 && (
-          <p className="text-[13px] text-[color:var(--app-danger)] text-center mt-2">
+          <p className="ios-caption text-[color:var(--app-danger)] text-center mt-2">
             Verrouille - reessayez dans {formatSeconds(lockRemainingMs)}s
           </p>
         )}
@@ -159,3 +159,4 @@ export default function PinLockScreen({ children }: { children: React.ReactNode 
     </div>
   );
 }
+

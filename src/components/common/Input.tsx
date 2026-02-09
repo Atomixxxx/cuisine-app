@@ -23,7 +23,7 @@ export default function Input({
       {label && (
         <label
           htmlFor={inputId}
-          className="text-[15px] font-medium app-muted"
+          className="ios-body font-medium app-muted"
         >
           {label}
         </label>
@@ -48,8 +48,9 @@ export default function Input({
         {...rest}
       />
       {error && (
-        <p className="text-[13px] text-[color:var(--app-danger)]">{error}</p>
+        <p className="ios-caption text-[color:var(--app-danger)]">{error}</p>
       )}
     </div>
   );
 }
+

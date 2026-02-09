@@ -140,6 +140,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen app-bg app-text flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 px-3 py-2 rounded-lg app-accent-bg"
+      >
+        Aller au contenu principal
+      </a>
       {/* Offline banner */}
       {!online && (
         <div className="app-warning-bg text-white text-xs font-medium text-center py-1.5 px-4">
@@ -149,7 +155,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Header — minimal like apple.com nav */}
       <header className="sticky top-0 z-40 app-header px-3 py-2 sm:px-5 sm:py-3 flex items-center justify-between hairline-b">
-        <h1 className="text-[15px] sm:text-[17px] font-semibold tracking-tight app-text truncate">
+        <h1 className="ios-body sm:text-[17px] font-semibold tracking-tight app-text truncate">
           CuisineControl
         </h1>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -182,14 +188,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </svg>
             )}
             <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-[color:var(--app-success)]' : 'bg-[color:var(--app-warning)]'}`} />
-            <span className="text-[11px] app-muted">{online ? 'En ligne' : 'Hors ligne'}</span>
+            <span className="ios-small app-muted">{online ? 'En ligne' : 'Hors ligne'}</span>
           </div>
-          <div className="hidden md:block text-[11px] app-muted">
+          <div className="hidden md:block ios-small app-muted">
             {formatBackupStatus(lastBackupAt)}
           </div>
           <button
             onClick={() => navigate('/settings')}
-            className="min-h-[36px] min-w-[36px] sm:min-h-[44px] sm:min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Parametres"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -199,7 +205,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="min-h-[36px] min-w-[36px] sm:min-h-[44px] sm:min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Basculer le mode sombre"
           >
             {darkMode ? (
@@ -216,7 +222,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Page content */}
-      <main className="flex-1 overflow-y-auto pb-20">{children}</main>
+      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto pb-20">
+        {children}
+      </main>
 
       {/* Bottom tab bar */}
       <nav aria-label="Navigation principale" className="fixed bottom-0 inset-x-0 z-40 app-nav hairline-t pb-safe">

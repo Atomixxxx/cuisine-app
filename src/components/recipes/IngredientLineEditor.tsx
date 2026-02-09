@@ -132,7 +132,7 @@ export default function IngredientLineEditor({
         </select>
         <button
           onClick={openEditPrice}
-          className="text-[13px] app-muted font-medium whitespace-nowrap active:opacity-70 underline decoration-dotted"
+          className="ios-caption app-muted font-medium whitespace-nowrap active:opacity-70 underline decoration-dotted"
           title="Modifier le prix / colisage"
         >
           {lineCost > 0 ? money(lineCost) : ingredient ? money(0) : ''}
@@ -172,20 +172,20 @@ export default function IngredientLineEditor({
             </div>
           </div>
           {Number(editCond) > 1 && Number(editPrice) > 0 && (
-            <p className="text-[11px] app-accent font-medium">
+            <p className="ios-small app-accent font-medium">
               Prix effectif: {(Number(editPrice) / Number(editCond)).toFixed(4)} EUR/{ingredient.unit}
             </p>
           )}
           <div className="flex gap-2">
             <button
               onClick={() => { void saveEditPrice(); }}
-              className="flex-1 py-2 rounded-lg app-accent-bg text-[13px] font-semibold active:opacity-70"
+              className="flex-1 py-2 rounded-lg app-accent-bg ios-caption font-semibold active:opacity-70"
             >
               Sauver
             </button>
             <button
               onClick={() => setShowEditPrice(false)}
-              className="px-4 py-2 rounded-lg app-surface-3 app-text text-[13px] font-semibold active:opacity-70"
+              className="px-4 py-2 rounded-lg app-surface-3 app-text ios-caption font-semibold active:opacity-70"
             >
               Annuler
             </button>
@@ -207,3 +207,4 @@ export default function IngredientLineEditor({
     </div>
   );
 }
+

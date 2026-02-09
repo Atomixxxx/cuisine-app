@@ -14,7 +14,7 @@ interface TaskItemProps {
   onDelete: (id: string) => void;
 }
 
-const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete }) => {
+const TaskItemComponent: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [completing, setCompleting] = useState(false);
@@ -133,7 +133,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
             <div className="flex items-center gap-2 flex-wrap">
               <span
                 className={cn(
-                  'text-[15px] font-medium transition-all duration-200',
+                  'ios-body font-medium transition-all duration-200',
                   task.completed
                     ? 'line-through app-muted'
                     : 'app-text'
@@ -185,7 +185,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
             {expanded && (
               <div className="mt-3 pt-3 border-t border-[color:var(--app-border)]/60">
                 {task.notes && (
-                  <p className="text-[13px] app-muted mb-2 whitespace-pre-wrap">
+                  <p className="ios-caption app-muted mb-2 whitespace-pre-wrap">
                     {task.notes}
                   </p>
                 )}
@@ -204,7 +204,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
                     e.stopPropagation();
                     onEdit(task);
                   }}
-                  className="mt-2 text-[13px] text-[color:var(--app-accent)] font-semibold active:opacity-70"
+                  className="mt-2 ios-caption text-[color:var(--app-accent)] font-semibold active:opacity-70"
                 >
                   Modifier
                 </button>
@@ -233,4 +233,14 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, onDelete })
   );
 };
 
+const TaskItem = React.memo(
+  TaskItemComponent,
+  (prevProps, nextProps) =>
+    prevProps.task === nextProps.task &&
+    prevProps.onToggle === nextProps.onToggle &&
+    prevProps.onEdit === nextProps.onEdit &&
+    prevProps.onDelete === nextProps.onDelete,
+);
+
 export default TaskItem;
+

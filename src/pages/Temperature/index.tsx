@@ -82,7 +82,7 @@ export default function TemperaturePage() {
       const records = await getTemperatureRecords(from, to, exportEquipmentId || undefined);
       const periodLabel = `${format(from, 'dd/MM/yyyy', { locale: fr })} - ${format(to, 'dd/MM/yyyy', { locale: fr })}`;
 
-      generateTemperaturePDF(records, equipment, settings?.establishmentName ?? 'Mon etablissement', periodLabel);
+      await generateTemperaturePDF(records, equipment, settings?.establishmentName ?? 'Mon etablissement', periodLabel);
       setShowExportPanel(false);
     } catch (err) {
       logger.error('PDF export error', { err });
@@ -120,7 +120,7 @@ export default function TemperaturePage() {
                 <button
                   onClick={() => setShowExportPanel((p) => !p)}
                   className={cn(
-                    'flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-[13px] sm:text-[15px] font-semibold transition-opacity active:opacity-70',
+                    'flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-2 rounded-xl ios-caption sm:[font-size:15px] font-semibold transition-opacity active:opacity-70',
                     'app-accent-bg',
                   )}
                 >
@@ -146,11 +146,11 @@ export default function TemperaturePage() {
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Debut export</p>
-                  <p className="app-kpi-value !text-[13px] sm:!text-[15px] font-semibold truncate">{exportFrom}</p>
+                  <p className="app-kpi-value ![font-size:13px] sm:![font-size:15px] font-semibold truncate">{exportFrom}</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Fin export</p>
-                  <p className="app-kpi-value !text-[13px] sm:!text-[15px] font-semibold truncate">{exportTo}</p>
+                  <p className="app-kpi-value ![font-size:13px] sm:![font-size:15px] font-semibold truncate">{exportTo}</p>
                 </div>
               </>
             ) : (
@@ -195,16 +195,16 @@ export default function TemperaturePage() {
           <div className="app-panel space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[13px] font-medium app-muted mb-1">Du</label>
+                <label className="block ios-caption font-medium app-muted mb-1">Du</label>
                 <input type="date" value={exportFrom} onChange={(e) => setExportFrom(e.target.value)} className="app-input" />
               </div>
               <div>
-                <label className="block text-[13px] font-medium app-muted mb-1">Au</label>
+                <label className="block ios-caption font-medium app-muted mb-1">Au</label>
                 <input type="date" value={exportTo} onChange={(e) => setExportTo(e.target.value)} className="app-input" />
               </div>
             </div>
             <div>
-              <label className="block text-[13px] font-medium app-muted mb-1">Equipement</label>
+              <label className="block ios-caption font-medium app-muted mb-1">Equipement</label>
               <select value={exportEquipmentId} onChange={(e) => setExportEquipmentId(e.target.value)} className="app-input">
                 <option value="">Tous les equipements</option>
                 {equipment.map((eq) => (
@@ -259,3 +259,4 @@ export default function TemperaturePage() {
     </div>
   );
 }
+

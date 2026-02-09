@@ -10,7 +10,7 @@ import InvoiceGallery from '../../components/invoices/InvoiceGallery';
 const PriceTracker = lazy(() => import('../../components/invoices/PriceTracker'));
 
 type SubTab = 'scanner' | 'factures' | 'cadencier';
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 30;
 
 const TAB_CONFIG: { key: SubTab; label: string }[] = [
   { key: 'scanner', label: 'Scanner' },
@@ -114,7 +114,7 @@ export default function InvoicesPage() {
       <div className="app-hero-card space-y-3">
         <div>
           <h1 className="ios-title app-text">Factures</h1>
-          <p className="text-[15px] app-muted">Scan OCR, historique et cadencier prix.</p>
+          <p className="ios-body app-muted">Scan OCR, historique et cadencier prix.</p>
         </div>
         <div className="app-kpi-grid">
           <div className="app-kpi-card">
@@ -200,3 +200,4 @@ export default function InvoicesPage() {
     </div>
   );
 }
+

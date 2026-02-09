@@ -13,6 +13,15 @@ import { logger } from "./services/logger";
 import { migrateLegacyPinIfNeeded } from "./services/pin";
 import { runTextRepairMigration } from "./services/textRepairMigration";
 
+async function requestPersistentStorage(): Promise<void> {
+  if (typeof navigator === "undefined" || !navigator.storage?.persist) return;
+  try {
+    await navigator.storage.persist();
+  } catch (error) {
+    logger.warn("navigator.storage.persist failed", { error });
+  }
+}
+
 async function bootstrapApp(): Promise<void> {
   try {
     await migrateLegacyPinIfNeeded();
@@ -26,6 +35,8 @@ async function bootstrapApp(): Promise<void> {
     logger.error("initDefaultData failed", { error });
     showError("Initialisation de la base locale impossible");
   }
+
+  await requestPersistentStorage();
 
   try {
     const status = await runTextRepairMigration();

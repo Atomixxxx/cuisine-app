@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { repairMojibake, sanitize } from './index';
+import { blobToBase64, normalizeKeyPart, repairMojibake, sanitize } from './index';
 
 describe('text encoding repair', () => {
   it('repairs common mojibake sequences', () => {
@@ -16,3 +16,15 @@ describe('text encoding repair', () => {
   });
 });
 
+describe('shared utils', () => {
+  it('normalizes key parts for deterministic keys', () => {
+    expect(normalizeKeyPart('  Crème   Brûlée  ')).toBe('creme brulee');
+  });
+
+  it('converts blob to base64', async () => {
+    const blob = {
+      arrayBuffer: async () => new TextEncoder().encode('abc').buffer,
+    } as unknown as Blob;
+    await expect(blobToBase64(blob)).resolves.toBe('YWJj');
+  });
+});

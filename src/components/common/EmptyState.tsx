@@ -19,10 +19,11 @@ export default function EmptyState({
       <h3 className="ios-title3 app-text mb-2">
         {title}
       </h3>
-      <p className="text-[15px] app-muted max-w-xs mb-8">
+      <p className="ios-body app-muted max-w-xs mb-8">
         {description}
       </p>
       {action && <div>{action}</div>}
     </div>
   );
 }
+

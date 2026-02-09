@@ -155,7 +155,7 @@ export default function PriceTracker() {
         />
         <div className="relative">
           <h2 className="text-[20px] font-semibold app-text">Cadencier prix</h2>
-          <p className="text-[13px] app-muted mt-1">Suivi lisible des variations fournisseurs.</p>
+          <p className="ios-caption app-muted mt-1">Suivi lisible des variations fournisseurs.</p>
           <div className="grid grid-cols-2 gap-2 mt-3">
             <StatTile label="Articles" value={String(overview.total)} tone="info" />
             <StatTile label="Alertes" value={String(overview.alerts)} tone={overview.alerts > 0 ? 'danger' : 'success'} />
@@ -283,7 +283,7 @@ export default function PriceTracker() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[15px] font-semibold app-text truncate">{item.itemName}</p>
+                    <p className="ios-body font-semibold app-text truncate">{item.itemName}</p>
                     <div className="flex items-center gap-1.5 mt-1">
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: generateSupplierColor(item.supplier) }} />
                       <span className="text-[12px] app-muted truncate">{item.supplier}</span>
@@ -291,14 +291,14 @@ export default function PriceTracker() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-[18px] font-bold app-text leading-none">{formatMoney(item.averagePrice)}</p>
-                    <p className="text-[11px] app-muted mt-1">prix moyen</p>
+                    <p className="ios-small app-muted mt-1">prix moyen</p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5 mt-3">
                   <span
                     className={cn(
-                      'px-2 py-0.5 rounded-full text-[11px] font-semibold',
+                      'px-2 py-0.5 rounded-full ios-small font-semibold',
                       isAlert
                         ? 'bg-[color:var(--app-danger)]/16 text-[color:var(--app-danger)]'
                         : 'bg-[color:var(--app-success)]/16 text-[color:var(--app-success)]',
@@ -307,17 +307,17 @@ export default function PriceTracker() {
                     {variation >= 0 ? '+' : ''}{variation}%
                   </span>
                   {hasMultipleSuppliers && (
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[color:var(--app-accent)]/14 text-[color:var(--app-accent)]">
+                    <span className="px-2 py-0.5 rounded-full ios-small font-semibold bg-[color:var(--app-accent)]/14 text-[color:var(--app-accent)]">
                       {duplicateCount} fournisseurs
                     </span>
                   )}
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold app-surface-2 app-muted">
+                  <span className="px-2 py-0.5 rounded-full ios-small font-semibold app-surface-2 app-muted">
                     {item.prices.length} entrees
                   </span>
                 </div>
 
                 <div className="mt-3">
-                  <div className="flex justify-between text-[11px] mb-1">
+                  <div className="flex justify-between ios-small mb-1">
                     <span className="text-[color:var(--app-success)] font-semibold">min {formatMoney(item.minPrice)}</span>
                     <span className="text-[color:var(--app-danger)] font-semibold">max {formatMoney(item.maxPrice)}</span>
                   </div>
@@ -329,7 +329,7 @@ export default function PriceTracker() {
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-[11px] app-muted">
+                <div className="mt-2 flex items-center justify-between ios-small app-muted">
                   <span>Derniere maj: {lastDate ? formatDateShort(lastDate) : 'n/a'}</span>
                   <span className="font-semibold">Voir detail</span>
                 </div>
@@ -362,7 +362,7 @@ function StatTile({
 
   return (
     <div className="rounded-xl app-surface/85 border app-border px-2.5 py-2">
-      <p className="text-[11px] app-muted">{label}</p>
+      <p className="ios-small app-muted">{label}</p>
       <p className={cn('text-[16px] leading-none font-bold mt-1', toneClass)}>{value}</p>
     </div>
   );
@@ -481,7 +481,7 @@ function PriceChart({
       <div className="rounded-2xl border app-border app-surface overflow-hidden">
         <div className="px-3.5 py-3 border-b app-border flex items-center justify-between">
           <h4 className="text-sm font-semibold app-text">Historique des prix</h4>
-          <span className="text-[11px] app-muted">{sortedDesc.length} lignes</span>
+          <span className="ios-small app-muted">{sortedDesc.length} lignes</span>
         </div>
         <div className="divide-y divide-[color:var(--app-border)]">
           {sortedDesc.map((entry, index) => {
@@ -501,7 +501,7 @@ function PriceChart({
                 <span className="text-sm app-muted">{formatDateShort(entry.date)}</span>
                 <div className="text-right">
                   <div className="text-sm font-semibold app-text">{formatMoney(entry.price)}</div>
-                  <div className={cn('text-[11px] font-medium', diffClass)}>{diffLabel}</div>
+                  <div className={cn('ios-small font-medium', diffClass)}>{diffLabel}</div>
                 </div>
               </div>
             );
@@ -532,8 +532,9 @@ function StatPanel({
 
   return (
     <div className="rounded-xl border app-border app-surface px-3 py-2.5">
-      <p className="text-[11px] app-muted">{label}</p>
+      <p className="ios-small app-muted">{label}</p>
       <p className={cn('text-[17px] leading-none font-bold mt-1', toneClass)}>{value}</p>
     </div>
   );
 }
+

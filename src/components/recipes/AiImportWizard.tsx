@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import Modal from '../common/Modal';
 import CostSummaryBar from './CostSummaryBar';
@@ -102,6 +102,7 @@ export default function AiImportWizard({
   const [reviewDraft, setReviewDraft] = useState<RecipeReviewDraft | null>(null);
   const [reviewQueue, setReviewQueue] = useState<RecipeReviewDraft[]>([]);
   const [saving, setSaving] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
 
   const ingredientMap = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
   const supplierQuickPicks = useMemo(() => {
@@ -116,6 +117,18 @@ export default function AiImportWizard({
     () => ingredients.filter((i) => i.unitPrice > 0).map((i) => ({ name: i.name, unit: i.unit, unitPrice: getEffectiveUnitPrice(i), supplierId: i.supplierId })),
     [ingredients],
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   // --- Helpers ---
   const sim = nameSimilarity;
@@ -206,6 +219,7 @@ export default function AiImportWizard({
 
   // --- Handlers ---
   const handleGenerate = async () => {
+    if (!isOnline) { showError("Mode hors ligne: l'IA n'est pas disponible"); return; }
     const label = supplierLabel.trim();
     if (!label) { showError('Renseigne le produit'); return; }
     const ratio = Number.parseFloat(ratioInput);
@@ -223,6 +237,7 @@ export default function AiImportWizard({
   };
 
   const handleGenerateBatch = async () => {
+    if (!isOnline) { showError("Mode hors ligne: l'IA n'est pas disponible"); return; }
     const ratio = Number.parseFloat(ratioInput);
     if (!Number.isFinite(ratio) || ratio <= 0) { showError('Ratio invalide'); return; }
 
@@ -450,7 +465,7 @@ export default function AiImportWizard({
               value={supplierLabel}
               onChange={(e) => setSupplierLabel(e.target.value)}
               placeholder='Ex: "Pate Burger Brioche 4x100g"'
-              className="w-full px-4 py-3 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+              className="w-full px-4 py-3 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
               autoFocus
             />
           </div>
@@ -458,7 +473,7 @@ export default function AiImportWizard({
           {/* Advanced options (collapsed) */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-1 text-[13px] app-muted active:opacity-70"
+            className="flex items-center gap-1 ios-caption app-muted active:opacity-70"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className={cn('h-3.5 w-3.5 transition-transform', showAdvanced && 'rotate-90')} viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -493,11 +508,14 @@ export default function AiImportWizard({
           )}
 
           {/* Actions */}
+          {!isOnline && (
+            <p className="ios-caption text-[color:var(--app-warning)]">Mode hors ligne: import IA indisponible</p>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => { void handleGenerate(); }}
-              disabled={generating}
-              className={cn('flex-1 py-3 rounded-xl text-[15px] font-semibold active:opacity-70', generating ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}
+              disabled={generating || !isOnline}
+              className={cn('flex-1 py-3 rounded-xl ios-body font-semibold active:opacity-70', (generating || !isOnline) ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}
             >
               {generating ? 'Generation...' : 'Generer avec IA'}
             </button>
@@ -521,13 +539,13 @@ export default function AiImportWizard({
               />
               <div className="flex gap-2">
                 <input ref={batchFileRef} type="file" accept=".csv,.txt,.json" onChange={(e) => { void handleFileImport(e); }} className="hidden" />
-                <button onClick={() => batchFileRef.current?.click()} className="px-3 py-2 rounded-lg app-surface-3 app-text text-[13px] font-semibold active:opacity-70">Importer fichier</button>
-                <button onClick={handleJsonPaste} className="px-3 py-2 rounded-lg app-surface-3 app-text text-[13px] font-semibold active:opacity-70">Parser JSON</button>
+                <button onClick={() => batchFileRef.current?.click()} className="px-3 py-2 rounded-lg app-surface-3 app-text ios-caption font-semibold active:opacity-70">Importer fichier</button>
+                <button onClick={handleJsonPaste} className="px-3 py-2 rounded-lg app-surface-3 app-text ios-caption font-semibold active:opacity-70">Parser JSON</button>
               </div>
               <button
                 onClick={() => { void handleGenerateBatch(); }}
-                disabled={batchGenerating}
-                className={cn('w-full py-3 rounded-xl text-[14px] font-semibold active:opacity-70', batchGenerating ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}
+                disabled={batchGenerating || !isOnline}
+                className={cn('w-full py-3 rounded-xl text-[14px] font-semibold active:opacity-70', (batchGenerating || !isOnline) ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}
               >
                 {batchGenerating ? 'Generation lot...' : 'Generer le lot IA'}
               </button>
@@ -539,7 +557,7 @@ export default function AiImportWizard({
       {step === 'review' && reviewDraft && (
         <div className="space-y-3">
           {/* Draft metadata */}
-          <p className="text-[13px] app-muted">{reviewDraft.feedback}</p>
+          <p className="ios-caption app-muted">{reviewDraft.feedback}</p>
 
           {/* Title / portions / price */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -558,7 +576,7 @@ export default function AiImportWizard({
                     const id = e.target.value;
                     const ing = ingredientMap.get(id);
                     updateReviewLine(line.id, { ingredientId: id, ingredientName: ing?.name || line.ingredientName, requiredUnit: ing?.unit || line.requiredUnit, unitPrice: ing ? getEffectiveUnitPrice(ing) : line.unitPrice, confidence: ing ? 0.95 : line.confidence });
-                  }} className="w-32 px-2 py-2 rounded-lg app-bg app-text text-[13px] border-0 focus:outline-none">
+                  }} className="w-32 px-2 py-2 rounded-lg app-bg app-text ios-caption border-0 focus:outline-none">
                     <option value="">Nouveau</option>
                     {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                   </select>
@@ -607,7 +625,7 @@ export default function AiImportWizard({
             <button
               onClick={() => { void handleSaveReview(); }}
               disabled={saving}
-              className={cn('flex-1 py-3 rounded-xl text-[15px] font-semibold active:opacity-70', saving ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-success-bg')}
+              className={cn('flex-1 py-3 rounded-xl ios-body font-semibold active:opacity-70', saving ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-success-bg')}
             >
               {saving ? 'Enregistrement...' : 'Valider et enregistrer'}
             </button>
@@ -625,3 +643,4 @@ export default function AiImportWizard({
     </Modal>
   );
 }
+

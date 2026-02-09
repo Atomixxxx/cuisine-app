@@ -14,6 +14,7 @@ import type {
   OilChangeRecord,
 } from '../types';
 import { GINEYS_CATALOG_ITEMS } from '../data/gineysCatalog';
+import { normalizeKeyPart } from '../utils';
 
 class CuisineDB extends Dexie {
   equipment!: Table<Equipment>;
@@ -116,15 +117,6 @@ export const db = new CuisineDB();
 
 const GINEYS_SUPPLIER_NAME = "Giney's";
 
-function normalizeKeyPart(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function buildPriceHistoryKey(itemName: string, supplier: string): string {
   return `${normalizeKeyPart(itemName)}_${normalizeKeyPart(supplier)}`;
 }
@@ -163,5 +155,24 @@ export async function initDefaultData() {
       maxPrice: 0,
     }));
     await db.priceHistory.bulkPut(seededRows);
+  }
+}
+
+export interface StorageEstimate {
+  usage: number;
+  quota: number;
+  usagePercent: number;
+}
+
+export async function getStorageEstimate(): Promise<StorageEstimate | null> {
+  if (typeof navigator === 'undefined' || !navigator.storage?.estimate) return null;
+  try {
+    const estimate = await navigator.storage.estimate();
+    const usage = estimate.usage ?? 0;
+    const quota = estimate.quota ?? 0;
+    const usagePercent = quota > 0 ? (usage / quota) * 100 : 0;
+    return { usage, quota, usagePercent };
+  } catch {
+    return null;
   }
 }

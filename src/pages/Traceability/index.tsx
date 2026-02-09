@@ -20,7 +20,7 @@ import ProductDetail from '../../components/traceability/ProductDetail';
 type Tab = 'scanner' | 'history';
 type ViewMode = 'grid' | 'list';
 type ScannerStep = 'scan' | 'form';
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 30;
 
 export default function Traceability() {
   const getProducts = useAppStore(s => s.getProducts);
@@ -267,11 +267,11 @@ export default function Traceability() {
     [updateProduct, loadInitialProducts]
   );
 
-  const handleExportPDF = useCallback(() => {
+  const handleExportPDF = useCallback(async () => {
     const label = dateFrom || dateTo
       ? `${dateFrom || '...'} - ${dateTo || '...'}`
       : 'Toutes les dates';
-    generateTraceabilityPDF(filteredProducts, settings?.establishmentName ?? '', label);
+    await generateTraceabilityPDF(filteredProducts, settings?.establishmentName ?? '', label);
   }, [filteredProducts, settings, dateFrom, dateTo]);
 
   const handleExportCSV = useCallback(() => {
@@ -284,7 +284,7 @@ export default function Traceability() {
       <div className="app-hero-card space-y-3">
         <div>
           <h1 className="ios-title app-text">Tracabilite</h1>
-          <p className="text-[15px] app-muted">Lots, DLC et historique des produits.</p>
+          <p className="ios-body app-muted">Lots, DLC et historique des produits.</p>
         </div>
         <div className="app-kpi-grid">
           <div className="app-kpi-card">
@@ -348,7 +348,7 @@ export default function Traceability() {
             {/* Export buttons */}
             <div className="flex gap-2">
               <button
-                onClick={handleExportPDF}
+                onClick={() => { void handleExportPDF(); }}
                 disabled={filteredProducts.length === 0}
                 className="flex items-center gap-1.5 px-3 py-2 app-accent-bg rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed active:opacity-70 transition-opacity"
               >
@@ -415,7 +415,7 @@ export default function Traceability() {
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Rechercher produit, fournisseur, lot, allergene..."
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl app-surface-2 app-text placeholder-[color:var(--app-muted)] text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl app-surface-2 app-text placeholder-[color:var(--app-muted)] ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
               </div>
 
@@ -424,7 +424,7 @@ export default function Traceability() {
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 >
                   <option value="">Toutes catégories</option>
                   {PRODUCT_CATEGORIES.map((cat) => (
@@ -436,7 +436,7 @@ export default function Traceability() {
                 <select
                   value={filterSupplier}
                   onChange={(e) => setFilterSupplier(e.target.value)}
-                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 >
                   <option value="">Tous fournisseurs</option>
                   {suppliers.map((s) => (
@@ -452,21 +452,21 @@ export default function Traceability() {
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   placeholder="Du"
-                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                   placeholder="Au"
-                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[15px] border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
+                  className="px-3 py-2.5 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 />
               </div>
 
               {/* Active filter count */}
               {(searchText || filterCategory || filterSupplier || dateFrom || dateTo) && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] app-muted">
+                  <span className="ios-caption app-muted">
                     {filteredProducts.length} résultat{filteredProducts.length !== 1 ? 's' : ''}
                   </span>
                   <button
@@ -477,7 +477,7 @@ export default function Traceability() {
                       setDateFrom('');
                       setDateTo('');
                     }}
-                    className="text-[13px] text-[color:var(--app-accent)] font-medium active:opacity-70"
+                    className="ios-caption text-[color:var(--app-accent)] font-medium active:opacity-70"
                   >
                     Effacer les filtres
                   </button>
@@ -614,10 +614,10 @@ function ProductListView({
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-[15px] font-semibold app-text truncate">
+              <h3 className="ios-body font-semibold app-text truncate">
                 {product.productName}
               </h3>
-              <p className="text-[13px] app-muted truncate">
+              <p className="ios-caption app-muted truncate">
                 {product.supplier} &middot; Lot {product.lotNumber}
               </p>
             </div>

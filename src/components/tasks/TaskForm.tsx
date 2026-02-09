@@ -108,7 +108,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-5">
           {/* Title */}
           <div>
-            <label className="block text-[13px] font-semibold app-muted uppercase tracking-wide mb-1.5">
+            <label className="block ios-caption font-semibold app-muted uppercase tracking-wide mb-1.5">
               Titre <span className="text-[color:var(--app-danger)]">*</span>
             </label>
             <input
@@ -129,13 +129,13 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
               autoFocus
             />
             {titleError && (
-              <p id="err-title" className="mt-1 text-[13px] text-[color:var(--app-danger)]">Le titre est requis</p>
+              <p id="err-title" className="mt-1 ios-caption text-[color:var(--app-danger)]">Le titre est requis</p>
             )}
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-[13px] font-semibold app-muted uppercase tracking-wide mb-1.5">
+            <label className="block ios-caption font-semibold app-muted uppercase tracking-wide mb-1.5">
               Categorie
             </label>
             <select
@@ -153,7 +153,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
 
           {/* Priority */}
           <div>
-            <label className="block text-[13px] font-semibold app-muted uppercase tracking-wide mb-1.5">
+            <label className="block ios-caption font-semibold app-muted uppercase tracking-wide mb-1.5">
               Priorite
             </label>
             <div className="flex gap-2" role="group" aria-label="Priorite">
@@ -164,7 +164,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
                   aria-pressed={priority === p}
                   onClick={() => setPriority(p)}
                   className={cn(
-                    'flex-1 py-2.5 px-3 rounded-xl text-[15px] font-semibold transition-opacity active:opacity-70',
+                    'flex-1 py-2.5 px-3 rounded-xl ios-body font-semibold transition-opacity active:opacity-70',
                     priority === p
                       ? 'text-white'
                       : 'app-surface-2 app-muted'
@@ -183,7 +183,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
 
           {/* Estimated time */}
           <div>
-            <label className="block text-[13px] font-semibold app-muted uppercase tracking-wide mb-1.5">
+            <label className="block ios-caption font-semibold app-muted uppercase tracking-wide mb-1.5">
               Temps estime (minutes)
             </label>
             <input
@@ -199,7 +199,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
 
           {/* Notes */}
           <div>
-            <label className="block text-[13px] font-semibold app-muted uppercase tracking-wide mb-1.5">
+            <label className="block ios-caption font-semibold app-muted uppercase tracking-wide mb-1.5">
               Notes
             </label>
             <textarea
@@ -213,7 +213,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
 
           {/* Recurring */}
           <div>
-            <label className="block text-[13px] font-semibold app-muted uppercase tracking-wide mb-1.5">
+            <label className="block ios-caption font-semibold app-muted uppercase tracking-wide mb-1.5">
               Recurrence
             </label>
             <div className="flex gap-2" role="group" aria-label="Recurrence">
@@ -224,7 +224,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
                   aria-pressed={recurring === opt.value}
                   onClick={() => setRecurring(opt.value)}
                   className={cn(
-                    'flex-1 py-2.5 px-3 rounded-xl text-[15px] font-semibold transition-opacity active:opacity-70',
+                    'flex-1 py-2.5 px-3 rounded-xl ios-body font-semibold transition-opacity active:opacity-70',
                     recurring === opt.value
                       ? 'app-accent-bg'
                       : 'app-surface-2 app-muted'
@@ -263,4 +263,5 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
 };
 
 export default TaskForm;
+
 
