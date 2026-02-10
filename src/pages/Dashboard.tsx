@@ -149,7 +149,7 @@ export default function Dashboard() {
             </div>
             <button onClick={installPwa} className="px-3 py-1 app-accent-bg rounded-full text-[10px] font-semibold active:opacity-70 shrink-0">Installer</button>
             <button onClick={dismissInstall} className="p-1 app-muted active:opacity-60" aria-label="Fermer">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
         )}
@@ -165,13 +165,13 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <KpiCard label="Temperatures" value={`${checkedEquipment}/${totalEquipment}`} tone={tempTone} ringProgress={tempProgress}
-              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path strokeLinecap="round" strokeLinejoin="round" d="M14 14.76V3.5a2 2 0 10-4 0v11.26a4 4 0 104 0z" /></svg>} />
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M14 14.76V3.5a2 2 0 10-4 0v11.26a4 4 0 104 0z" /></svg>} />
             <KpiCard label="Anomalies" value={`${anomalies}`} tone={anomTone}
-              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 12l2.6 2.6L16 9.8" /></svg>} />
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 12l2.6 2.6L16 9.8" /></svg>} />
             <KpiCard label="Taches" value={`${pendingTasks.length}`} tone={taskTone}
-              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>} />
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>} />
             <KpiCard label="DLC proches" value={`${expiringProducts.length}`} tone={dlcTone}
-              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" /></svg>} />
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" /></svg>} />
           </div>
         </div>
 
@@ -215,7 +215,7 @@ export default function Dashboard() {
               {/* Produits proches */}
               <div className="dash-panel flex-1">
                 <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 7v5l3 2" /></svg>
+                  <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 7v5l3 2" /></svg>
                   Produits a surveiller
                 </h2>
                 {expiringProducts.length === 0 ? (
@@ -243,13 +243,13 @@ export default function Dashboard() {
               {/* Taches en attente */}
               <div className="dash-panel flex-1">
                 <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>
+                  <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true"><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>
                   Taches en attente
                 </h2>
                 {pendingTasks.length === 0 ? (
                   <div className="py-4 text-center">
                     <span className="inline-flex h-8 w-8 rounded-full bg-[color:var(--app-success)]/15 text-[color:var(--app-success)] items-center justify-center mb-1">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
                     </span>
                     <p className="text-[11px] app-muted">Tout est fait</p>
                   </div>
@@ -295,7 +295,7 @@ function AlertList({ alerts, onNavigate }: { alerts: ReturnType<typeof buildSmar
   if (allClear) return (
     <div className="py-4 text-center flex flex-col items-center gap-1">
       <span className="h-10 w-10 rounded-full bg-[color:var(--app-success)]/15 text-[color:var(--app-success)] inline-flex items-center justify-center">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
       </span>
       <p className="text-[12px] font-semibold app-text">Tout est OK</p>
       <p className="text-[10px] app-muted">{alerts[0].description}</p>

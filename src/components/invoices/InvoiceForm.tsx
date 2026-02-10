@@ -66,6 +66,7 @@ export default function InvoiceForm({
   onCancel,
   existingInvoice,
 }: InvoiceFormProps) {
+  type InvoiceFieldErrorKey = 'supplier' | 'invoiceDate' | 'items';
   const [supplier, setSupplier] = useState(
     sanitizeInput(existingInvoice?.supplier ?? initialData.supplier)
   );
@@ -92,6 +93,7 @@ export default function InvoiceForm({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<InvoiceFieldErrorKey, string>>>({});
   const [knownSuppliers, setKnownSuppliers] = useState<string[]>([]);
 
   const addInvoice = useAppStore((s) => s.addInvoice);
@@ -103,6 +105,9 @@ export default function InvoiceForm({
   const numberFieldId = 'invoice-number';
   const dateFieldId = 'invoice-date';
   const tagsFieldId = 'invoice-tags';
+  const supplierErrorId = 'invoice-supplier-error';
+  const dateErrorId = 'invoice-date-error';
+  const formErrorId = 'invoice-form-error';
 
   useEffect(() => {
     const loadKnownSuppliers = async () => {
@@ -193,6 +198,7 @@ export default function InvoiceForm({
   const handleSave = useCallback(async () => {
     const supplierValue = canonicalizeSupplierName(supplier.trim());
     const filteredItems = items.filter((item) => item.designation.trim().length > 0);
+    const nextFieldErrors: Partial<Record<InvoiceFieldErrorKey, string>> = {};
     const validationResult = invoiceFormSchema.safeParse({
       supplier: supplierValue,
       invoiceDate,
@@ -200,6 +206,13 @@ export default function InvoiceForm({
     });
     if (!validationResult.success) {
       const firstIssue = validationResult.error.issues[0];
+      for (const issue of validationResult.error.issues) {
+        const field = issue.path[0];
+        if (field === 'supplier' && !nextFieldErrors.supplier) nextFieldErrors.supplier = issue.message;
+        if (field === 'invoiceDate' && !nextFieldErrors.invoiceDate) nextFieldErrors.invoiceDate = issue.message;
+        if (field === 'items' && !nextFieldErrors.items) nextFieldErrors.items = issue.message;
+      }
+      setFieldErrors(nextFieldErrors);
       if (firstIssue.path[0] === 'items' && typeof firstIssue.path[1] === 'number') {
         const row = firstIssue.path[1] + 1;
         setError(`Article ${row}: ${firstIssue.message}`);
@@ -208,6 +221,7 @@ export default function InvoiceForm({
       setError(firstIssue.message);
       return;
     }
+    setFieldErrors({});
     if (!existingInvoice && isNewSupplier(supplierValue, knownSuppliers)) {
       const confirmed = window.confirm(
         `Nouveau fournisseur detecte: "${supplierValue}".\nVoulez-vous le sauvegarder ?`,
@@ -311,10 +325,22 @@ export default function InvoiceForm({
             id={supplierFieldId}
             type="text"
             value={supplier}
-            onChange={(e) => setSupplier(sanitizeInput(e.target.value))}
+            onChange={(e) => {
+              setSupplier(sanitizeInput(e.target.value));
+              if (fieldErrors.supplier) {
+                setFieldErrors((prev) => ({ ...prev, supplier: undefined }));
+              }
+            }}
             className="w-full px-3 py-2 rounded-lg border app-border app-surface app-text text-sm focus:ring-2 focus:ring-[color:var(--app-accent)] focus:border-transparent"
             placeholder="Nom du fournisseur"
+            aria-invalid={fieldErrors.supplier ? 'true' : 'false'}
+            aria-describedby={fieldErrors.supplier ? supplierErrorId : undefined}
           />
+          {fieldErrors.supplier && (
+            <p id={supplierErrorId} className="mt-1 ios-small text-[color:var(--app-danger)]">
+              {fieldErrors.supplier}
+            </p>
+          )}
           {canonicalSupplier && canonicalSupplier !== supplier.trim() && (
             <button
               type="button"
@@ -370,9 +396,21 @@ export default function InvoiceForm({
               id={dateFieldId}
               type="date"
               value={invoiceDate}
-              onChange={(e) => setInvoiceDate(e.target.value)}
+              onChange={(e) => {
+                setInvoiceDate(e.target.value);
+                if (fieldErrors.invoiceDate) {
+                  setFieldErrors((prev) => ({ ...prev, invoiceDate: undefined }));
+                }
+              }}
               className="w-full px-3 py-2 rounded-lg border app-border app-surface app-text text-sm focus:ring-2 focus:ring-[color:var(--app-accent)] focus:border-transparent"
+              aria-invalid={fieldErrors.invoiceDate ? 'true' : 'false'}
+              aria-describedby={fieldErrors.invoiceDate ? dateErrorId : undefined}
             />
+            {fieldErrors.invoiceDate && (
+              <p id={dateErrorId} className="mt-1 ios-small text-[color:var(--app-danger)]">
+                {fieldErrors.invoiceDate}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -560,7 +598,11 @@ export default function InvoiceForm({
 
       {/* Error */}
       {error && (
-        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+        <div
+          id={formErrorId}
+          role="alert"
+          className="p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm"
+        >
           {error}
         </div>
       )}

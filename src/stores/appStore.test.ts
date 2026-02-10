@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db, initDefaultData } from '../services/db';
 import { useAppStore } from './appStore';
-import type { Equipment, Invoice, Task } from '../types';
+import type { Equipment, Invoice, ProductTrace, Task } from '../types';
 
 beforeEach(async () => {
   // Clear all tables before each test
@@ -186,6 +186,98 @@ describe('tasks', () => {
     await store.deleteTask(t.id);
     const tasks = await store.getTasks(true);
     expect(tasks.length).toBe(0);
+  });
+});
+
+describe('products', () => {
+  const makeProduct = (overrides: Partial<ProductTrace> = {}) => ({
+    id: crypto.randomUUID(),
+    status: 'active' as const,
+    productName: 'Yaourt',
+    supplier: 'Metro',
+    lotNumber: 'LOT-1',
+    receptionDate: new Date(),
+    expirationDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    category: 'Produits laitiers',
+    scannedAt: new Date(),
+    ...overrides,
+  });
+
+  it('adds, marks used and deletes a product', async () => {
+    const store = useAppStore.getState();
+    const product = makeProduct();
+
+    await store.addProduct(product);
+    await store.markProductAsUsed(product.id);
+
+    const stored = await db.productTraces.get(product.id);
+    expect(stored).toBeDefined();
+    expect(stored!.status).toBe('used');
+    expect(stored!.usedAt).toBeInstanceOf(Date);
+
+    await store.deleteProduct(product.id);
+    const afterDelete = await db.productTraces.get(product.id);
+    expect(afterDelete).toBeUndefined();
+  });
+
+  it('sanitizes product text fields on add', async () => {
+    const store = useAppStore.getState();
+    await store.addProduct(
+      makeProduct({
+        productName: '<script>alert(1)</script>Yaourt',
+        supplier: '<b>Metro</b>',
+        lotNumber: '<img src=x onerror=alert(1)>LOT-2',
+      }),
+    );
+
+    const all = await db.productTraces.toArray();
+    expect(all).toHaveLength(1);
+    expect(all[0].productName).not.toContain('<script>');
+    expect(all[0].supplier).not.toContain('<b>');
+    expect(all[0].lotNumber).not.toContain('<img');
+  });
+});
+
+describe('invoices', () => {
+  const makeInvoice = (overrides: Partial<Invoice> = {}): Invoice => ({
+    id: crypto.randomUUID(),
+    images: [],
+    supplier: 'Metro',
+    invoiceNumber: 'INV-001',
+    invoiceDate: new Date(),
+    items: [{ designation: 'Tomates', quantity: 2, unitPriceHT: 3, totalPriceHT: 6 }],
+    totalHT: 6,
+    totalTVA: 1.2,
+    totalTTC: 7.2,
+    ocrText: '',
+    tags: [],
+    scannedAt: new Date(),
+    ...overrides,
+  });
+
+  it('adds and retrieves invoices', async () => {
+    const store = useAppStore.getState();
+    const invoice = makeInvoice();
+    await store.addInvoice(invoice);
+
+    const invoices = await store.getInvoices();
+    expect(invoices).toHaveLength(1);
+    expect(invoices[0].invoiceNumber).toBe('INV-001');
+  });
+
+  it('sanitizes invoice supplier and designations', async () => {
+    const store = useAppStore.getState();
+    await store.addInvoice(
+      makeInvoice({
+        supplier: '<script>evil()</script>Metro',
+        items: [{ designation: '<img src=x>Tomates', quantity: 2, unitPriceHT: 3, totalPriceHT: 6 }],
+      }),
+    );
+
+    const invoices = await db.invoices.toArray();
+    expect(invoices).toHaveLength(1);
+    expect(invoices[0].supplier).not.toContain('<script>');
+    expect(invoices[0].items[0].designation).not.toContain('<img');
   });
 });
 

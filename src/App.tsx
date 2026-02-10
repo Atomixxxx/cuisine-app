@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/common/Layout";
 import ToastContainer from "./components/common/ToastContainer";
 import PinLockScreen from "./components/security/PinLockScreen";
+import SectionErrorBoundary from "./components/common/SectionErrorBoundary";
 import { logger } from "./services/logger";
 
 /* Lazy-loaded page components */
@@ -101,6 +102,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 }
 
 export default function App() {
+  const withSection = (section: string, node: ReactNode) => (
+    <SectionErrorBoundary section={section}>{node}</SectionErrorBoundary>
+  );
+
   return (
     <ErrorBoundary>
       <ToastContainer />
@@ -109,14 +114,14 @@ export default function App() {
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/temperature" element={<TemperaturePage />} />
-              <Route path="/traceability" element={<TraceabilityPage />} />
-              <Route path="/tasks" element={<TasksPage />} />
-              <Route path="/invoices" element={<InvoicesPage />} />
-              <Route path="/recipes" element={<RecipesPage />} />
-              <Route path="/assistant" element={<AssistantPage />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/temperature" element={withSection('Controles', <TemperaturePage />)} />
+              <Route path="/traceability" element={withSection('Tracabilite', <TraceabilityPage />)} />
+              <Route path="/tasks" element={withSection('Taches', <TasksPage />)} />
+              <Route path="/invoices" element={withSection('Factures', <InvoicesPage />)} />
+              <Route path="/recipes" element={withSection('Fiches techniques', <RecipesPage />)} />
+              <Route path="/assistant" element={withSection('Agent IA', <AssistantPage />)} />
+              <Route path="/dashboard" element={withSection('Dashboard', <Dashboard />)} />
+              <Route path="/settings" element={withSection('Parametres', <SettingsPage />)} />
             </Routes>
           </Suspense>
         </Layout>
