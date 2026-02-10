@@ -9,6 +9,7 @@ interface BarcodeScannerProps {
 }
 
 const SCANNER_REGION_ID = 'barcode-scanner-region';
+const MAX_CAPTURE_WIDTH = 1600;
 
 export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabel }: BarcodeScannerProps) {
   const [scannedBarcode, setScannedBarcode] = useState('');
@@ -119,7 +120,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
   }, [onAnalyzeLabel]);
 
   const applyCapturedPhoto = useCallback(async (sourcePhoto: Blob) => {
-    const compressedPhoto = await compressImage(sourcePhoto);
+    const compressedPhoto = await compressImage(sourcePhoto, 1024, 0.65);
     setCapturedPhoto(compressedPhoto);
     setLabelAnalyzed(false);
     setPhotoPreviewUrl((previousUrl) => {
@@ -156,19 +157,33 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
       return;
     }
 
+    const scale = videoWidth > MAX_CAPTURE_WIDTH ? MAX_CAPTURE_WIDTH / videoWidth : 1;
+    const captureWidth = Math.round(videoWidth * scale);
+    const captureHeight = Math.round(videoHeight * scale);
+
     const canvas = document.createElement('canvas');
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
+    canvas.width = captureWidth;
+    canvas.height = captureHeight;
     const context = canvas.getContext('2d');
     if (!context) {
+      canvas.width = 0;
+      canvas.height = 0;
       setScannerError('Impossible de capturer la photo depuis le flux camera.');
       return;
     }
 
-    context.drawImage(scannerVideo, 0, 0, videoWidth, videoHeight);
-    const frameBlob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, 'image/jpeg', 0.92);
-    });
+    let frameBlob: Blob | null = null;
+    try {
+      context.drawImage(scannerVideo, 0, 0, captureWidth, captureHeight);
+      frameBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.92);
+      });
+    } finally {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+
     if (!frameBlob) {
       setScannerError('La capture photo a echoue. Reessayez.');
       return;
