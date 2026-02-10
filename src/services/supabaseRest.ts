@@ -1,4 +1,4 @@
-import { getSupabaseAccessToken } from './supabaseAuth';
+import { getValidAccessToken } from './supabaseAuth';
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL ?? '').trim().replace(/\/+$/, '');
 const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
@@ -11,8 +11,8 @@ export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 type Primitive = string | number | boolean;
 type QueryValue = Primitive | null | undefined;
 
-function getAuthHeaders(extra?: Record<string, string>): Record<string, string> {
-  const accessToken = getSupabaseAccessToken();
+async function getAuthHeaders(extra?: Record<string, string>): Promise<Record<string, string>> {
+  const accessToken = await getValidAccessToken();
   const bearerToken = accessToken && accessToken.trim() ? accessToken : SUPABASE_ANON_KEY;
   return {
     apikey: SUPABASE_ANON_KEY,
@@ -62,7 +62,7 @@ export async function fetchRows<T>(
   },
 ): Promise<T[]> {
   const response = await fetch(buildTableUrl(table, options), {
-    headers: getAuthHeaders({
+    headers: await getAuthHeaders({
       Accept: 'application/json',
     }),
   });
@@ -78,7 +78,7 @@ export async function upsertRows<T>(
   if (onConflict) url.searchParams.set('on_conflict', onConflict);
   const response = await fetch(url.toString(), {
     method: 'POST',
-    headers: getAuthHeaders({
+    headers: await getAuthHeaders({
       'Content-Type': 'application/json',
       Prefer: 'return=representation,resolution=merge-duplicates',
     }),
@@ -94,7 +94,7 @@ export async function deleteRows(
   const url = buildTableUrl(table, { filters });
   const response = await fetch(url, {
     method: 'DELETE',
-    headers: getAuthHeaders({
+    headers: await getAuthHeaders({
       Prefer: 'return=minimal',
     }),
   });
@@ -121,7 +121,7 @@ export async function uploadBlob(path: string, blob: Blob): Promise<string> {
   const endpoint = `${SUPABASE_URL}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${normalizedPath}`;
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: getAuthHeaders({
+    headers: await getAuthHeaders({
       'x-upsert': 'true',
       'Content-Type': blob.type || 'application/octet-stream',
     }),
@@ -146,7 +146,7 @@ export async function removeStorageFiles(publicUrls: string[]): Promise<void> {
     const endpoint = `${SUPABASE_URL}/storage/v1/object/${SUPABASE_STORAGE_BUCKET}/${path}`;
     const response = await fetch(endpoint, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: await getAuthHeaders(),
     });
     if (!response.ok) {
       const text = await response.text();

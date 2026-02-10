@@ -85,10 +85,59 @@ export function getSupabaseAccessToken(): string | null {
   const session = readSession();
   if (!session) return null;
   if (session.expiresAt && Math.floor(Date.now() / 1000) >= session.expiresAt - 30) {
-    writeSession(null);
+    // Token expiré — on ne supprime plus la session ici,
+    // le refresh sera tenté par getValidAccessToken()
     return null;
   }
   return session.accessToken;
+}
+
+/**
+ * Rafraîchit la session via le refresh_token stocké.
+ * Retourne le nouveau access_token ou null si échec.
+ */
+export async function refreshSession(): Promise<string | null> {
+  const session = readSession();
+  if (!session?.refreshToken || !isSupabaseAuthConfigured()) {
+    writeSession(null);
+    return null;
+  }
+
+  try {
+    const endpoint = `${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ refresh_token: session.refreshToken }),
+    });
+
+    if (!response.ok) {
+      logger.warn('supabase refresh token failed', { status: response.status });
+      writeSession(null);
+      return null;
+    }
+
+    const payload = (await response.json()) as SessionPayload;
+    const refreshed = mapSession(payload);
+    writeSession(refreshed);
+    logger.info('supabase session refreshed', { email: refreshed.email });
+    return refreshed.accessToken;
+  } catch (error) {
+    logger.warn('supabase refresh token error', { error });
+    writeSession(null);
+    return null;
+  }
+}
+
+/**
+ * Retourne un access_token valide, en rafraîchissant si nécessaire.
+ * C'est cette fonction que le reste de l'app devrait utiliser.
+ */
+export async function getValidAccessToken(): Promise<string | null> {
+  const token = getSupabaseAccessToken();
+  if (token) return token;
+  // Token expiré ou absent → tenter un refresh
+  return refreshSession();
 }
 
 export function clearSupabaseSession(): void {
