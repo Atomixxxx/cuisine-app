@@ -26,8 +26,12 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
       if (offset === 0) {
         const fullRemote = await runCloudRead('products:list:full', async () => fetchRemoteProducts());
         if (fullRemote) {
+          const remoteIds = new Set(fullRemote.map((p) => p.id));
+          const localOnly = await db.productTraces
+            .filter((p) => !remoteIds.has(p.id))
+            .toArray();
           await db.productTraces.clear();
-          await db.productTraces.bulkPut(fullRemote);
+          await db.productTraces.bulkPut([...fullRemote, ...localOnly]);
         }
       }
       if (remoteProducts.length === 0) {
