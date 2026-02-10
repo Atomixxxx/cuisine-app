@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { cn, vibrate, fileToBlob, compressImage } from '../../utils';
+import { logger } from '../../services/logger';
 
 interface BarcodeScannerProps {
   onScanComplete: (barcode: string | undefined, photo: Blob | undefined) => void;
@@ -32,8 +33,8 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
       try {
         await html5QrCodeRef.current.stop();
         scannerStartedRef.current = false;
-      } catch {
-        // Scanner may already be stopped
+      } catch (error) {
+        logger.warn('Barcode scanner stop failed', { error });
       }
     }
     setIsScanning(false);
@@ -79,6 +80,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
       );
       scannerStartedRef.current = true;
     } catch (err) {
+      logger.warn('Barcode scanner start failed', { err });
       setIsScanning(false);
       setScannerError(
         'Impossible d\'accéder à la caméra. Vérifiez les permissions ou saisissez le code manuellement.'
@@ -91,7 +93,9 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
 
     return () => {
       if (html5QrCodeRef.current && scannerStartedRef.current) {
-        html5QrCodeRef.current.stop().catch(() => {});
+        html5QrCodeRef.current.stop().catch((error) => {
+          logger.warn('Barcode scanner stop during cleanup failed', { error });
+        });
         scannerStartedRef.current = false;
       }
     };
@@ -112,8 +116,8 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
     try {
       await onAnalyzeLabel(photo);
       setLabelAnalyzed(true);
-    } catch {
-      // Silent fail - user can retry manually
+    } catch (error) {
+      logger.warn('Label OCR auto-run failed', { error });
     } finally {
       setAnalyzingLabel(false);
     }
@@ -303,6 +307,9 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
             try {
               await onAnalyzeLabel(capturedPhoto);
               setLabelAnalyzed(true);
+            } catch (error) {
+              logger.warn('Label OCR manual run failed', { error });
+              setScannerError("Echec de l'analyse OCR. Vous pouvez continuer manuellement.");
             } finally {
               setAnalyzingLabel(false);
             }

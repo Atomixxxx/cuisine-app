@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
+import { z } from 'zod';
 import { EU_ALLERGENS, PRODUCT_CATEGORIES, type ProductTrace } from '../../types';
 import type { ProductFormPrefill } from '../../services/productScan';
 import { cn, fileToBlob, blobToUrl, compressImage } from '../../utils';
@@ -12,6 +13,34 @@ interface ProductFormProps {
   onSave: (product: ProductTrace) => void | Promise<void>;
   onCancel: () => void;
 }
+
+const productFormSchema = z
+  .object({
+    productName: z.string().trim().min(1, 'Nom du produit requis'),
+    supplier: z.string().trim().min(1, 'Fournisseur requis'),
+    lotNumber: z.string().trim().min(1, 'Numéro de lot requis'),
+    receptionDate: z
+      .string()
+      .trim()
+      .min(1, 'Date de reception requise')
+      .refine((value) => Number.isFinite(new Date(value).getTime()), 'Date de reception invalide'),
+    expirationDate: z
+      .string()
+      .trim()
+      .min(1, 'Date de peremption requise')
+      .refine((value) => Number.isFinite(new Date(value).getTime()), 'Date de peremption invalide'),
+  })
+  .superRefine((value, context) => {
+    const receptionTs = new Date(value.receptionDate).getTime();
+    const expirationTs = new Date(value.expirationDate).getTime();
+    if (Number.isFinite(receptionTs) && Number.isFinite(expirationTs) && expirationTs < receptionTs) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['expirationDate'],
+        message: 'La date de peremption doit etre posterieure ou egale a la date de reception',
+      });
+    }
+  });
 
 export default function ProductForm({ barcode, photo, prefill, existingProduct, onSave, onCancel }: ProductFormProps) {
   const [productName, setProductName] = useState(existingProduct?.productName ?? prefill?.productName ?? '');
@@ -81,21 +110,26 @@ export default function ProductForm({ barcode, photo, prefill, existingProduct, 
   }, []);
 
   const validate = useCallback((): boolean => {
-    const errs: Record<string, string> = {};
-    if (!productName.trim()) errs.productName = 'Nom du produit requis';
-    if (!supplier.trim()) errs.supplier = 'Fournisseur requis';
-    if (!lotNumber.trim()) errs.lotNumber = 'Numéro de lot requis';
-    if (!receptionDate) errs.receptionDate = 'Date de réception requise';
-    if (!expirationDate) errs.expirationDate = 'Date de peremption requise';
-    if (receptionDate && expirationDate) {
-      const receptionTs = new Date(receptionDate).getTime();
-      const expirationTs = new Date(expirationDate).getTime();
-      if (Number.isFinite(receptionTs) && Number.isFinite(expirationTs) && expirationTs < receptionTs) {
-        errs.expirationDate = 'La date de peremption doit etre posterieure ou egale a la date de reception';
+    const result = productFormSchema.safeParse({
+      productName,
+      supplier,
+      lotNumber,
+      receptionDate,
+      expirationDate,
+    });
+    if (result.success) {
+      setErrors({});
+      return true;
+    }
+    const nextErrors: Record<string, string> = {};
+    for (const issue of result.error.issues) {
+      const field = issue.path[0];
+      if (typeof field === 'string' && !nextErrors[field]) {
+        nextErrors[field] = issue.message;
       }
     }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    setErrors(nextErrors);
+    return false;
   }, [productName, supplier, lotNumber, receptionDate, expirationDate]);
 
   const [saving, setSaving] = useState(false);
@@ -387,3 +421,4 @@ export default function ProductForm({ barcode, photo, prefill, existingProduct, 
     </form>
   );
 }
+

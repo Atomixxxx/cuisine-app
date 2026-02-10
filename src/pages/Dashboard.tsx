@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -73,6 +73,7 @@ export default function Dashboard() {
   const [products, setProducts] = useState<ProductTrace[]>([]);
   const [dashboardView, setDashboardView] = useState<DashboardView>('overview');
   const { canShow: showInstall, install: installPwa, dismiss: dismissInstall } = usePwaInstall();
+  const refreshTimerRef = useRef<number | null>(null);
 
   const refreshAll = useCallback(() => {
     loadEquipment();
@@ -81,14 +82,36 @@ export default function Dashboard() {
     getTasks(false).then(setTasks).catch(() => showError('Impossible de charger les taches'));
     getProducts().then(setProducts).catch(() => showError('Impossible de charger les produits'));
   }, [loadEquipment, getTemperatureRecords, getTasks, getProducts]);
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current !== null) {
+      window.clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      refreshAll();
+    }, 180);
+  }, [refreshAll]);
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
+  useEffect(
+    () => () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    },
+    [],
+  );
   useEffect(() => {
-    const h = () => { if (document.visibilityState === 'visible') refreshAll(); };
+    const h = () => {
+      if (document.visibilityState === 'visible') scheduleRefresh();
+    };
     document.addEventListener('visibilitychange', h);
-    window.addEventListener('focus', refreshAll);
-    return () => { document.removeEventListener('visibilitychange', h); window.removeEventListener('focus', refreshAll); };
-  }, [refreshAll]);
+    window.addEventListener('focus', scheduleRefresh);
+    return () => {
+      document.removeEventListener('visibilitychange', h);
+      window.removeEventListener('focus', scheduleRefresh);
+    };
+  }, [scheduleRefresh]);
 
   const pendingTasks = tasks.filter((t) => !t.completed && !t.archived);
   const anomalies = todayRecords.filter((r) => !r.isCompliant).length;

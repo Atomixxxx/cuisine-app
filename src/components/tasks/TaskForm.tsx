@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { z } from 'zod';
 import {
   CATEGORIES,
   PRIORITY_COLORS,
@@ -24,6 +25,16 @@ const recurringOptions: { value: RecurringType; label: string }[] = [
   { value: 'weekly', label: 'Hebdomadaire' },
 ];
 
+const taskFormSchema = z.object({
+  title: z.string().trim().min(1, 'Le titre est requis'),
+  estimatedTime: z
+    .number()
+    .int('Le temps estime doit etre un nombre entier')
+    .min(0, 'Le temps estime doit etre superieur ou egal a 0')
+    .max(480, 'Le temps estime doit etre inferieur ou egal a 480')
+    .optional(),
+});
+
 const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TaskCategory>('autre');
@@ -32,6 +43,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
   const [notes, setNotes] = useState('');
   const [recurring, setRecurring] = useState<RecurringType>(null);
   const [titleError, setTitleError] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -49,19 +61,27 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      const trimmed = title.trim();
-      if (!trimmed) {
-        setTitleError(true);
+      const estimatedTimeValue = estimatedTime ? parseInt(estimatedTime, 10) : undefined;
+      const validationResult = taskFormSchema.safeParse({
+        title,
+        estimatedTime: estimatedTimeValue,
+      });
+      if (!validationResult.success) {
+        const firstIssue = validationResult.error.issues[0];
+        setTitleError(firstIssue.path[0] === 'title');
+        setFormError(firstIssue.message);
         return;
       }
+      setTitleError(false);
+      setFormError(null);
       if (saving) return;
       setSaving(true);
       try {
         await onSave({
-          title: trimmed,
+          title: validationResult.data.title,
           category,
           priority,
-          estimatedTime: estimatedTime ? parseInt(estimatedTime, 10) : undefined,
+          estimatedTime: validationResult.data.estimatedTime,
           notes: notes.trim() || undefined,
           recurring,
         });
@@ -117,6 +137,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
               onChange={(e) => {
                 setTitle(e.target.value);
                 if (titleError) setTitleError(false);
+                if (formError) setFormError(null);
               }}
               placeholder="Ex: Préparer la sauce béarnaise"
               aria-required="true"
@@ -235,6 +256,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSave, onCancel }) => {
               ))}
             </div>
           </div>
+
+          {formError && !titleError && (
+            <p className="ios-caption text-[color:var(--app-danger)]">{formError}</p>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-2 pb-2">

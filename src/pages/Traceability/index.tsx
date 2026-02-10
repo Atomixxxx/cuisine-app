@@ -11,6 +11,7 @@ import { useBadgeStore } from '../../stores/badgeStore';
 import { generateTraceabilityPDF, generateTraceabilityCSV, downloadCSV } from '../../services/pdf';
 import { buildProductFormPrefill, mapLabelOcrToPrefill, mergePrefills, type ProductFormPrefill } from '../../services/productScan';
 import { analyzeLabelImage, hasApiKey } from '../../services/ocr';
+import { logger } from '../../services/logger';
 import BarcodeScanner from '../../components/traceability/BarcodeScanner';
 import ProductForm from '../../components/traceability/ProductForm';
 import ProductGallery from '../../components/traceability/ProductGallery';
@@ -72,7 +73,8 @@ export default function Traceability() {
       setPage(1);
       setHasMoreProducts(list.length === PAGE_SIZE);
       refreshBadges();
-    } catch {
+    } catch (error) {
+      logger.warn('Failed to load initial traceability products', { error });
       showError('Impossible de charger les produits');
     } finally {
       setLoading(false);
@@ -84,7 +86,12 @@ export default function Traceability() {
   }, [loadInitialProducts]);
 
   useEffect(() => {
-    hasApiKey().then(setOcrAvailable).catch(() => setOcrAvailable(false));
+    hasApiKey()
+      .then(setOcrAvailable)
+      .catch((error) => {
+        logger.warn('Failed to check OCR API key availability', { error });
+        setOcrAvailable(false);
+      });
   }, []);
 
   const loadMoreProducts = useCallback(async () => {
@@ -99,7 +106,8 @@ export default function Traceability() {
       setProducts((prev) => [...prev, ...list]);
       setPage(nextPage);
       setHasMoreProducts(list.length === PAGE_SIZE);
-    } catch {
+    } catch (error) {
+      logger.warn('Failed to load more traceability products', { error });
       showError('Impossible de charger plus de produits');
     } finally {
       setLoadingMore(false);
@@ -183,7 +191,8 @@ export default function Traceability() {
         const ocrResult = await analyzeLabelImage(photo);
         const ocrPrefill = mapLabelOcrToPrefill(ocrResult);
         setLabelOcrPrefill(ocrPrefill);
-      } catch {
+      } catch (error) {
+        logger.warn('Label OCR analysis failed', { error });
         showError("Echec de l'analyse OCR. Vous pouvez remplir manuellement.");
       }
     },
@@ -202,7 +211,8 @@ export default function Traceability() {
           ? mergePrefills(barcodePrefill, labelOcrPrefill)
           : barcodePrefill;
         setScanPrefill(finalPrefill);
-      } catch {
+      } catch (error) {
+        logger.warn('Failed to build prefill from latest barcode product', { error, barcode });
         const barcodePrefill = buildProductFormPrefill({ barcode });
         const finalPrefill = labelOcrPrefill
           ? mergePrefills(barcodePrefill, labelOcrPrefill)
@@ -226,7 +236,8 @@ export default function Traceability() {
         setCapturedPhoto(undefined);
         setScanPrefill(undefined);
         await loadInitialProducts();
-      } catch {
+      } catch (error) {
+        logger.warn('Failed to save product from traceability scanner', { error, productId: product.id });
         showError('Impossible de sauvegarder le produit');
       }
     },
@@ -246,7 +257,8 @@ export default function Traceability() {
       try {
         await deleteProduct(id);
         await loadInitialProducts();
-      } catch {
+      } catch (error) {
+        logger.warn('Failed to delete product from traceability history', { error, productId: id });
         showError('Impossible de supprimer le produit');
       }
     },
@@ -258,7 +270,8 @@ export default function Traceability() {
       try {
         await markProductAsUsed(id);
         await loadInitialProducts();
-      } catch {
+      } catch (error) {
+        logger.warn('Failed to mark product as used', { error, productId: id });
         showError("Impossible de marquer le produit comme utilise");
       }
     },
@@ -276,7 +289,8 @@ export default function Traceability() {
         await updateProduct(product);
         setEditingProduct(null);
         await loadInitialProducts();
-      } catch {
+      } catch (error) {
+        logger.warn('Failed to update product from traceability editor', { error, productId: product.id });
         showError('Impossible de modifier le produit');
       }
     },
@@ -702,5 +716,3 @@ function ProductListView({
     </div>
   );
 }
-
-

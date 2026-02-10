@@ -1,15 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
+import { z } from 'zod';
 import { useAppStore } from '../../stores/appStore';
 import { showError } from '../../stores/toastStore';
 import { EQUIPMENT_TYPES } from '../../types';
 import type { Equipment, TemperatureRecord } from '../../types';
-import { formatDate, cn, vibrate, validateRange } from '../../utils';
+import { formatDate, cn, vibrate } from '../../utils';
 
 interface NumpadModalProps {
   equipment: Equipment;
   onClose: () => void;
   onSubmit: (value: number) => Promise<void> | void;
 }
+
+const temperatureInputSchema = z
+  .number()
+  .finite('La temperature doit etre un nombre valide')
+  .min(-50, 'La temperature doit etre au minimum -50')
+  .max(300, 'La temperature doit etre au maximum 300');
 
 function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
   const [display, setDisplay] = useState('');
@@ -44,11 +51,14 @@ function NumpadModal({ equipment, onClose, onSubmit }: NumpadModalProps) {
         const raw = display.length === 0 ? '0' : display;
         const value = parseFloat((isNegative ? '-' : '') + raw);
         if (isNaN(value)) return;
-        const err = validateRange(value, -50, 300, 'La temperature');
-        if (err) { setRangeError(err); return; }
+        const parsed = temperatureInputSchema.safeParse(value);
+        if (!parsed.success) {
+          setRangeError(parsed.error.issues[0]?.message ?? 'Temperature invalide');
+          return;
+        }
         setSaving(true);
         try {
-          await onSubmit(value);
+          await onSubmit(parsed.data);
         } finally {
           setSaving(false);
         }
@@ -201,13 +211,19 @@ export default function TemperatureInput() {
 
   const handleSubmit = async (value: number) => {
     if (!selectedEquipment) return;
+    const parsed = temperatureInputSchema.safeParse(value);
+    if (!parsed.success) {
+      showError(parsed.error.issues[0]?.message ?? 'Temperature invalide');
+      return;
+    }
+    const validatedValue = parsed.data;
 
-    const isCompliant = value >= selectedEquipment.minTemp && value <= selectedEquipment.maxTemp;
+    const isCompliant = validatedValue >= selectedEquipment.minTemp && validatedValue <= selectedEquipment.maxTemp;
 
     const record: TemperatureRecord = {
       id: crypto.randomUUID(),
       equipmentId: selectedEquipment.id,
-      temperature: value,
+      temperature: validatedValue,
       timestamp: new Date(),
       isCompliant,
     };

@@ -7,12 +7,12 @@ import PinLockScreen from "./components/security/PinLockScreen";
 import { logger } from "./services/logger";
 
 /* Lazy-loaded page components */
-const TemperaturePage = lazy(() => import("./pages/TemperaturePage"));
-const TraceabilityPage = lazy(() => import("./pages/TraceabilityPage"));
-const TasksPage = lazy(() => import("./pages/TasksPage"));
-const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
-const RecipesPage = lazy(() => import("./pages/RecipesPage"));
-const AssistantPage = lazy(() => import("./pages/AssistantPage"));
+const TemperaturePage = lazy(() => import("./pages/Temperature"));
+const TraceabilityPage = lazy(() => import("./pages/Traceability"));
+const TasksPage = lazy(() => import("./pages/Tasks"));
+const InvoicesPage = lazy(() => import("./pages/Invoices"));
+const RecipesPage = lazy(() => import("./pages/Recipes"));
+const AssistantPage = lazy(() => import("./pages/Assistant"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 

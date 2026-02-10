@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { z } from 'zod';
 import { useAppStore } from '../../stores/appStore';
 import type { OCRResult } from '../../services/ocr';
 import type { Invoice, InvoiceItem } from '../../types';
-import { cn, sanitizeInput, vibrate, validateRange } from '../../utils';
+import { cn, sanitizeInput, vibrate } from '../../utils';
 import { logger } from '../../services/logger';
 import { buildSupplierQuickPicks, canonicalizeSupplierName, isNewSupplier } from '../../services/suppliers';
 import { syncInvoiceToIngredients } from '../../services/invoiceIngredientSync';
@@ -14,6 +15,35 @@ interface InvoiceFormProps {
   onCancel: () => void;
   existingInvoice?: Invoice;
 }
+
+const invoiceItemSchema = z.object({
+  designation: z.string().trim().min(1, 'La designation est requise'),
+  quantity: z
+    .number()
+    .finite('Quantite invalide')
+    .min(0, 'La quantite doit etre superieure ou egale a 0')
+    .max(99999, 'La quantite doit etre inferieure ou egale a 99999'),
+  unitPriceHT: z
+    .number()
+    .finite('Prix unitaire invalide')
+    .min(0, 'Le prix unitaire doit etre superieur ou egal a 0')
+    .max(99999, 'Le prix unitaire doit etre inferieur ou egal a 99999'),
+  totalPriceHT: z
+    .number()
+    .finite('Total HT invalide')
+    .min(0, 'Le total HT doit etre superieur ou egal a 0'),
+  conditioningQuantity: z.number().positive('Le colisage doit etre positif').optional(),
+});
+
+const invoiceFormSchema = z.object({
+  supplier: z.string().trim().min(1, 'Le fournisseur est requis'),
+  invoiceDate: z
+    .string()
+    .trim()
+    .min(1, 'La date de facture est requise')
+    .refine((value) => Number.isFinite(new Date(value).getTime()), 'Date de facture invalide'),
+  items: z.array(invoiceItemSchema).min(1, 'Au moins un article est requis'),
+});
 
 const PlusIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -162,8 +192,20 @@ export default function InvoiceForm({
 
   const handleSave = useCallback(async () => {
     const supplierValue = canonicalizeSupplierName(supplier.trim());
-    if (!supplierValue) {
-      setError('Le fournisseur est requis');
+    const filteredItems = items.filter((item) => item.designation.trim().length > 0);
+    const validationResult = invoiceFormSchema.safeParse({
+      supplier: supplierValue,
+      invoiceDate,
+      items: filteredItems,
+    });
+    if (!validationResult.success) {
+      const firstIssue = validationResult.error.issues[0];
+      if (firstIssue.path[0] === 'items' && typeof firstIssue.path[1] === 'number') {
+        const row = firstIssue.path[1] + 1;
+        setError(`Article ${row}: ${firstIssue.message}`);
+        return;
+      }
+      setError(firstIssue.message);
       return;
     }
     if (!existingInvoice && isNewSupplier(supplierValue, knownSuppliers)) {
@@ -171,18 +213,6 @@ export default function InvoiceForm({
         `Nouveau fournisseur detecte: "${supplierValue}".\nVoulez-vous le sauvegarder ?`,
       );
       if (!confirmed) return;
-    }
-    if (items.length === 0 || !items.some((it) => it.designation.trim())) {
-      setError('Au moins un article est requis');
-      return;
-    }
-    for (const item of items) {
-      if (item.designation.trim()) {
-        const qErr = validateRange(item.quantity, 0, 99999, 'La quantite');
-        if (qErr) { setError(`${item.designation}: ${qErr}`); return; }
-        const pErr = validateRange(item.unitPriceHT, 0, 99999, 'Le prix unitaire');
-        if (pErr) { setError(`${item.designation}: ${pErr}`); return; }
-      }
     }
 
     setSaving(true);
@@ -201,7 +231,7 @@ export default function InvoiceForm({
         supplier: supplierValue,
         invoiceNumber: invoiceNumber.trim(),
         invoiceDate: new Date(invoiceDate),
-        items: items.filter((it) => it.designation.trim()),
+        items: filteredItems,
         totalHT: totals.totalHT,
         totalTVA: totals.totalTVA,
         totalTTC: totals.totalTTC,
