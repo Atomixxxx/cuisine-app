@@ -393,6 +393,36 @@ body {
   .dash-main { padding: 12px; gap: 8px; }
 }
 
+.dash-notif-tabs {
+  width: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: var(--app-surface-2);
+}
+
+.dash-tab-btn {
+  min-height: 44px;
+  padding-inline: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-notif-badge {
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .dash-panel {
   border: 1px solid var(--app-border);
   border-radius: 12px;

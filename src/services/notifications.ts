@@ -4,7 +4,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 export async function getExpiringProductsCount(withinDays = 3): Promise<number> {
   const products = (await db.productTraces.toArray()).filter((p) => p.status !== 'used');
   const now = Date.now();
-  return products.filter(p => {
+  return products.filter((p) => {
     const daysLeft = Math.ceil((new Date(p.expirationDate).getTime() - now) / (1000 * 60 * 60 * 24));
     return daysLeft <= withinDays;
   }).length;
@@ -51,16 +51,22 @@ export async function checkAndNotifyExpiringProducts(): Promise<void> {
 
   let body = '';
   if (expiredCount > 0 && soonExpiringCount > 0) {
-    body = `${expiredCount} produit${expiredCount > 1 ? 's' : ''} expiré${expiredCount > 1 ? 's' : ''}, ${soonExpiringCount} DLC proche${soonExpiringCount > 1 ? 's' : ''}`;
+    body = `${expiredCount} produit${expiredCount > 1 ? 's' : ''} expire${expiredCount > 1 ? 's' : ''}, ${soonExpiringCount} DLC proche${soonExpiringCount > 1 ? 's' : ''}`;
   } else if (soonExpiringCount > 0) {
     body = `${soonExpiringCount} produit${soonExpiringCount > 1 ? 's' : ''} avec DLC dans les 3 jours`;
   } else {
-    body = `${expiredCount} produit${expiredCount > 1 ? 's' : ''} expiré${expiredCount > 1 ? 's' : ''}`;
+    body = `${expiredCount} produit${expiredCount > 1 ? 's' : ''} expire${expiredCount > 1 ? 's' : ''}`;
   }
 
-  new Notification('CuisineControl — Alerte DLC', {
+  const notification = new Notification('CuisineControl - Alerte DLC', {
     body,
     icon: '/icons/icon-192.svg',
     tag: 'expiry-alert',
   });
+
+  notification.onclick = () => {
+    notification.close();
+    window.focus();
+    window.location.assign('/traceability?tab=history');
+  };
 }

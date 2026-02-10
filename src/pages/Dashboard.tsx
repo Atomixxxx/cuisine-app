@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../stores/appStore';
-import { showError, showSuccess } from '../stores/toastStore';
+import { showError } from '../stores/toastStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { buildSmartAlerts, type SmartAlertSeverity } from '../services/smartAlerts';
 import type { ProductTrace, Task, TemperatureRecord } from '../types';
 import { cn } from '../utils';
 
 type KpiTone = 'success' | 'warning' | 'danger';
+type DashboardView = 'overview' | 'notifications';
 
 const alertStyles: Record<SmartAlertSeverity, { border: string; dot: string }> = {
   danger: { border: 'border-l-[color:var(--app-danger)]', dot: 'bg-[color:var(--app-danger)]' },
@@ -70,6 +71,7 @@ export default function Dashboard() {
   const [todayRecords, setTodayRecords] = useState<TemperatureRecord[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [products, setProducts] = useState<ProductTrace[]>([]);
+  const [dashboardView, setDashboardView] = useState<DashboardView>('overview');
   const { canShow: showInstall, install: installPwa, dismiss: dismissInstall } = usePwaInstall();
 
   const refreshAll = useCallback(() => {
@@ -109,13 +111,8 @@ export default function Dashboard() {
   const anomTone: KpiTone = anomalies > 0 ? 'danger' : 'success';
   const taskTone: KpiTone = pendingTasks.length === 0 ? 'success' : pendingTasks.length >= 5 ? 'danger' : 'warning';
   const dlcTone: KpiTone = expiredCount > 0 ? 'danger' : expiringProducts.length > 0 ? 'warning' : 'success';
-
-  const handleSos = () => {
-    if (navigator.vibrate) navigator.vibrate([120, 60, 120, 60, 180]);
-    showError('SOS hygiene active. Controle immediat des temperatures.');
-    showSuccess('Etape 1/3: temperatures -> Etape 2/3: tracabilite -> Etape 3/3: taches critiques.');
-    navigate('/temperature?quick=input');
-  };
+  const actionableAlerts = smartAlerts.filter((alert) => alert.id !== 'all-clear');
+  const notificationCount = actionableAlerts.length;
 
   return (
     <div className="dash-root">
@@ -155,83 +152,114 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Row 2: multi-panel grid */}
-        <div className="dash-grid animate-fade-in-up stagger-2">
-          {/* Col A: SOS + Alerts */}
-          <div className="dash-col-a">
-            <button onClick={handleSos} className="sos-hygiene-btn sos-compact w-full">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/16 border border-white/25 text-white shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M4.93 19h14.14c1.43 0 2.33-1.55 1.62-2.8L13.62 4.2c-.71-1.25-2.53-1.25-3.24 0L3.31 16.2C2.6 17.45 3.5 19 4.93 19z" /></svg>
-              </span>
-              <span className="block text-left"><span className="block text-[14px] font-bold leading-none">SOS Hygiene</span></span>
+        <div className="flex justify-end animate-fade-in-up stagger-2">
+          <div className="ios-segmented dash-notif-tabs">
+            <button
+              type="button"
+              onClick={() => setDashboardView('overview')}
+              className={cn('ios-segmented-item dash-tab-btn', dashboardView === 'overview' && 'active')}
+            >
+              Vue
             </button>
-
-            <div className="dash-panel flex-1 mt-2">
-              <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--app-danger)]" />Alertes
-              </h2>
-              <AlertList alerts={smartAlerts.slice(0, 6)} onNavigate={navigate} />
-            </div>
-          </div>
-
-          {/* Col B: Produits + Taches */}
-          <div className="dash-col-b">
-            {/* Produits proches */}
-            <div className="dash-panel flex-1">
-              <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 7v5l3 2" /></svg>
-                Produits a surveiller
-              </h2>
-              {expiringProducts.length === 0 ? (
-                <p className="text-[11px] app-muted py-4 text-center">Aucun produit proche de la DLC</p>
-              ) : (
-                <div className="space-y-1">
-                  {expiringProducts.slice(0, 5).map((p) => {
-                    const daysLeft = Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5);
-                    const expired = daysLeft < 0;
-                    return (
-                      <button key={p.id} onClick={() => navigate('/traceability')}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg app-surface-2 border border-[color:var(--app-border)] text-left transition-opacity active:opacity-70">
-                        <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', expired ? 'bg-[color:var(--app-danger)]' : 'bg-[color:var(--app-warning)]')} />
-                        <span className="text-[11px] font-medium app-text truncate flex-1">{p.productName}</span>
-                        <span className={cn('text-[10px] font-semibold shrink-0', expired ? 'text-[color:var(--app-danger)]' : 'text-[color:var(--app-warning)]')}>
-                          {expired ? 'Expire' : `J-${daysLeft}`}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+            <button
+              type="button"
+              onClick={() => setDashboardView('notifications')}
+              className={cn('ios-segmented-item dash-tab-btn', dashboardView === 'notifications' && 'active')}
+            >
+              Notifs
+              {notificationCount > 0 && (
+                <span className="dash-notif-badge">{notificationCount > 9 ? '9+' : notificationCount}</span>
               )}
-            </div>
-
-            {/* Taches en attente */}
-            <div className="dash-panel flex-1">
-              <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>
-                Taches en attente
-              </h2>
-              {pendingTasks.length === 0 ? (
-                <div className="py-4 text-center">
-                  <span className="inline-flex h-8 w-8 rounded-full bg-[color:var(--app-success)]/15 text-[color:var(--app-success)] items-center justify-center mb-1">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
-                  </span>
-                  <p className="text-[11px] app-muted">Tout est fait</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {pendingTasks.slice(0, 5).map((t) => (
-                    <button key={t.id} onClick={() => navigate('/tasks')}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg app-surface-2 border border-[color:var(--app-border)] text-left transition-opacity active:opacity-70">
-                      <span className="w-3 h-3 rounded border border-[color:var(--app-muted)] shrink-0" />
-                      <span className="text-[11px] font-medium app-text truncate flex-1">{t.title}</span>
-                      {t.priority === 'high' && <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--app-danger)] shrink-0" />}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            </button>
           </div>
         </div>
+
+        {dashboardView === 'overview' ? (
+          <div className="dash-grid animate-fade-in-up stagger-2">
+            {/* Col A: Alerts */}
+            <div className="dash-col-a">
+              <div className="dash-panel flex-1">
+                <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--app-danger)]" />
+                  Notifications
+                </h2>
+                <AlertList alerts={smartAlerts.slice(0, 6)} onNavigate={navigate} />
+              </div>
+            </div>
+
+            {/* Col B: Produits + Taches */}
+            <div className="dash-col-b">
+              {/* Produits proches */}
+              <div className="dash-panel flex-1">
+                <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 7v5l3 2" /></svg>
+                  Produits a surveiller
+                </h2>
+                {expiringProducts.length === 0 ? (
+                  <p className="text-[11px] app-muted py-4 text-center">Aucun produit proche de la DLC</p>
+                ) : (
+                  <div className="space-y-1">
+                    {expiringProducts.slice(0, 5).map((p) => {
+                      const daysLeft = Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5);
+                      const expired = daysLeft < 0;
+                      return (
+                        <button key={p.id} onClick={() => navigate('/traceability')}
+                          className="w-full min-h-[44px] flex items-center gap-2 px-2 py-1.5 rounded-lg app-surface-2 border border-[color:var(--app-border)] text-left transition-opacity active:opacity-70">
+                          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', expired ? 'bg-[color:var(--app-danger)]' : 'bg-[color:var(--app-warning)]')} />
+                          <span className="text-[11px] font-medium app-text truncate flex-1">{p.productName}</span>
+                          <span className={cn('text-[10px] font-semibold shrink-0', expired ? 'text-[color:var(--app-danger)]' : 'text-[color:var(--app-warning)]')}>
+                            {expired ? 'Expire' : `J-${daysLeft}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Taches en attente */}
+              <div className="dash-panel flex-1">
+                <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>
+                  Taches en attente
+                </h2>
+                {pendingTasks.length === 0 ? (
+                  <div className="py-4 text-center">
+                    <span className="inline-flex h-8 w-8 rounded-full bg-[color:var(--app-success)]/15 text-[color:var(--app-success)] items-center justify-center mb-1">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
+                    </span>
+                    <p className="text-[11px] app-muted">Tout est fait</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {pendingTasks.slice(0, 5).map((t) => (
+                      <button key={t.id} onClick={() => navigate('/tasks')}
+                        className="w-full min-h-[44px] flex items-center gap-2 px-2 py-1.5 rounded-lg app-surface-2 border border-[color:var(--app-border)] text-left transition-opacity active:opacity-70">
+                        <span className="w-3 h-3 rounded border border-[color:var(--app-muted)] shrink-0" />
+                        <span className="text-[11px] font-medium app-text truncate flex-1">{t.title}</span>
+                        {t.priority === 'high' && <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--app-danger)] shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="dash-panel animate-fade-in-up stagger-2">
+            <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--app-danger)]" />
+              Notifications
+            </h2>
+            <AlertList
+              alerts={smartAlerts.slice(0, 12)}
+              onNavigate={(path) => {
+                navigate(path);
+                setDashboardView('overview');
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -255,7 +283,7 @@ function AlertList({ alerts, onNavigate }: { alerts: ReturnType<typeof buildSmar
     <div className="space-y-0.5">
       {alerts.map((a) => (
         <button key={a.id} onClick={() => onNavigate(a.path)}
-          className={cn('w-full flex items-center gap-2 px-2 py-2 rounded-lg border-l-[3px] transition-opacity active:opacity-70 text-left', alertStyles[a.severity].border, 'app-surface-2')}>
+          className={cn('w-full min-h-[44px] flex items-center gap-2 px-2 py-2 rounded-lg border-l-[3px] transition-opacity active:opacity-70 text-left', alertStyles[a.severity].border, 'app-surface-2')}>
           <span className={cn('w-2 h-2 rounded-full shrink-0', alertStyles[a.severity].dot)} />
           <span className="text-[11px] font-medium app-text truncate flex-1">{a.title}</span>
           <span className="text-[10px] app-muted shrink-0">{a.description.split('.')[0]}</span>
