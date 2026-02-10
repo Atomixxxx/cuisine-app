@@ -13,7 +13,7 @@ import { sanitizeAllergens } from './sliceUtils';
 
 type ProductSlice = Pick<
   AppState,
-  'getProducts' | 'getLatestProductByBarcode' | 'addProduct' | 'updateProduct' | 'deleteProduct'
+  'getProducts' | 'getLatestProductByBarcode' | 'addProduct' | 'updateProduct' | 'markProductAsUsed' | 'deleteProduct'
 >;
 
 export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = () => ({
@@ -74,8 +74,11 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
   },
 
   addProduct: async (product) => {
+    const status = product.status ?? 'active';
     const payload = {
       ...product,
+      status,
+      usedAt: status === 'used' ? product.usedAt ?? new Date() : undefined,
       productName: sanitize(product.productName),
       supplier: sanitize(product.supplier),
       lotNumber: sanitize(product.lotNumber),
@@ -91,8 +94,11 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
   },
 
   updateProduct: async (product) => {
+    const status = product.status ?? 'active';
     const payload = {
       ...product,
+      status,
+      usedAt: status === 'used' ? product.usedAt ?? new Date() : undefined,
       productName: sanitize(product.productName),
       supplier: sanitize(product.supplier),
       lotNumber: sanitize(product.lotNumber),
@@ -102,6 +108,23 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
     };
     await db.productTraces.put(payload);
     const remoteSaved = await runCloudRead('products:update', async () => upsertRemoteProduct(payload));
+    if (remoteSaved) {
+      await db.productTraces.put(remoteSaved);
+    }
+  },
+
+  markProductAsUsed: async (id) => {
+    const current = await db.productTraces.get(id);
+    if (!current || current.status === 'used') return;
+
+    const payload = {
+      ...current,
+      status: 'used' as const,
+      usedAt: new Date(),
+    };
+    await db.productTraces.put(payload);
+
+    const remoteSaved = await runCloudRead('products:markAsUsed', async () => upsertRemoteProduct(payload));
     if (remoteSaved) {
       await db.productTraces.put(remoteSaved);
     }

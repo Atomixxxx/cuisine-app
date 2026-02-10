@@ -9,14 +9,24 @@ interface ProductDetailProps {
   products: ProductTrace[];
   onClose: () => void;
   onDelete: (id: string) => void;
+  onMarkAsUsed: (id: string) => void;
   onEdit: (product: ProductTrace) => void;
   onNavigate: (product: ProductTrace) => void;
 }
 
-export default function ProductDetail({ product, products, onClose, onDelete, onEdit, onNavigate }: ProductDetailProps) {
+export default function ProductDetail({
+  product,
+  products,
+  onClose,
+  onDelete,
+  onMarkAsUsed,
+  onEdit,
+  onNavigate,
+}: ProductDetailProps) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const isUsed = product.status === 'used';
 
   const currentIndex = useMemo(
     () => products.findIndex((p) => p.id === product.id),
@@ -60,12 +70,23 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
     onClose();
   }, [onDelete, product.id, onClose]);
 
+  const handleMarkAsUsed = useCallback(() => {
+    onMarkAsUsed(product.id);
+    onClose();
+  }, [onMarkAsUsed, product.id, onClose]);
+
   const dlcStatus = useMemo(() => {
     const days = differenceInDays(new Date(product.expirationDate), new Date());
     if (days < 0) return { label: 'Expire', color: 'text-[color:var(--app-danger)]', bg: 'bg-[color:var(--app-danger)]/10' };
     if (days <= 3) return { label: `Expire dans ${days} jour${days > 1 ? 's' : ''}`, color: 'text-[color:var(--app-warning)]', bg: 'bg-[color:var(--app-warning)]/12' };
     return { label: `${days} jours restants`, color: 'text-[color:var(--app-success)]', bg: 'bg-[color:var(--app-success)]/12' };
   }, [product.expirationDate]);
+
+  const usedLabel = useMemo(() => {
+    if (!isUsed) return null;
+    const date = product.usedAt ? new Date(product.usedAt) : new Date(product.scannedAt);
+    return format(date, 'dd MMMM yyyy HH:mm', { locale: fr });
+  }, [isUsed, product.usedAt, product.scannedAt]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col app-bg">
@@ -84,6 +105,18 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
           {product.productName}
         </h2>
         <div className="flex items-center gap-1">
+          {!isUsed && (
+            <button
+              onClick={handleMarkAsUsed}
+              className="p-1.5 rounded-lg text-[color:var(--app-success)] active:opacity-70 transition-colors"
+              aria-label="Marquer comme utilise"
+              title="Marquer comme utilise"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => onEdit(product)}
             className="p-1.5 rounded-lg text-[color:var(--app-accent)] active:opacity-70 dark:active:opacity-70 transition-colors"
@@ -180,9 +213,18 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
         {/* Product info */}
         <div className="p-4 flex flex-col gap-4">
           {/* DLC status badge */}
-          <div className={cn('inline-flex self-start items-center px-3 py-1.5 rounded-full text-sm font-medium', dlcStatus.bg, dlcStatus.color)}>
-            {dlcStatus.label}
-          </div>
+          {isUsed ? (
+            <div className="inline-flex self-start items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-[color:var(--app-surface-3)] app-muted">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Utilise le {usedLabel}
+            </div>
+          ) : (
+            <div className={cn('inline-flex self-start items-center px-3 py-1.5 rounded-full text-sm font-medium', dlcStatus.bg, dlcStatus.color)}>
+              {dlcStatus.label}
+            </div>
+          )}
 
           {/* Info rows */}
           <div className="grid gap-3">
@@ -198,6 +240,7 @@ export default function ProductDetail({ product, products, onClose, onDelete, on
               label="DLC / DDM"
               value={format(new Date(product.expirationDate), 'dd MMMM yyyy', { locale: fr })}
             />
+            {isUsed && usedLabel && <InfoRow label="Utilise le" value={usedLabel} />}
             {product.barcode && <InfoRow label="Code-barres" value={product.barcode} mono />}
             <InfoRow
               label="Scanne le"

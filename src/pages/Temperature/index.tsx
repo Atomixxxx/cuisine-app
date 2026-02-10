@@ -94,25 +94,25 @@ export default function TemperaturePage() {
   return (
     <div className="app-page-wrap h-full pb-24">
       <div className="flex-shrink-0 space-y-3">
-        <div className="app-hero-card space-y-3">
+        <div className="app-hero-card space-y-3 spx-scan-line">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="ios-title app-text">Controles</h1>
-              <p className="text-[12px] sm:text-[14px] app-muted">
+              <p className="text-[11px] sm:text-[12px] app-muted">
                 {activeCategory === 'cold'
-                  ? 'Controle des temperatures de froid et export HACCP.'
-                  : 'Controle des changements d huile de friture (HACCP).'}
+                  ? 'Temperatures de froid & export HACCP.'
+                  : 'Changements d huile friture (HACCP).'}
               </p>
             </div>
             {activeCategory === 'cold' && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowEquipmentModal(true)}
-                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl app-surface-2 app-text active:opacity-70 transition-opacity"
+                  className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-xl app-surface-2 app-text active:opacity-70 transition-opacity"
                   title="Equipements"
                   aria-label="Equipements"
                 >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -142,34 +142,34 @@ export default function TemperaturePage() {
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Vue active</p>
-                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">{SUB_VIEWS.find((sv) => sv.key === activeView)?.label}</p>
+                  <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">{SUB_VIEWS.find((sv) => sv.key === activeView)?.label}</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Debut export</p>
-                  <p className="app-kpi-value ![font-size:13px] sm:![font-size:15px] font-semibold truncate">{exportFrom}</p>
+                  <p className="app-kpi-value ![font-size:12px] sm:![font-size:13px] font-semibold truncate">{exportFrom}</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Fin export</p>
-                  <p className="app-kpi-value ![font-size:13px] sm:![font-size:15px] font-semibold truncate">{exportTo}</p>
+                  <p className="app-kpi-value ![font-size:12px] sm:![font-size:13px] font-semibold truncate">{exportTo}</p>
                 </div>
               </>
             ) : (
               <>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Categorie</p>
-                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">Huile</p>
+                  <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">Huile</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Saisie</p>
-                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">Par calendrier</p>
+                  <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">Par calendrier</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Trace</p>
-                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">Historique</p>
+                  <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">Historique</p>
                 </div>
                 <div className="app-kpi-card">
                   <p className="app-kpi-label">Export</p>
-                  <p className="app-kpi-value !text-[14px] sm:!text-[16px] font-semibold">PDF</p>
+                  <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">PDF</p>
                 </div>
               </>
             )}
@@ -218,7 +218,7 @@ export default function TemperaturePage() {
               onClick={handleExportPDF}
               disabled={exporting}
               className={cn(
-                'w-full py-3 rounded-xl text-[17px] font-bold transition-opacity active:opacity-70',
+                'w-full py-2.5 rounded-xl text-[14px] font-bold transition-opacity active:opacity-70',
                 exporting ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
               )}
             >

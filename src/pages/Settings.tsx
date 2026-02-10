@@ -332,7 +332,7 @@ export default function Settings() {
     void change();
   }, [currentPin, newPin, confirmPin]);
 
-  const inputClass = 'app-input text-[17px]';
+  const inputClass = 'app-input text-[14px]';
   const usagePercent = Math.min(100, Math.max(0, storageEstimate?.usagePercent ?? 0));
 
   const formatStorageBytes = (bytes: number): string => {
@@ -343,32 +343,32 @@ export default function Settings() {
   };
 
   return (
-    <div className="app-page-wrap max-w-2xl pb-28 space-y-4">
-      <div className="app-hero-card space-y-3">
+    <div className="app-page-wrap pb-28 space-y-3">
+      <div className="app-hero-card space-y-3 spx-scan-line">
         <div>
           <h1 className="ios-title app-text">Parametres</h1>
-          <p className="text-[14px] app-muted">Configuration generale, API, sauvegardes et securite.</p>
+          <p className="text-[11px] sm:text-[12px] app-muted">Configuration generale, API, sauvegardes et securite.</p>
         </div>
         <div className="app-kpi-grid">
           <div className="app-kpi-card">
             <p className="app-kpi-label">Etablissement</p>
-            <p className="app-kpi-value text-[16px] font-semibold truncate">{establishmentName || 'Non renseigne'}</p>
+            <p className="app-kpi-value text-[14px] font-semibold truncate">{establishmentName || 'Non renseigne'}</p>
           </div>
           <div className="app-kpi-card">
             <p className="app-kpi-label">Gemini API</p>
-            <p className="app-kpi-value text-[16px] font-semibold">{geminiConnected ? 'Connecte' : 'Inactif'}</p>
+            <p className="app-kpi-value text-[14px] font-semibold">{geminiConnected ? 'Connecte' : 'Inactif'}</p>
           </div>
           <div className="app-kpi-card">
             <p className="app-kpi-label">Backup auto</p>
-            <p className="app-kpi-value text-[16px] font-semibold">{autoBackup ? 'Actif' : 'Off'}</p>
+            <p className="app-kpi-value text-[14px] font-semibold">{autoBackup ? 'Actif' : 'Off'}</p>
           </div>
           <div className="app-kpi-card">
             <p className="app-kpi-label">Code PIN</p>
-            <p className="app-kpi-value text-[16px] font-semibold">{pinEnabled ? 'Actif' : 'Off'}</p>
+            <p className="app-kpi-value text-[14px] font-semibold">{pinEnabled ? 'Actif' : 'Off'}</p>
           </div>
           <div className="app-kpi-card">
             <p className="app-kpi-label">Cloud</p>
-            <p className="app-kpi-value text-[16px] font-semibold">
+            <p className="app-kpi-value text-[14px] font-semibold">
               {supabaseAuthConfigured ? (supabaseUserEmail ? 'Connecte' : 'Pret') : 'Non configure'}
             </p>
           </div>
@@ -379,7 +379,7 @@ export default function Settings() {
         <h2 className="ios-caption-upper app-muted mb-2">General</h2>
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] app-text">Nom de l'etablissement</label>
+            <label className="text-[14px] app-text">Nom de l'etablissement</label>
             <input
               type="text"
               value={establishmentName}
@@ -390,7 +390,7 @@ export default function Settings() {
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] app-text">Seuil alerte prix (%)</label>
+            <label className="text-[14px] app-text">Seuil alerte prix (%)</label>
             <input
               type="number"
               min="1"
@@ -406,7 +406,7 @@ export default function Settings() {
               onClick={handleSaveSettings}
               disabled={saving}
               className={cn(
-                'w-full py-3 rounded-xl text-[17px] font-semibold transition-opacity active:opacity-70',
+                'w-full py-2.5 rounded-xl text-[14px] font-semibold transition-opacity active:opacity-70',
                 saving ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
               )}
             >
@@ -420,7 +420,7 @@ export default function Settings() {
         <h2 className="ios-caption-upper app-muted mb-2">API Gemini</h2>
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
-            <span className="text-[17px] app-text">Statut</span>
+            <span className="text-[14px] app-text">Statut</span>
             <span
               className={cn(
                 'flex items-center gap-1.5 ios-body font-medium',
@@ -438,7 +438,7 @@ export default function Settings() {
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] app-text">Cle API</label>
+            <label className="text-[14px] app-text">Cle API</label>
             <input
               type="password"
               value={geminiKey}
@@ -451,7 +451,7 @@ export default function Settings() {
           <div className="px-4 py-3">
             <button
               onClick={handleSaveGeminiKey}
-              className="w-full py-3 rounded-xl app-accent-bg text-[17px] font-semibold active:opacity-70 transition-opacity"
+              className="w-full py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
             >
               Enregistrer la cle
             </button>
@@ -463,21 +463,21 @@ export default function Settings() {
         <h2 className="ios-caption-upper app-muted mb-2">Cloud Supabase</h2>
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
-            <span className="text-[17px] app-text">Configuration</span>
+            <span className="text-[14px] app-text">Configuration</span>
             <span className={cn('ios-body font-medium', supabaseAuthConfigured ? 'text-[color:var(--app-success)]' : 'app-muted')}>
               {supabaseAuthConfigured ? 'Variables OK' : 'Variables manquantes'}
             </span>
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row">
-            <span className="text-[17px] app-text">Session</span>
+            <span className="text-[14px] app-text">Session</span>
             <span className={cn('ios-body font-medium', supabaseUserEmail ? 'text-[color:var(--app-success)]' : 'app-muted')}>
               {supabaseUserEmail ?? 'Non connecte'}
             </span>
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] app-text">Email Supabase</label>
+            <label className="text-[14px] app-text">Email Supabase</label>
             <input
               type="email"
               value={supabaseEmail}
@@ -488,7 +488,7 @@ export default function Settings() {
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] app-text">Mot de passe Supabase</label>
+            <label className="text-[14px] app-text">Mot de passe Supabase</label>
             <input
               type="password"
               value={supabasePassword}
@@ -502,7 +502,7 @@ export default function Settings() {
               onClick={handleSupabaseLogin}
               disabled={!supabaseAuthConfigured || supabaseSigningIn}
               className={cn(
-                'flex-1 py-3 rounded-xl text-[16px] font-semibold active:opacity-70 transition-opacity',
+                'flex-1 py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity',
                 !supabaseAuthConfigured || supabaseSigningIn ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
               )}
             >
@@ -512,7 +512,7 @@ export default function Settings() {
               onClick={handleSupabaseLogout}
               disabled={!supabaseUserEmail || supabaseSigningOut}
               className={cn(
-                'flex-1 py-3 rounded-xl text-[16px] font-semibold active:opacity-70 transition-opacity',
+                'flex-1 py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity',
                 !supabaseUserEmail || supabaseSigningOut ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-danger-bg',
               )}
             >
@@ -535,7 +535,7 @@ export default function Settings() {
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row">
-            <span className="text-[17px] app-text">Backup auto hebdomadaire</span>
+            <span className="text-[14px] app-text">Backup auto hebdomadaire</span>
             <button
               onClick={handleToggleAutoBackup}
               className={cn(
@@ -550,13 +550,13 @@ export default function Settings() {
           <div className="px-4 py-3 flex gap-3">
             <button
               onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl app-success-bg text-[17px] font-semibold active:opacity-70 transition-opacity"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl app-success-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
             >
               Exporter
             </button>
             <button
               onClick={handleExportAutoBackup}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl app-surface-2 app-text text-[17px] font-semibold active:opacity-70 transition-opacity"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl app-surface-2 app-text text-[14px] font-semibold active:opacity-70 transition-opacity"
             >
               Export auto
             </button>
@@ -567,7 +567,7 @@ export default function Settings() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={restoringBackup}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl app-warning-bg text-[17px] font-semibold active:opacity-70 transition-opacity"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl app-warning-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
             >
               {restoringBackup ? 'Restauration...' : 'Importer'}
             </button>
@@ -611,7 +611,7 @@ export default function Settings() {
         <h2 className="ios-caption-upper app-muted mb-2">Securite</h2>
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
-            <span className="text-[17px] app-text">Code PIN</span>
+            <span className="text-[14px] app-text">Code PIN</span>
             <span className={cn('ios-body font-medium', pinEnabled ? 'text-[color:var(--app-success)]' : 'app-muted')}>
               {pinEnabled ? 'Active' : 'Desactive'}
             </span>
@@ -620,7 +620,7 @@ export default function Settings() {
           {pinEnabled && (
             <>
               <div className="ios-settings-row flex-col items-stretch gap-1.5">
-                <label className="text-[17px] app-text">PIN actuel</label>
+                <label className="text-[14px] app-text">PIN actuel</label>
                 <input
                   type="password"
                   inputMode="numeric"
@@ -635,7 +635,7 @@ export default function Settings() {
             </>
           )}
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] app-text">{pinEnabled ? 'Nouveau PIN' : 'PIN'}</label>
+            <label className="text-[14px] app-text">{pinEnabled ? 'Nouveau PIN' : 'PIN'}</label>
             <input
               type="password"
               inputMode="numeric"
@@ -648,7 +648,7 @@ export default function Settings() {
           </div>
           <div className="ios-settings-separator" />
           <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[17px] app-text">Confirmation PIN</label>
+            <label className="text-[14px] app-text">Confirmation PIN</label>
             <input
               type="password"
               inputMode="numeric"
@@ -664,13 +664,13 @@ export default function Settings() {
               <>
                 <button
                   onClick={handleChangePin}
-                  className="flex-1 py-3 rounded-xl app-accent-bg text-[16px] font-semibold active:opacity-70 transition-opacity"
+                  className="flex-1 py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
                 >
                   Changer PIN
                 </button>
                 <button
                   onClick={handleDisablePin}
-                  className="flex-1 py-3 rounded-xl app-danger-bg text-[16px] font-semibold active:opacity-70 transition-opacity"
+                  className="flex-1 py-2.5 rounded-xl app-danger-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
                 >
                   Desactiver
                 </button>
@@ -678,7 +678,7 @@ export default function Settings() {
             ) : (
               <button
                 onClick={handleEnablePin}
-                className="w-full py-3 rounded-xl app-accent-bg text-[16px] font-semibold active:opacity-70 transition-opacity"
+                className="w-full py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
               >
                 Activer le PIN
               </button>

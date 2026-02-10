@@ -83,6 +83,8 @@ interface TaskRow {
 interface ProductTraceRow {
   workspace_id: string;
   id: string;
+  status: string;
+  used_at?: string | null;
   barcode?: string | null;
   photo_url?: string | null;
   product_name: string;
@@ -305,6 +307,8 @@ function toProductRow(value: ProductTrace, photoUrl: string | null): ProductTrac
   return {
     workspace_id: SUPABASE_WORKSPACE_ID,
     id: value.id,
+    status: value.status ?? 'active',
+    used_at: value.usedAt ? toIsoDate(value.usedAt) : null,
     barcode: value.barcode ?? null,
     photo_url: photoUrl,
     product_name: value.productName,
@@ -321,6 +325,8 @@ function toProductRow(value: ProductTrace, photoUrl: string | null): ProductTrac
 function fromProductRow(value: ProductTraceRow): ProductTrace {
   return {
     id: value.id,
+    status: value.status === 'used' ? 'used' : 'active',
+    usedAt: value.used_at ? toDate(value.used_at) : undefined,
     barcode: value.barcode ?? undefined,
     photo: undefined,
     photoUrl: value.photo_url ?? undefined,

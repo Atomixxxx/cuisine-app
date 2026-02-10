@@ -39,6 +39,7 @@ export function buildSmartAlerts({
   const alerts: SmartAlert[] = [];
   const nowMs = Date.now();
   const todayStartMs = startOfTodayMs();
+  const activeProducts = products.filter((product) => product.status !== 'used');
 
   const checkedEquipment = new Set(todayRecords.map((r) => r.equipmentId));
   const missingChecks = Math.max(equipment.length - checkedEquipment.size, 0);
@@ -81,7 +82,7 @@ export function buildSmartAlerts({
     });
   }
 
-  const expiredProducts = products.filter((product) => {
+  const expiredProducts = activeProducts.filter((product) => {
     const daysLeft = Math.ceil((new Date(product.expirationDate).getTime() - nowMs) / DAY_MS);
     return daysLeft < 0;
   }).length;
@@ -96,7 +97,7 @@ export function buildSmartAlerts({
     });
   }
 
-  const expiringSoon = products.filter((product) => {
+  const expiringSoon = activeProducts.filter((product) => {
     const daysLeft = Math.ceil((new Date(product.expirationDate).getTime() - nowMs) / DAY_MS);
     return daysLeft >= 0 && daysLeft <= 2;
   }).length;
@@ -136,4 +137,3 @@ export function buildSmartAlerts({
     })
     .slice(0, 6);
 }
-

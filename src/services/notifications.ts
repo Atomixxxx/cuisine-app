@@ -2,7 +2,7 @@ import { db } from './db';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 
 export async function getExpiringProductsCount(withinDays = 3): Promise<number> {
-  const products = await db.productTraces.toArray();
+  const products = (await db.productTraces.toArray()).filter((p) => p.status !== 'used');
   const now = Date.now();
   return products.filter(p => {
     const daysLeft = Math.ceil((new Date(p.expirationDate).getTime() - now) / (1000 * 60 * 60 * 24));
@@ -19,7 +19,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 export async function checkAndNotifyExpiringProducts(): Promise<void> {
-  const products = await db.productTraces.toArray();
+  const products = (await db.productTraces.toArray()).filter((p) => p.status !== 'used');
   const now = Date.now();
   const expired: typeof products = [];
   const soonExpiring: typeof products = [];

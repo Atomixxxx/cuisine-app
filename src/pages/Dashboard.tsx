@@ -1,34 +1,62 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../stores/appStore';
 import { showError, showSuccess } from '../stores/toastStore';
 import { usePwaInstall } from '../hooks/usePwaInstall';
-import { buildSmartAlerts } from '../services/smartAlerts';
+import { buildSmartAlerts, type SmartAlertSeverity } from '../services/smartAlerts';
 import type { ProductTrace, Task, TemperatureRecord } from '../types';
+import { cn } from '../utils';
 
-const alertStyles = {
-  danger: {
-    box: 'border-[color:var(--app-danger)]/30 bg-[color:var(--app-danger)]/10',
-    badge: 'text-[color:var(--app-danger)] bg-[color:var(--app-danger)]/15',
-  },
-  warning: {
-    box: 'border-[color:var(--app-warning)]/30 bg-[color:var(--app-warning)]/10',
-    badge: 'text-[color:var(--app-warning)] bg-[color:var(--app-warning)]/15',
-  },
-  info: {
-    box: 'border-[color:var(--app-info)]/30 bg-[color:var(--app-info)]/10',
-    badge: 'text-[color:var(--app-info)] bg-[color:var(--app-info)]/15',
-  },
-} as const;
+type KpiTone = 'success' | 'warning' | 'danger';
+
+const alertStyles: Record<SmartAlertSeverity, { border: string; dot: string }> = {
+  danger: { border: 'border-l-[color:var(--app-danger)]', dot: 'bg-[color:var(--app-danger)]' },
+  warning: { border: 'border-l-[color:var(--app-warning)]', dot: 'bg-[color:var(--app-warning)]' },
+  info: { border: 'border-l-[color:var(--app-info)]', dot: 'bg-[color:var(--app-info)]' },
+};
+
+function clamp(v: number, min: number, max: number) { return Math.min(max, Math.max(min, v)); }
 
 function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Bonjour';
-  if (hour < 18) return 'Bon apres-midi';
+  const h = new Date().getHours();
+  if (h < 12) return 'Bonjour';
+  if (h < 18) return 'Bon apres-midi';
   return 'Bonsoir';
 }
+
+/* ── Mini KPI ── */
+function KpiCard({ label, value, tone, icon, ringProgress }: {
+  label: string; value: string; tone: KpiTone; icon: ReactNode; ringProgress?: number;
+}) {
+  const radius = 16, circ = 2 * Math.PI * radius;
+  const progress = clamp(ringProgress ?? 0, 0, 1);
+  const toneColor = tone === 'danger' ? 'var(--app-danger)' : tone === 'warning' ? 'var(--app-warning)' : 'var(--app-success)';
+
+  return (
+    <div className="dash-kpi" style={{ '--kpi-tone': toneColor } as React.CSSProperties}>
+      <div className="flex items-center gap-2">
+        <span className="dash-kpi-icon">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] app-muted leading-none truncate">{label}</p>
+          <p className="text-[18px] font-bold app-text leading-none mt-0.5">{value}</p>
+        </div>
+        {typeof ringProgress === 'number' && (
+          <div className="relative h-8 w-8 shrink-0">
+            <svg className="-rotate-90" viewBox="0 0 40 40" fill="none">
+              <circle cx="20" cy="20" r={radius} stroke="currentColor" strokeOpacity="0.15" strokeWidth="3.5" className="app-muted" />
+              <circle cx="20" cy="20" r={radius} stroke={toneColor} strokeWidth="3.5" strokeLinecap="round"
+                style={{ strokeDasharray: `${circ}`, strokeDashoffset: `${circ * (1 - progress)}` }} />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold app-text">{Math.round(progress * 100)}%</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -47,44 +75,42 @@ export default function Dashboard() {
   const refreshAll = useCallback(() => {
     loadEquipment();
     const today = new Date();
-    getTemperatureRecords(startOfDay(today), endOfDay(today))
-      .then(setTodayRecords)
-      .catch(() => showError('Impossible de charger les temperatures'));
+    getTemperatureRecords(startOfDay(today), endOfDay(today)).then(setTodayRecords).catch(() => showError('Impossible de charger les temperatures'));
     getTasks(false).then(setTasks).catch(() => showError('Impossible de charger les taches'));
     getProducts().then(setProducts).catch(() => showError('Impossible de charger les produits'));
   }, [loadEquipment, getTemperatureRecords, getTasks, getProducts]);
 
-  // Load on mount
   useEffect(() => { refreshAll(); }, [refreshAll]);
-
-  // Refresh when user comes back to the tab or the app regains focus
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') refreshAll();
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
+    const h = () => { if (document.visibilityState === 'visible') refreshAll(); };
+    document.addEventListener('visibilitychange', h);
     window.addEventListener('focus', refreshAll);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', refreshAll);
-    };
+    return () => { document.removeEventListener('visibilitychange', h); window.removeEventListener('focus', refreshAll); };
   }, [refreshAll]);
 
-  const pendingTasks = tasks.filter((t) => !t.completed && !t.archived).length;
+  const pendingTasks = tasks.filter((t) => !t.completed && !t.archived);
   const anomalies = todayRecords.filter((r) => !r.isCompliant).length;
   const checkedEquipment = new Set(todayRecords.map((r) => r.equipmentId)).size;
-
-  const expiringProducts = products.filter((product) => {
-    const daysLeft = Math.ceil((new Date(product.expirationDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return daysLeft <= 3;
+  const totalEquipment = equipment.length;
+  const activeProducts = products.filter((p) => p.status !== 'used');
+  const expiringProducts = activeProducts.filter((p) => {
+    const d = Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5);
+    return d <= 3;
   });
+  const expiredCount = activeProducts.filter((p) => Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5) < 0).length;
 
   const smartAlerts = useMemo(
-    () => buildSmartAlerts({ equipment, todayRecords, tasks, products }),
-    [equipment, todayRecords, tasks, products],
+    () => buildSmartAlerts({ equipment, todayRecords, tasks, products: activeProducts }),
+    [equipment, todayRecords, tasks, activeProducts],
   );
 
-  const handleSosHygiene = () => {
+  const tempProgress = totalEquipment > 0 ? checkedEquipment / totalEquipment : 0;
+  const tempTone: KpiTone = totalEquipment === 0 ? 'warning' : checkedEquipment === totalEquipment ? 'success' : 'warning';
+  const anomTone: KpiTone = anomalies > 0 ? 'danger' : 'success';
+  const taskTone: KpiTone = pendingTasks.length === 0 ? 'success' : pendingTasks.length >= 5 ? 'danger' : 'warning';
+  const dlcTone: KpiTone = expiredCount > 0 ? 'danger' : expiringProducts.length > 0 ? 'warning' : 'success';
+
+  const handleSos = () => {
     if (navigator.vibrate) navigator.vibrate([120, 60, 120, 60, 180]);
     showError('SOS hygiene active. Controle immediat des temperatures.');
     showSuccess('Etape 1/3: temperatures -> Etape 2/3: tracabilite -> Etape 3/3: taches critiques.');
@@ -92,229 +118,149 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="app-page-wrap pb-28 lg:pl-20">
-      {showInstall && (
-        <div className="flex items-center gap-3 p-4 rounded-2xl app-panel">
-          <div className="flex-1">
-            <p className="ios-body font-semibold app-text">Installer CuisineControl</p>
-            <p className="ios-caption app-muted mt-0.5">Acces rapide depuis l'ecran d'accueil</p>
-          </div>
-          <button
-            onClick={installPwa}
-            className="px-4 py-2 app-accent-bg rounded-full ios-caption font-semibold active:opacity-70 shrink-0"
-          >
-            Installer
-          </button>
-          <button onClick={dismissInstall} className="p-2 app-muted active:opacity-60" aria-label="Fermer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      <section className="app-hero-card space-y-4">
-        <div>
-          <p className="app-muted ios-caption font-medium">{getGreeting()}</p>
-          <h1 className="ios-title mt-1">{settings?.establishmentName || 'CuisineControl'}</h1>
-          <p className="app-muted ios-body mt-1">{format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}</p>
-        </div>
-        <div className="app-kpi-grid">
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Temperatures</p>
-            <p className="app-kpi-value">{checkedEquipment}/{equipment.length}</p>
-          </div>
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Anomalies</p>
-            <p className="app-kpi-value">{anomalies}</p>
-          </div>
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Taches en attente</p>
-            <p className="app-kpi-value">{pendingTasks}</p>
-          </div>
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">DLC proches</p>
-            <p className="app-kpi-value">{expiringProducts.length}</p>
-          </div>
-        </div>
-        <button
-          onClick={handleSosHygiene}
-          className="w-full rounded-2xl p-4 sm:p-5 text-left app-danger-bg text-white active:opacity-80 transition-opacity shadow-[0_10px_24px_rgba(0,0,0,0.16)]"
-        >
-          <p className="text-[18px] sm:text-[20px] font-bold leading-tight">SOS Hygiene</p>
-          <p className="text-[12px] sm:[font-size:13px] text-white/90 mt-1">Lancer le protocole rapide en 1 geste</p>
-        </button>
-      </section>
-
-      <QuickActions onNavigate={navigate} />
-      <AlertPanel alerts={smartAlerts.slice(0, 3)} onNavigate={navigate} />
-
-      <button
-        onClick={() => navigate('/assistant')}
-        className="fixed bottom-20 right-3 sm:bottom-24 sm:right-5 z-30 h-12 w-12 sm:h-14 sm:w-14 rounded-full active:opacity-85 transition-opacity flex items-center justify-center"
-        aria-label="Ouvrir l'assistant IA"
-        title="Assistant IA"
-      >
-        <span className="absolute inset-0 rounded-full bg-sky-400/45 blur-md" aria-hidden />
-        <span
-          className="absolute inset-[2px] rounded-full shadow-[inset_0_1px_4px_rgba(255,255,255,0.45),0_14px_30px_rgba(15,23,42,0.34)]"
-          style={{ background: 'radial-gradient(circle at 30% 26%, #e0f2fe 0%, #7dd3fc 22%, #38bdf8 48%, #0284c7 72%, #0f172a 100%)' }}
-          aria-hidden
-        />
-        <svg
-          className="relative z-10 text-white drop-shadow-[0_2px_4px_rgba(15,23,42,0.55)]"
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="4" y="4" width="16" height="11" rx="3" />
-          <path d="M12 15v3" />
-          <path d="M9 20h6" />
-          <path d="M9 9h.01M15 9h.01" />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
-function AlertPanel({
-  alerts,
-  onNavigate,
-}: {
-  alerts: ReturnType<typeof buildSmartAlerts>;
-  onNavigate: (path: string) => void;
-}) {
-  if (alerts.length === 0) return null;
-
-  return (
-    <div className="app-panel">
-      <h2 className="text-[16px] sm:text-[18px] font-semibold mb-2 sm:mb-3 app-text">Alertes prioritaires</h2>
-      <div className="space-y-2">
-        {alerts.map((alert) => (
-          <button
-            key={alert.id}
-            onClick={() => onNavigate(alert.path)}
-            className={`w-full text-left rounded-2xl border p-3 transition-opacity active:opacity-70 ${alertStyles[alert.severity].box}`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="ios-caption sm:text-[14px] font-semibold app-text">{alert.title}</p>
-                <p className="text-[12px] sm:[font-size:13px] app-muted mt-0.5">{alert.description}</p>
-              </div>
-              <span className={`ios-small font-semibold px-2 py-1 rounded-full ${alertStyles[alert.severity].badge}`}>
-                {alert.severity.toUpperCase()}
-              </span>
+    <div className="dash-root">
+      {/* Main content */}
+      <div className="dash-main">
+        {showInstall && (
+          <div className="flex items-center gap-3 px-3 py-2 rounded-xl dash-panel mb-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold app-text">Installer CuisineControl</p>
+              <p className="text-[10px] app-muted">Acces rapide depuis l'ecran d'accueil</p>
             </div>
-          </button>
-        ))}
+            <button onClick={installPwa} className="px-3 py-1 app-accent-bg rounded-full text-[10px] font-semibold active:opacity-70 shrink-0">Installer</button>
+            <button onClick={dismissInstall} className="p-1 app-muted active:opacity-60" aria-label="Fermer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        )}
+
+        {/* Row 1: Header + KPIs */}
+        <div className="dash-panel dash-header-panel spx-scan-line animate-fade-in-up stagger-1">
+          <div className="flex items-end justify-between gap-3 mb-3">
+            <div>
+              <p className="app-muted text-[10px] font-medium">{getGreeting()}</p>
+              <h1 className="text-[20px] sm:text-[24px] font-bold app-text leading-none mt-0.5">{settings?.establishmentName || 'CuisineControl'}</h1>
+            </div>
+            <p className="app-muted text-[11px] shrink-0">{format(new Date(), 'dd/MM/yyyy', { locale: fr })}</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <KpiCard label="Temperatures" value={`${checkedEquipment}/${totalEquipment}`} tone={tempTone} ringProgress={tempProgress}
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path strokeLinecap="round" strokeLinejoin="round" d="M14 14.76V3.5a2 2 0 10-4 0v11.26a4 4 0 104 0z" /></svg>} />
+            <KpiCard label="Anomalies" value={`${anomalies}`} tone={anomTone}
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M8 12l2.6 2.6L16 9.8" /></svg>} />
+            <KpiCard label="Taches" value={`${pendingTasks.length}`} tone={taskTone}
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>} />
+            <KpiCard label="DLC proches" value={`${expiringProducts.length}`} tone={dlcTone}
+              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" /></svg>} />
+          </div>
+        </div>
+
+        {/* Row 2: multi-panel grid */}
+        <div className="dash-grid animate-fade-in-up stagger-2">
+          {/* Col A: SOS + Alerts */}
+          <div className="dash-col-a">
+            <button onClick={handleSos} className="sos-hygiene-btn sos-compact w-full">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/16 border border-white/25 text-white shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M4.93 19h14.14c1.43 0 2.33-1.55 1.62-2.8L13.62 4.2c-.71-1.25-2.53-1.25-3.24 0L3.31 16.2C2.6 17.45 3.5 19 4.93 19z" /></svg>
+              </span>
+              <span className="block text-left"><span className="block text-[14px] font-bold leading-none">SOS Hygiene</span></span>
+            </button>
+
+            <div className="dash-panel flex-1 mt-2">
+              <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--app-danger)]" />Alertes
+              </h2>
+              <AlertList alerts={smartAlerts.slice(0, 6)} onNavigate={navigate} />
+            </div>
+          </div>
+
+          {/* Col B: Produits + Taches */}
+          <div className="dash-col-b">
+            {/* Produits proches */}
+            <div className="dash-panel flex-1">
+              <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M12 7v5l3 2" /></svg>
+                Produits a surveiller
+              </h2>
+              {expiringProducts.length === 0 ? (
+                <p className="text-[11px] app-muted py-4 text-center">Aucun produit proche de la DLC</p>
+              ) : (
+                <div className="space-y-1">
+                  {expiringProducts.slice(0, 5).map((p) => {
+                    const daysLeft = Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5);
+                    const expired = daysLeft < 0;
+                    return (
+                      <button key={p.id} onClick={() => navigate('/traceability')}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg app-surface-2 border border-[color:var(--app-border)] text-left transition-opacity active:opacity-70">
+                        <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', expired ? 'bg-[color:var(--app-danger)]' : 'bg-[color:var(--app-warning)]')} />
+                        <span className="text-[11px] font-medium app-text truncate flex-1">{p.name}</span>
+                        <span className={cn('text-[10px] font-semibold shrink-0', expired ? 'text-[color:var(--app-danger)]' : 'text-[color:var(--app-warning)]')}>
+                          {expired ? 'Expire' : `J-${daysLeft}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Taches en attente */}
+            <div className="dash-panel flex-1">
+              <h2 className="text-[12px] font-semibold mb-2 app-text flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 app-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="7" y="5" width="11" height="15" rx="2" /><path strokeLinecap="round" d="M9 3h7v4H9zM10 10h5M10 14h5" /></svg>
+                Taches en attente
+              </h2>
+              {pendingTasks.length === 0 ? (
+                <div className="py-4 text-center">
+                  <span className="inline-flex h-8 w-8 rounded-full bg-[color:var(--app-success)]/15 text-[color:var(--app-success)] items-center justify-center mb-1">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                  <p className="text-[11px] app-muted">Tout est fait</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {pendingTasks.slice(0, 5).map((t) => (
+                    <button key={t.id} onClick={() => navigate('/tasks')}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg app-surface-2 border border-[color:var(--app-border)] text-left transition-opacity active:opacity-70">
+                      <span className="w-3 h-3 rounded border border-[color:var(--app-muted)] shrink-0" />
+                      <span className="text-[11px] font-medium app-text truncate flex-1">{t.title}</span>
+                      {t.priority === 'high' && <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--app-danger)] shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function QuickActions({ onNavigate }: { onNavigate: (path: string) => void }) {
-  const actions = [
-    {
-      label: 'Saisir temperatures',
-      path: '/temperature',
-      color: 'text-[color:var(--app-accent)]',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M14 14.76V3.5a2 2 0 10-4 0v11.26a4 4 0 104 0z" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Scanner produit',
-      path: '/traceability?tab=scanner',
-      color: 'text-[color:var(--app-info)]',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7V5a1 1 0 011-1h2M20 7V5a1 1 0 00-1-1h-2M4 17v2a1 1 0 001 1h2M20 17v2a1 1 0 01-1 1h-2M7 12h10" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Nouvelle tache',
-      path: '/tasks?quick=new',
-      color: 'text-[color:var(--app-success)]',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 6h11M8 12h11M8 18h11M4 6h.01M4 12h.01M4 18h.01" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Scanner facture',
-      path: '/invoices?quick=scan',
-      color: 'text-[color:var(--app-warning)]',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-          <rect x="5" y="3.5" width="14" height="17" rx="2" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 8h8M8 12h8M8 16h5" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Fiche technique',
-      path: '/recipes',
-      color: 'text-[color:var(--app-accent)]',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7V4z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7 4H6a2 2 0 00-2 2v12a2 2 0 002 2h1M10 9h6M10 13h6" />
-        </svg>
-      ),
-    },
-  ];
+/* ── Alert list (table-like rows) ── */
+function AlertList({ alerts, onNavigate }: { alerts: ReturnType<typeof buildSmartAlerts>; onNavigate: (p: string) => void }) {
+  if (alerts.length === 0) return <p className="text-[11px] app-muted py-3 text-center">Aucune alerte</p>;
+  const allClear = alerts[0]?.id === 'all-clear';
+  if (allClear) return (
+    <div className="py-4 text-center flex flex-col items-center gap-1">
+      <span className="h-10 w-10 rounded-full bg-[color:var(--app-success)]/15 text-[color:var(--app-success)] inline-flex items-center justify-center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" d="M5 13l4 4L19 7" /></svg>
+      </span>
+      <p className="text-[12px] font-semibold app-text">Tout est OK</p>
+      <p className="text-[10px] app-muted">{alerts[0].description}</p>
+    </div>
+  );
 
   return (
-    <>
-      <div className="app-panel lg:hidden">
-        <h2 className="text-[14px] sm:text-[16px] font-semibold mb-2 app-text">Actions rapides</h2>
-        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {actions.map((action) => (
-            <button
-              key={action.label}
-              onClick={() => onNavigate(action.path)}
-              className="shrink-0 min-w-[80px] sm:min-w-[92px] rounded-xl app-surface-2 border border-[color:var(--app-border)] px-2 py-2 sm:px-2.5 sm:py-2.5 active:opacity-80 transition-opacity"
-              title={action.label}
-              aria-label={action.label}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <span className={action.color}>{action.icon}</span>
-                <span className="text-[10px] sm:[font-size:11px] font-semibold app-text text-center leading-tight">{action.label}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="hidden lg:flex fixed left-2 top-24 z-30 flex-col gap-2 rounded-2xl border border-[color:var(--app-border)] p-2 app-surface-2 shadow-[0_14px_34px_rgba(15,23,42,0.18)]"
-        aria-label="Actions rapides"
-      >
-        {actions.map((action) => (
-          <button
-            key={action.label}
-            onClick={() => onNavigate(action.path)}
-            className="h-11 w-11 rounded-xl app-bg border border-[color:var(--app-border)] active:opacity-80 transition-opacity flex items-center justify-center"
-            title={action.label}
-            aria-label={action.label}
-          >
-            <span className={action.color}>{action.icon}</span>
-          </button>
-        ))}
-        <div className="px-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] app-muted text-center">Actions</p>
-        </div>
-      </div>
-    </>
+    <div className="space-y-0.5">
+      {alerts.map((a) => (
+        <button key={a.id} onClick={() => onNavigate(a.path)}
+          className={cn('w-full flex items-center gap-2 px-2 py-2 rounded-lg border-l-[3px] transition-opacity active:opacity-70 text-left', alertStyles[a.severity].border, 'app-surface-2')}>
+          <span className={cn('w-2 h-2 rounded-full shrink-0', alertStyles[a.severity].dot)} />
+          <span className="text-[11px] font-medium app-text truncate flex-1">{a.title}</span>
+          <span className="text-[10px] app-muted shrink-0">{a.description.split('.')[0]}</span>
+        </button>
+      ))}
+    </div>
   );
 }
-

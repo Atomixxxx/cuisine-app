@@ -92,7 +92,7 @@ export default function RecipesPage() {
   };
 
   return (
-    <div className="app-page-wrap max-w-4xl pb-28">
+    <div className="app-page-wrap pb-28">
       {view === 'list' && (
         <RecipeList
           recipes={recipes}

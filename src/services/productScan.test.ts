@@ -3,19 +3,23 @@ import { describe, expect, it } from 'vitest';
 import type { ProductTrace } from '../types';
 import { buildProductFormPrefill, parseGs1BarcodeData } from './productScan';
 
-const makeProduct = (overrides: Partial<ProductTrace> = {}): ProductTrace => ({
-  id: 'p-1',
-  barcode: '0103453120000011',
-  productName: 'Saumon fume',
-  supplier: 'Pomona',
-  lotNumber: 'LOT-OLD',
-  receptionDate: new Date('2026-01-10T00:00:00.000Z'),
-  expirationDate: new Date('2026-01-20T00:00:00.000Z'),
-  category: 'Poisson',
-  allergens: ['Poissons'],
-  scannedAt: new Date('2026-01-10T08:00:00.000Z'),
-  ...overrides,
-});
+const makeProduct = (overrides: Partial<ProductTrace> = {}): ProductTrace => {
+  const { status = 'active', ...rest } = overrides;
+  return {
+    id: 'p-1',
+    status,
+    barcode: '0103453120000011',
+    productName: 'Saumon fume',
+    supplier: 'Pomona',
+    lotNumber: 'LOT-OLD',
+    receptionDate: new Date('2026-01-10T00:00:00.000Z'),
+    expirationDate: new Date('2026-01-20T00:00:00.000Z'),
+    category: 'Poisson',
+    allergens: ['Poissons'],
+    scannedAt: new Date('2026-01-10T08:00:00.000Z'),
+    ...rest,
+  };
+};
 
 describe('productScan service', () => {
   it('parses lot and expiration from parenthesized GS1 barcode', () => {

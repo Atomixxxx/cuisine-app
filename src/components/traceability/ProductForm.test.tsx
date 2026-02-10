@@ -98,6 +98,7 @@ describe('ProductForm', () => {
       <ProductForm
         existingProduct={{
           id: '1',
+          status: 'active',
           productName: 'Saumon',
           supplier: 'Pomona',
           lotNumber: 'LOT-99',

@@ -54,6 +54,7 @@ export interface AppState {
   getLatestProductByBarcode: (barcode: string) => Promise<ProductTrace | null>;
   addProduct: (p: ProductTrace) => Promise<void>;
   updateProduct: (p: ProductTrace) => Promise<void>;
+  markProductAsUsed: (id: string) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
 
   getInvoices: (options?: { limit?: number; offset?: number }) => Promise<Invoice[]>;

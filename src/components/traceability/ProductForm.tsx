@@ -115,6 +115,8 @@ export default function ProductForm({ barcode, photo, prefill, existingProduct, 
       try {
         const product: ProductTrace = {
           id: existingProduct?.id ?? crypto.randomUUID(),
+          status: existingProduct?.status ?? 'active',
+          usedAt: existingProduct?.usedAt,
           barcode: existingProduct?.barcode ?? barcode ?? undefined,
           photo: currentPhoto,
           photoUrl: photoUrl ?? undefined,

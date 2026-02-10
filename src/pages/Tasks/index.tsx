@@ -148,11 +148,11 @@ const TasksPage: React.FC = () => {
 
   return (
     <div className="app-page-wrap h-full pb-28">
-      <div className="app-hero-card space-y-3">
+      <div className="app-hero-card space-y-3 spx-scan-line">
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="ios-title app-text">Taches</h1>
-            <p className="text-[14px] app-muted">
+            <p className="text-[11px] sm:text-[12px] app-muted">
               {activeTasks.length} restante{activeTasks.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -253,10 +253,10 @@ const TasksPage: React.FC = () => {
           setEditingTask(null);
           setShowForm(true);
         }}
-        className="fixed bottom-20 right-4 w-14 h-14 app-accent-bg rounded-full flex items-center justify-center active:opacity-70 transition-opacity z-40 shadow-[0_10px_22px_rgba(41,151,255,0.4)]"
+        className="fixed bottom-16 right-3 w-12 h-12 app-accent-bg rounded-full flex items-center justify-center active:opacity-70 transition-opacity z-40 spx-fab"
         aria-label="Ajouter une tache"
       >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>

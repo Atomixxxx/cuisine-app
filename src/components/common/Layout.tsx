@@ -4,78 +4,90 @@ import { useBadgeStore } from "../../stores/badgeStore";
 import { useAppStore } from "../../stores/appStore";
 import { STORAGE_KEYS } from "../../constants/storageKeys";
 
-/* ---------- Tab bar icons ---------- */
-
-function HomeIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
-}
-
-function ThermometerIcon({ active: _active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
-    </svg>
-  );
-}
-
-function PackageIcon({ active: _active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-      <line x1="12" y1="22.08" x2="12" y2="12" />
-    </svg>
-  );
-}
-
-function ChecklistIcon({ active: _active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 11l3 3L22 4" />
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-    </svg>
-  );
-}
-
-function ReceiptIcon({ active: _active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 3 2V2l-3 2-3-2-3 2-3-2-3 2-3-2z" />
-      <line x1="8" y1="10" x2="16" y2="10" />
-      <line x1="8" y1="14" x2="16" y2="14" />
-    </svg>
-  );
-}
-
-function BookIcon({ active }: { active: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    </svg>
-  );
-}
-
-/* ---------- Tab config ---------- */
+/* ---------- Tab bar config with colored icons (matching sidebar) ---------- */
 
 interface TabDef {
   path: string;
   label: string;
-  icon: (props: { active: boolean }) => React.JSX.Element;
+  color: string;
+  icon: React.ReactNode;
 }
 
 const tabs: TabDef[] = [
-  { path: "/dashboard", label: "Accueil", icon: HomeIcon },
-  { path: "/temperature", label: "Controles", icon: ThermometerIcon },
-  { path: "/traceability", label: "Tracabilite", icon: PackageIcon },
-  { path: "/tasks", label: "Taches", icon: ChecklistIcon },
-  { path: "/recipes", label: "Fiches", icon: BookIcon },
-  { path: "/invoices", label: "Factures", icon: ReceiptIcon },
+  {
+    path: "/dashboard",
+    label: "Accueil",
+    color: "#f5f5f7",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    ),
+  },
+  {
+    path: "/temperature",
+    label: "Controles",
+    color: "#2997FF",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+      </svg>
+    ),
+  },
+  {
+    path: "/traceability",
+    label: "Tracabilite",
+    color: "#0EA5E9",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 7V5a1 1 0 011-1h2M20 7V5a1 1 0 00-1-1h-2M4 17v2a1 1 0 001 1h2M20 17v2a1 1 0 01-1 1h-2M7 12h10" />
+      </svg>
+    ),
+  },
+  {
+    path: "/tasks",
+    label: "Taches",
+    color: "#34C759",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 6h11M8 12h11M8 18h11M4 6h.01M4 12h.01M4 18h.01" />
+      </svg>
+    ),
+  },
+  {
+    path: "/recipes",
+    label: "Fiches",
+    color: "#2997FF",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7V4z" />
+        <path d="M7 4H6a2 2 0 00-2 2v12a2 2 0 002 2h1M10 9h6M10 13h6" />
+      </svg>
+    ),
+  },
+  {
+    path: "/invoices",
+    label: "Factures",
+    color: "#FF9F0A",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="5" y="3.5" width="14" height="17" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h5" />
+      </svg>
+    ),
+  },
+  {
+    path: "/assistant",
+    label: "Agent IA",
+    color: "#38bdf8",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="4" width="16" height="11" rx="3" />
+        <path d="M12 15v3M9 20h6M9 9h.01M15 9h.01" />
+      </svg>
+    ),
+  },
 ];
 
 /* ---------- Layout ---------- */
@@ -153,9 +165,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Header — minimal like apple.com nav */}
-      <header className="sticky top-0 z-40 app-header px-3 py-2 sm:px-5 sm:py-3 flex items-center justify-between hairline-b">
-        <h1 className="ios-body sm:text-[17px] font-semibold tracking-tight app-text truncate">
+      {/* Header */}
+      <header className="sticky top-0 z-40 app-header px-3 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between hairline-b">
+        <h1 className="text-[13px] sm:text-[14px] font-semibold tracking-tight app-text truncate">
           CuisineControl
         </h1>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -195,25 +207,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <button
             onClick={() => navigate('/settings')}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+            className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Parametres"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
             </svg>
           </button>
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+            className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
             aria-label="Basculer le mode sombre"
           >
             {darkMode ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
               </svg>
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
             )}
@@ -222,11 +234,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Page content */}
-      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto pb-20">
+      <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto pb-14">
         {children}
       </main>
 
-      {/* Bottom tab bar */}
+      {/* Bottom tab bar — SpaceX style */}
       <nav aria-label="Navigation principale" className="fixed bottom-0 inset-x-0 z-40 app-nav hairline-t pb-safe">
         <div className="flex items-stretch justify-around" role="tablist">
           {tabs.map((tab) => {
@@ -238,13 +250,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 aria-selected={active}
                 aria-current={active ? "page" : undefined}
                 onClick={() => navigate(tab.path)}
-                className={[
-                  "flex flex-col items-center justify-center gap-0 flex-1 min-h-[46px] sm:min-h-[50px] px-0.5 transition-colors active:opacity-60",
-                  active ? "text-[color:var(--app-accent)]" : "app-muted",
-                ].join(" ")}
+                className="flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[42px] sm:min-h-[46px] px-0.5 transition-all duration-300 active:opacity-60"
+                style={{ color: active ? tab.color : undefined }}
               >
-                <span className="relative">
-                  <tab.icon active={active} />
+                <span
+                  className={`relative transition-all duration-300 ${active ? 'spx-icon-glow' : 'app-muted'}`}
+                  style={active ? { color: tab.color } : undefined}
+                >
+                  {tab.icon}
                   {tab.path === "/traceability" && expiringCount > 0 && (
                     <span
                       className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 rounded-full bg-[color:var(--app-danger)] text-white text-[9px] leading-[14px] text-center font-semibold"
@@ -255,7 +268,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     </span>
                   )}
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-medium leading-tight">{tab.label}</span>
+                <span
+                  className="text-[8px] sm:text-[9px] font-medium leading-tight uppercase tracking-[0.06em] transition-colors duration-300"
+                  style={active ? { color: tab.color } : undefined}
+                >
+                  {tab.label}
+                </span>
               </button>
             );
           })}

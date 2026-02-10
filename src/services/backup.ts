@@ -171,6 +171,8 @@ function parseTask(value: unknown): Task | null {
 function parseProductTrace(value: unknown): ProductTrace | null {
   if (!isObject(value)) return null;
   const id = toSanitizedString(value.id);
+  const status = value.status === 'used' ? 'used' : 'active';
+  const usedAt = status === 'used' ? toDate(value.usedAt) ?? undefined : undefined;
   const productName = toSanitizedString(value.productName);
   const supplier = toSanitizedString(value.supplier);
   const lotNumber = toSanitizedString(value.lotNumber);
@@ -186,6 +188,8 @@ function parseProductTrace(value: unknown): ProductTrace | null {
   }
   return {
     id,
+    status,
+    usedAt,
     productName,
     supplier,
     lotNumber,

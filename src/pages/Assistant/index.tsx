@@ -76,7 +76,7 @@ export default function AssistantPage() {
 
   return (
     <div className="app-page-wrap h-full pb-24">
-      <div className="app-hero-card space-y-2">
+      <div className="app-hero-card space-y-2 spx-scan-line">
         <h1 className="ios-title app-text">Assistant IA</h1>
         <p className="text-[14px] app-muted">{helperText}</p>
       </div>

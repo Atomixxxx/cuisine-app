@@ -24,8 +24,12 @@ export interface OilChangeRecord {
   operator?: string;
 }
 
+export type ProductStatus = 'active' | 'used';
+
 export interface ProductTrace {
   id: string;
+  status: ProductStatus;
+  usedAt?: Date;
   barcode?: string;
   photo?: Blob;
   photoUrl?: string;

@@ -42,6 +42,7 @@ function ProductCard({
   onDelete: () => void;
 }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const isUsed = product.status === 'used';
   const dlcStatus = getDlcStatus(product.expirationDate);
 
   useEffect(() => {
@@ -62,7 +63,8 @@ function ProductCard({
       onClick={onSelect}
       className={cn(
         'relative flex flex-col rounded-2xl overflow-hidden app-card cursor-pointer active:opacity-70 transition-opacity',
-        dlcBorderColors[dlcStatus],
+        !isUsed && dlcBorderColors[dlcStatus],
+        isUsed && 'opacity-50',
       )}
     >
       <div className="relative h-32 app-surface-2 flex items-center justify-center overflow-hidden">
@@ -94,9 +96,15 @@ function ProductCard({
         <h3 className="ios-body font-semibold app-text truncate">{product.productName}</h3>
         <p className="ios-caption app-muted truncate">{product.supplier}</p>
         <p className="text-[12px] app-muted truncate">Lot {product.lotNumber}</p>
-        <div className={cn('inline-flex self-start items-center px-2 py-0.5 rounded-full text-[12px] font-medium mt-1', dlcColors[dlcStatus])}>
-          DLC {format(new Date(product.expirationDate), 'dd/MM/yyyy', { locale: fr })}
-        </div>
+        {isUsed ? (
+          <div className="inline-flex self-start items-center px-2 py-0.5 rounded-full text-[12px] font-medium mt-1 bg-[color:var(--app-surface-3)] app-muted">
+            Utilise
+          </div>
+        ) : (
+          <div className={cn('inline-flex self-start items-center px-2 py-0.5 rounded-full text-[12px] font-medium mt-1', dlcColors[dlcStatus])}>
+            DLC {format(new Date(product.expirationDate), 'dd/MM/yyyy', { locale: fr })}
+          </div>
+        )}
       </div>
     </div>
   );

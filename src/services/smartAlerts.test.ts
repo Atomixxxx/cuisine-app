@@ -45,6 +45,7 @@ describe('smart alerts', () => {
       products: [
         {
           id: 'p-1',
+          status: 'active',
           productName: 'Viande',
           supplier: 'S1',
           lotNumber: 'L1',
@@ -55,6 +56,7 @@ describe('smart alerts', () => {
         },
         {
           id: 'p-2',
+          status: 'active',
           productName: 'Poisson',
           supplier: 'S2',
           lotNumber: 'L2',

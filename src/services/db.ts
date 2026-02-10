@@ -110,6 +110,20 @@ class CuisineDB extends Dexie {
     // Version 7: confirm indexes for expirationDate (productTraces) and supplier (invoices)
     // Both indexes already existed since version 1; this bump is a no-schema-change version.
     this.version(7).stores({});
+
+    this.version(8)
+      .stores({
+        productTraces:
+          'id, barcode, productName, supplier, category, receptionDate, expirationDate, status, scannedAt',
+      })
+      .upgrade(async (tx) => {
+        await tx.table<ProductTrace>('productTraces').toCollection().modify((product) => {
+          const row = product as ProductTrace & { status?: ProductTrace['status'] };
+          if (!row.status) {
+            row.status = 'active';
+          }
+        });
+      });
   }
 }
 

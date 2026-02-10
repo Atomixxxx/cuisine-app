@@ -111,10 +111,10 @@ export default function InvoicesPage() {
 
   return (
     <div className="app-page-wrap h-full pb-24">
-      <div className="app-hero-card space-y-3">
+      <div className="app-hero-card space-y-3 spx-scan-line">
         <div>
           <h1 className="ios-title app-text">Factures</h1>
-          <p className="ios-body app-muted">Scan OCR, historique et cadencier prix.</p>
+          <p className="text-[11px] sm:text-[12px] app-muted">Scan OCR, historique et cadencier prix.</p>
         </div>
         <div className="app-kpi-grid">
           <div className="app-kpi-card">
@@ -127,11 +127,11 @@ export default function InvoicesPage() {
           </div>
           <div className="app-kpi-card">
             <p className="app-kpi-label">Pagination</p>
-            <p className="app-kpi-value text-[16px] font-semibold">{hasMoreInvoices ? 'Disponible' : 'Fin de liste'}</p>
+            <p className="app-kpi-value text-[13px] font-semibold">{hasMoreInvoices ? 'Disponible' : 'Fin'}</p>
           </div>
           <div className="app-kpi-card">
             <p className="app-kpi-label">Mode</p>
-            <p className="app-kpi-value text-[16px] font-semibold">{activeSubTab}</p>
+            <p className="app-kpi-value text-[13px] font-semibold">{activeSubTab}</p>
           </div>
         </div>
       </div>
@@ -191,7 +191,7 @@ export default function InvoicesPage() {
       {activeSubTab !== 'scanner' && (
         <button
           onClick={handleFabClick}
-          className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full app-accent-bg shadow-[0_10px_24px_rgba(41,151,255,0.35)] flex items-center justify-center active:opacity-70 transition-opacity"
+          className="fixed bottom-16 right-3 z-30 w-12 h-12 rounded-full app-accent-bg flex items-center justify-center active:opacity-70 transition-opacity spx-fab"
           aria-label="Scanner une facture"
         >
           <PlusIcon />
