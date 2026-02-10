@@ -52,22 +52,45 @@ export function blobToUrl(blob: Blob): string {
 }
 
 export async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result !== 'string') {
-        reject(new Error('Failed to convert blob to base64'));
-        return;
-      }
-      const commaIndex = result.indexOf(',');
-      resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
-    };
-    reader.onerror = () => {
-      reject(reader.error || new Error('Failed to read blob as data URL'));
-    };
-    reader.readAsDataURL(blob);
-  });
+  if (typeof FileReader !== 'undefined') {
+    try {
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result;
+          if (typeof result !== 'string') {
+            reject(new Error('Failed to convert blob to base64'));
+            return;
+          }
+          const commaIndex = result.indexOf(',');
+          resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result);
+        };
+        reader.onerror = () => {
+          reject(reader.error || new Error('Failed to read blob as data URL'));
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      // Fallback for Blob-like objects in non-browser test runtimes.
+    }
+  }
+
+  const source = blob as { arrayBuffer?: () => Promise<ArrayBuffer> };
+  if (typeof source.arrayBuffer !== 'function') {
+    throw new Error('Failed to convert blob to base64');
+  }
+  const buffer = await source.arrayBuffer();
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(buffer).toString('base64');
+  }
+
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  const chunks: string[] = [];
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode(...bytes.subarray(i, i + chunkSize)));
+  }
+  return btoa(chunks.join(''));
 }
 
 export function revokeUrl(url?: string | null): void {
