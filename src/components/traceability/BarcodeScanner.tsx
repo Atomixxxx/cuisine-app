@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { cn, vibrate, fileToBlob } from '../../utils';
+import { cn, vibrate, fileToBlob, compressImage } from '../../utils';
 
 interface BarcodeScannerProps {
   onScanComplete: (barcode: string | undefined, photo: Blob | undefined) => void;
@@ -22,6 +22,8 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerStartedRef = useRef(false);
+  const lastScannedBarcodeRef = useRef('');
+  const lastScannedAtRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const stopScanner = useCallback(async () => {
@@ -57,10 +59,18 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
           aspectRatio: 1.5,
         },
         (decodedText) => {
+          const now = Date.now();
+          if (
+            decodedText === lastScannedBarcodeRef.current &&
+            now - lastScannedAtRef.current < 1500
+          ) {
+            return;
+          }
+          lastScannedBarcodeRef.current = decodedText;
+          lastScannedAtRef.current = now;
           vibrate(100);
           setScannedBarcode(decodedText);
           setManualBarcode(decodedText);
-          stopScanner();
         },
         () => {
           // Ignore scan failures (no QR found in frame)
@@ -95,7 +105,31 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
     };
   }, [photoPreviewUrl]);
 
-  const handleTakePhoto = useCallback(() => {
+  const runAutoOcr = useCallback(async (photo: Blob) => {
+    if (!onAnalyzeLabel) return;
+    setAnalyzingLabel(true);
+    try {
+      await onAnalyzeLabel(photo);
+      setLabelAnalyzed(true);
+    } catch {
+      // Silent fail - user can retry manually
+    } finally {
+      setAnalyzingLabel(false);
+    }
+  }, [onAnalyzeLabel]);
+
+  const applyCapturedPhoto = useCallback(async (sourcePhoto: Blob) => {
+    const compressedPhoto = await compressImage(sourcePhoto);
+    setCapturedPhoto(compressedPhoto);
+    setLabelAnalyzed(false);
+    setPhotoPreviewUrl((previousUrl) => {
+      if (previousUrl) URL.revokeObjectURL(previousUrl);
+      return URL.createObjectURL(compressedPhoto);
+    });
+    await runAutoOcr(compressedPhoto);
+  }, [runAutoOcr]);
+
+  const handleTakeFallbackPhoto = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
@@ -104,24 +138,44 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
     if (!file) return;
 
     const blob = await fileToBlob(file);
-    setCapturedPhoto(blob);
-    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-    setPhotoPreviewUrl(URL.createObjectURL(blob));
+    await applyCapturedPhoto(blob);
+    e.target.value = '';
+  }, [applyCapturedPhoto]);
 
-    // Auto-trigger OCR analysis when a photo is taken
-    if (onAnalyzeLabel) {
-      setAnalyzingLabel(true);
-      try {
-        await onAnalyzeLabel(blob);
-        setLabelAnalyzed(true);
-      } catch {
-        // Silent fail — user can retry manually
-      } finally {
-        setAnalyzingLabel(false);
-      }
+  const capturePhotoFromStream = useCallback(async () => {
+    const scannerRegion = document.getElementById(SCANNER_REGION_ID);
+    const scannerVideo = scannerRegion?.querySelector('video');
+    if (!(scannerVideo instanceof HTMLVideoElement)) {
+      setScannerError('Flux camera indisponible. Utilisez le mode photo de secours.');
+      return;
     }
-  }, [photoPreviewUrl, onAnalyzeLabel]);
 
+    const { videoWidth, videoHeight } = scannerVideo;
+    if (!videoWidth || !videoHeight) {
+      setScannerError('La camera est en cours d\'initialisation. Reessayez dans un instant.');
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      setScannerError('Impossible de capturer la photo depuis le flux camera.');
+      return;
+    }
+
+    context.drawImage(scannerVideo, 0, 0, videoWidth, videoHeight);
+    const frameBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.92);
+    });
+    if (!frameBlob) {
+      setScannerError('La capture photo a echoue. Reessayez.');
+      return;
+    }
+
+    await applyCapturedPhoto(frameBlob);
+  }, [applyCapturedPhoto]);
   const handleContinue = useCallback(() => {
     const barcode = scannedBarcode || manualBarcode || undefined;
     onScanComplete(barcode, capturedPhoto ?? undefined);
@@ -180,14 +234,16 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
 
       {/* Photo capture */}
       <div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileChange}
-          className="hidden"
-        />
+        {scannerError && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        )}
 
         {photoPreviewUrl ? (
           <div className="relative">
@@ -198,7 +254,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
             />
             <button
               type="button"
-              onClick={handleTakePhoto}
+              onClick={scannerError ? handleTakeFallbackPhoto : capturePhotoFromStream}
               className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 app-surface app-border rounded-lg text-sm font-medium app-text shadow"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -210,14 +266,14 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
         ) : (
           <button
             type="button"
-            onClick={handleTakePhoto}
+            onClick={scannerError ? handleTakeFallbackPhoto : capturePhotoFromStream}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed app-border rounded-lg app-muted active:border-[color:var(--app-accent)] hover:text-[color:var(--app-accent)] hover:border-[color:var(--app-accent)] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Prendre photo
+            {scannerError ? 'Prendre photo' : "Capturer l'etiquette"}
           </button>
         )}
       </div>
@@ -294,3 +350,4 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
     </div>
   );
 }
+
