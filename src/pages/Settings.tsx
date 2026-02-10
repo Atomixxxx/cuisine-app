@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { ChangeEvent } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { showError, showSuccess, showWarning } from '../stores/toastStore';
 import { getApiKey, setApiKey, hasApiKey } from '../services/ocr';
 import { db, getStorageEstimate, type StorageEstimate } from '../services/db';
-import { cn } from '../utils';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import {
   buildBackupPayload,
@@ -28,6 +28,13 @@ import {
   signInSupabase,
   signOutSupabase,
 } from '../services/supabaseAuth';
+import SettingsHeader from '../components/settings/SettingsHeader';
+import GeneralSettingsSection from '../components/settings/GeneralSettingsSection';
+import ApiSettingsSection from '../components/settings/ApiSettingsSection';
+import CloudSettingsSection from '../components/settings/CloudSettingsSection';
+import BackupSettingsSection from '../components/settings/BackupSettingsSection';
+import StorageSettingsSection from '../components/settings/StorageSettingsSection';
+import SecuritySettingsSection from '../components/settings/SecuritySettingsSection';
 
 export default function Settings() {
   const settings = useAppStore((s) => s.settings);
@@ -243,7 +250,7 @@ export default function Settings() {
     [loadSettings, refreshStorage],
   );
 
-  const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setPendingImportFile(file);
@@ -371,358 +378,78 @@ export default function Settings() {
 
   return (
     <div className="app-page-wrap pb-28 space-y-3">
-      <div className="app-hero-card space-y-3 spx-scan-line">
-        <div>
-          <h1 className="ios-title app-text">Parametres</h1>
-          <p className="text-[11px] sm:text-[12px] app-muted">Configuration generale, API, sauvegardes et securite.</p>
-        </div>
-        <div className="app-kpi-grid">
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Etablissement</p>
-            <p className="app-kpi-value text-[14px] font-semibold truncate">{establishmentName || 'Non renseigne'}</p>
-          </div>
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Gemini API</p>
-            <p className="app-kpi-value text-[14px] font-semibold">{geminiConnected ? 'Connecte' : 'Inactif'}</p>
-          </div>
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Backup auto</p>
-            <p className="app-kpi-value text-[14px] font-semibold">{autoBackup ? 'Actif' : 'Off'}</p>
-          </div>
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Code PIN</p>
-            <p className="app-kpi-value text-[14px] font-semibold">{pinEnabled ? 'Actif' : 'Off'}</p>
-          </div>
-          <div className="app-kpi-card">
-            <p className="app-kpi-label">Cloud</p>
-            <p className="app-kpi-value text-[14px] font-semibold">
-              {supabaseAuthConfigured ? (supabaseUserEmail ? 'Connecte' : 'Pret') : 'Non configure'}
-            </p>
-          </div>
-        </div>
-      </div>
+      <SettingsHeader
+        establishmentName={establishmentName}
+        geminiConnected={geminiConnected}
+        autoBackup={autoBackup}
+        pinEnabled={pinEnabled}
+        supabaseAuthConfigured={supabaseAuthConfigured}
+        supabaseUserEmail={supabaseUserEmail}
+      />
 
-      <div>
-        <h2 className="ios-caption-upper app-muted mb-2">General</h2>
-        <div className="rounded-2xl app-panel overflow-hidden">
-          <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[14px] app-text">Nom de l'etablissement</label>
-            <input
-              type="text"
-              value={establishmentName}
-              onChange={(e) => setEstablishmentName(e.target.value)}
-              placeholder="Mon Restaurant"
-              className={inputClass}
-            />
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[14px] app-text">Seuil alerte prix (%)</label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              value={priceThreshold}
-              onChange={(e) => setPriceThreshold(e.target.value)}
-              className={inputClass}
-            />
-            <p className="ios-caption app-muted">Alerte si la variation de prix depasse ce pourcentage</p>
-          </div>
-          <div className="px-4 py-3">
-            <button
-              onClick={handleSaveSettings}
-              disabled={saving}
-              className={cn(
-                'w-full py-2.5 rounded-xl text-[14px] font-semibold transition-opacity active:opacity-70',
-                saving ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
-              )}
-            >
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <GeneralSettingsSection
+        inputClass={inputClass}
+        establishmentName={establishmentName}
+        priceThreshold={priceThreshold}
+        saving={saving}
+        onEstablishmentNameChange={setEstablishmentName}
+        onPriceThresholdChange={setPriceThreshold}
+        onSave={handleSaveSettings}
+      />
 
-      <div>
-        <h2 className="ios-caption-upper app-muted mb-2">API Gemini</h2>
-        <div className="rounded-2xl app-panel overflow-hidden">
-          <div className="ios-settings-row">
-            <span className="text-[14px] app-text">Statut</span>
-            <span
-              className={cn(
-                'flex items-center gap-1.5 ios-body font-medium',
-                geminiConnected ? 'text-[color:var(--app-success)]' : 'app-muted',
-              )}
-            >
-              <span
-                className={cn(
-                  'w-2 h-2 rounded-full',
-                  geminiConnected ? 'bg-[color:var(--app-success)]' : 'app-surface-3',
-                )}
-              />
-              {geminiConnected ? 'Connecte' : 'Non configure'}
-            </span>
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[14px] app-text">Cle API</label>
-            <input
-              type="password"
-              value={geminiKey}
-              onChange={(e) => setGeminiKey(e.target.value)}
-              placeholder="AIza..."
-              className={inputClass}
-            />
-            <p className="ios-caption app-muted">Necessaire pour l'analyse des factures par IA</p>
-          </div>
-          <div className="px-4 py-3">
-            <button
-              onClick={handleSaveGeminiKey}
-              className="w-full py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
-            >
-              Enregistrer la cle
-            </button>
-          </div>
-        </div>
-      </div>
+      <ApiSettingsSection
+        inputClass={inputClass}
+        geminiConnected={geminiConnected}
+        geminiKey={geminiKey}
+        onGeminiKeyChange={setGeminiKey}
+        onSave={handleSaveGeminiKey}
+      />
 
-      <div>
-        <h2 className="ios-caption-upper app-muted mb-2">Cloud Supabase</h2>
-        <div className="rounded-2xl app-panel overflow-hidden">
-          <div className="ios-settings-row">
-            <span className="text-[14px] app-text">Configuration</span>
-            <span className={cn('ios-body font-medium', supabaseAuthConfigured ? 'text-[color:var(--app-success)]' : 'app-muted')}>
-              {supabaseAuthConfigured ? 'Variables OK' : 'Variables manquantes'}
-            </span>
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="ios-settings-row">
-            <span className="text-[14px] app-text">Session</span>
-            <span className={cn('ios-body font-medium', supabaseUserEmail ? 'text-[color:var(--app-success)]' : 'app-muted')}>
-              {supabaseUserEmail ?? 'Non connecte'}
-            </span>
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[14px] app-text">Email Supabase</label>
-            <input
-              type="email"
-              value={supabaseEmail}
-              onChange={(e) => setSupabaseEmail(e.target.value)}
-              placeholder="utilisateur@domaine.com"
-              className={inputClass}
-            />
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[14px] app-text">Mot de passe Supabase</label>
-            <input
-              type="password"
-              value={supabasePassword}
-              onChange={(e) => setSupabasePassword(e.target.value)}
-              placeholder="••••••••"
-              className={inputClass}
-            />
-          </div>
-          <div className="px-4 py-3 flex gap-3">
-            <button
-              onClick={handleSupabaseLogin}
-              disabled={!supabaseAuthConfigured || supabaseSigningIn}
-              className={cn(
-                'flex-1 py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity',
-                !supabaseAuthConfigured || supabaseSigningIn ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
-              )}
-            >
-              {supabaseSigningIn ? 'Connexion...' : 'Se connecter'}
-            </button>
-            <button
-              onClick={handleSupabaseLogout}
-              disabled={!supabaseUserEmail || supabaseSigningOut}
-              className={cn(
-                'flex-1 py-2.5 rounded-xl text-[14px] font-semibold active:opacity-70 transition-opacity',
-                !supabaseUserEmail || supabaseSigningOut ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-danger-bg',
-              )}
-            >
-              {supabaseSigningOut ? 'Deconnexion...' : 'Se deconnecter'}
-            </button>
-          </div>
-          <div className="px-4 pb-4 ios-caption app-muted">
-            Utilise ce login pour le mode securise RLS. En mode simple, la synchro peut fonctionner sans login.
-          </div>
-        </div>
-      </div>
+      <CloudSettingsSection
+        inputClass={inputClass}
+        supabaseAuthConfigured={supabaseAuthConfigured}
+        supabaseUserEmail={supabaseUserEmail}
+        supabaseEmail={supabaseEmail}
+        supabasePassword={supabasePassword}
+        supabaseSigningIn={supabaseSigningIn}
+        supabaseSigningOut={supabaseSigningOut}
+        onSupabaseEmailChange={setSupabaseEmail}
+        onSupabasePasswordChange={setSupabasePassword}
+        onLogin={handleSupabaseLogin}
+        onLogout={handleSupabaseLogout}
+      />
 
-      <div>
-        <h2 className="ios-caption-upper app-muted mb-2">Sauvegarde</h2>
-        <div className="rounded-2xl app-panel overflow-hidden">
-          <div className="ios-settings-row">
-            <p className="ios-body app-muted">
-              Exportez vos donnees pour les sauvegarder ou les transferer. Les blobs locaux ne sont pas inclus, mais les URL cloud sont conservees.
-            </p>
-          </div>
-          {missingMediaTotal > 0 && (
-            <div className="px-4 pb-3">
-              <div className="rounded-xl border border-[color:var(--app-warning)]/35 bg-[color:var(--app-warning)]/10 px-3 py-2">
-                <p className="ios-caption text-[color:var(--app-warning)] font-semibold">Medias potentiellement perdus</p>
-                <p className="ios-caption app-muted">
-                  {mediaIntegrity.missingProducts} produit(s) et {mediaIntegrity.missingInvoices} facture(s) n'ont ni media local ni URL cloud.
-                </p>
-              </div>
-            </div>
-          )}
-          <div className="ios-settings-separator" />
-          <div className="ios-settings-row">
-            <span className="text-[14px] app-text">Backup auto hebdomadaire</span>
-            <button
-              onClick={handleToggleAutoBackup}
-              className={cn(
-                'px-3 py-1.5 rounded-full ios-caption font-semibold transition-opacity active:opacity-70',
-                autoBackup ? 'app-success-bg' : 'app-surface-2 app-muted',
-              )}
-            >
-              {autoBackup ? 'Active' : 'Desactive'}
-            </button>
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="px-4 py-3 flex gap-3">
-            <button
-              onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl app-success-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
-            >
-              Exporter
-            </button>
-            <button
-              onClick={handleExportAutoBackup}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl app-surface-2 app-text text-[14px] font-semibold active:opacity-70 transition-opacity"
-            >
-              Export auto
-            </button>
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="px-4 py-3">
-            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={restoringBackup}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl app-warning-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
-            >
-              {restoringBackup ? 'Restauration...' : 'Importer'}
-            </button>
-          </div>
-        </div>
-      </div>
+      <BackupSettingsSection
+        fileInputRef={fileInputRef}
+        missingMediaTotal={missingMediaTotal}
+        mediaIntegrity={mediaIntegrity}
+        autoBackup={autoBackup}
+        restoringBackup={restoringBackup}
+        onToggleAutoBackup={handleToggleAutoBackup}
+        onExport={handleExport}
+        onExportAutoBackup={handleExportAutoBackup}
+        onImportFileChange={handleImport}
+      />
 
-      <div>
-        <h2 className="ios-caption-upper app-muted mb-2">Stockage local</h2>
-        <div className="rounded-2xl app-panel overflow-hidden">
-          <div className="ios-settings-row flex-col items-stretch gap-2">
-            {storageEstimate ? (
-              <>
-                <div className="flex items-center justify-between text-[14px]">
-                  <span className="app-text">Utilisation</span>
-                  <span className={cn('font-semibold', usagePercent >= 80 ? 'text-[color:var(--app-warning)]' : 'app-muted')}>
-                    {usagePercent.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-2 rounded-full app-surface-2 overflow-hidden">
-                  <div
-                    className={cn(
-                      'h-full transition-all',
-                      usagePercent >= 80 ? 'bg-[color:var(--app-warning)]' : 'bg-[color:var(--app-accent)]',
-                    )}
-                    style={{ width: `${usagePercent}%` }}
-                  />
-                </div>
-                <div className="ios-caption app-muted">
-                  {formatStorageBytes(storageEstimate.usage)} / {formatStorageBytes(storageEstimate.quota)}
-                </div>
-              </>
-            ) : (
-              <p className="text-[14px] app-muted">Estimation du stockage indisponible sur cet appareil.</p>
-            )}
-          </div>
-        </div>
-      </div>
+      <StorageSettingsSection
+        storageEstimate={storageEstimate}
+        usagePercent={usagePercent}
+        formatStorageBytes={formatStorageBytes}
+      />
 
-      <div>
-        <h2 className="ios-caption-upper app-muted mb-2">Securite</h2>
-        <div className="rounded-2xl app-panel overflow-hidden">
-          <div className="ios-settings-row">
-            <span className="text-[14px] app-text">Code PIN</span>
-            <span className={cn('ios-body font-medium', pinEnabled ? 'text-[color:var(--app-success)]' : 'app-muted')}>
-              {pinEnabled ? 'Active' : 'Desactive'}
-            </span>
-          </div>
-          <div className="ios-settings-separator" />
-          {pinEnabled && (
-            <>
-              <div className="ios-settings-row flex-col items-stretch gap-1.5">
-                <label className="text-[14px] app-text">PIN actuel</label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={currentPin}
-                  onChange={(e) => setPinField(setCurrentPin)(e.target.value)}
-                  placeholder="0000"
-                  className={inputClass}
-                />
-              </div>
-              <div className="ios-settings-separator" />
-            </>
-          )}
-          <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[14px] app-text">{pinEnabled ? 'Nouveau PIN' : 'PIN'}</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={newPin}
-              onChange={(e) => setPinField(setNewPin)(e.target.value)}
-              placeholder="0000"
-              className={inputClass}
-            />
-          </div>
-          <div className="ios-settings-separator" />
-          <div className="ios-settings-row flex-col items-stretch gap-1.5">
-            <label className="text-[14px] app-text">Confirmation PIN</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={confirmPin}
-              onChange={(e) => setPinField(setConfirmPin)(e.target.value)}
-              placeholder="0000"
-              className={inputClass}
-            />
-          </div>
-          <div className="px-4 py-3 flex gap-3">
-            {pinEnabled ? (
-              <>
-                <button
-                  onClick={handleChangePin}
-                  className="flex-1 py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
-                >
-                  Changer PIN
-                </button>
-                <button
-                  onClick={handleDisablePin}
-                  className="flex-1 py-2.5 rounded-xl app-danger-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
-                >
-                  Desactiver
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleEnablePin}
-                className="w-full py-2.5 rounded-xl app-accent-bg text-[14px] font-semibold active:opacity-70 transition-opacity"
-              >
-                Activer le PIN
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <SecuritySettingsSection
+        inputClass={inputClass}
+        pinEnabled={pinEnabled}
+        currentPin={currentPin}
+        newPin={newPin}
+        confirmPin={confirmPin}
+        onCurrentPinChange={setPinField(setCurrentPin)}
+        onNewPinChange={setPinField(setNewPin)}
+        onConfirmPinChange={setPinField(setConfirmPin)}
+        onEnablePin={handleEnablePin}
+        onDisablePin={handleDisablePin}
+        onChangePin={handleChangePin}
+      />
 
       <div className="text-center ios-caption app-muted py-4">
         <p>CuisineControl v1.0</p>
