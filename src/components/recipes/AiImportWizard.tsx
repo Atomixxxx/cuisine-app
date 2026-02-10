@@ -28,6 +28,7 @@ interface RecipeReviewLine {
   requiredQuantity: number;
   requiredUnit: RecipeUnit;
   unitPrice: number;
+  priceUnit?: RecipeUnit;
   supplierId: string;
   priceSource: ReviewPriceSource;
   confidence: number;
@@ -200,7 +201,7 @@ export default function AiImportWizard({
 
       lines.push({
         id: crypto.randomUUID(), ingredientId: ing?.id || '', ingredientName: ing?.name || item.name,
-        requiredQuantity: scaled, requiredUnit: ing?.unit || item.unit, unitPrice,
+        requiredQuantity: scaled, requiredUnit: ing?.unit || item.unit, unitPrice, priceUnit: cad?.unit,
         supplierId: ing?.supplierId || cad?.supplier || '', priceSource, confidence,
       });
     }
@@ -357,7 +358,7 @@ export default function AiImportWizard({
     if (!reviewDraft) return null;
     const totalCost = reviewDraft.lines.reduce((sum, line) => {
       const linked = line.ingredientId ? ingredientMap.get(line.ingredientId) : undefined;
-      const priceUnit = linked?.unit || line.requiredUnit;
+      const priceUnit = linked?.unit || line.priceUnit || line.requiredUnit;
       const conv = convertQuantity(line.requiredQuantity, line.requiredUnit, priceUnit);
       if (conv === null || conv < 0 || !Number.isFinite(conv)) return sum;
       const price = linked && linked.unitPrice > 0 ? getEffectiveUnitPrice(linked) : line.unitPrice;

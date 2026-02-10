@@ -95,6 +95,7 @@ export interface PriceHistory {
   averagePrice: number;
   minPrice: number;
   maxPrice: number;
+  unit?: IngredientUnit;
 }
 
 export interface AppSettings {

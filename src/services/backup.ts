@@ -240,10 +240,12 @@ function parseInvoice(value: unknown): Invoice | null {
   const tags = tagsRaw
     .map((tag) => toSanitizedString(tag))
     .filter((tag): tag is string => Boolean(tag));
+  const imageUrls = toSanitizedStringArray(value.imageUrls);
 
   return {
     id,
     images: [],
+    imageUrls,
     supplier,
     invoiceNumber,
     invoiceDate,
@@ -362,10 +364,12 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
     productTraces: (await db.productTraces.toArray()).map((p) => ({
       ...p,
       photo: undefined,
+      photoUrl: p.photoUrl ?? undefined,
     })),
     invoices: (await db.invoices.toArray()).map((i) => ({
       ...i,
       images: [],
+      imageUrls: (i.imageUrls ?? []).filter((url): url is string => typeof url === 'string' && url.trim().length > 0),
     })),
     priceHistory: await db.priceHistory.toArray(),
     settings: (await db.settings.toArray()).map(({ geminiApiKey: _removed, ...rest }) => rest as AppSettings),

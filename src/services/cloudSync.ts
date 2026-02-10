@@ -22,6 +22,7 @@ import {
   uploadBlob,
   upsertRows,
 } from './supabaseRest';
+import { logger } from './logger';
 
 type MaybeDate = Date | string;
 
@@ -590,9 +591,20 @@ export async function upsertRemoteProduct(value: ProductTrace): Promise<ProductT
   const previousPhotoUrl = existingRows[0]?.photo_url ?? null;
 
   let nextPhotoUrl = value.photoUrl ?? previousPhotoUrl ?? null;
+  let uploadedPhotoUrl: string | null = null;
   if (value.photo) {
     const path = buildProductPhotoPath(value.id, value.photo);
-    nextPhotoUrl = await uploadBlob(path, value.photo);
+    try {
+      const uploadedUrl = await uploadBlob(path, value.photo);
+      if (uploadedUrl.trim().length > 0) {
+        uploadedPhotoUrl = uploadedUrl;
+        nextPhotoUrl = uploadedUrl;
+      } else {
+        logger.warn('product media upload returned empty url', { productId: value.id });
+      }
+    } catch (error) {
+      logger.warn('product media upload failed; keeping local blob', { productId: value.id, error });
+    }
   }
 
   await upsertRows<ProductTraceRow>('product_traces', [toProductRow(value, nextPhotoUrl)], 'workspace_id,id');
@@ -603,7 +615,7 @@ export async function upsertRemoteProduct(value: ProductTrace): Promise<ProductT
 
   return {
     ...value,
-    photo: undefined,
+    photo: value.photo && !uploadedPhotoUrl ? value.photo : undefined,
     photoUrl: nextPhotoUrl ?? undefined,
   };
 }
@@ -638,15 +650,33 @@ export async function upsertRemoteInvoice(value: Invoice): Promise<Invoice> {
   const previousImageUrls = existingRows[0]?.image_urls ?? [];
 
   let imageUrls = normalizeInvoiceImageUrls(value);
+  let uploadedAllImages = false;
   if (value.images.length > 0) {
     const uploadedUrls: string[] = [];
+    let uploadFailed = false;
     for (let index = 0; index < value.images.length; index += 1) {
       const image = value.images[index];
       const path = buildInvoiceImagePath(value.id, index, image);
-      const uploadedUrl = await uploadBlob(path, image);
-      uploadedUrls.push(uploadedUrl);
+      try {
+        const uploadedUrl = await uploadBlob(path, image);
+        if (uploadedUrl.trim().length === 0) {
+          uploadFailed = true;
+          logger.warn('invoice media upload returned empty url', { invoiceId: value.id, index });
+          break;
+        }
+        uploadedUrls.push(uploadedUrl);
+      } catch (error) {
+        uploadFailed = true;
+        logger.warn('invoice media upload failed; keeping local blobs', { invoiceId: value.id, index, error });
+        break;
+      }
     }
-    imageUrls = uploadedUrls;
+    if (!uploadFailed && uploadedUrls.length === value.images.length) {
+      imageUrls = uploadedUrls;
+      uploadedAllImages = true;
+    } else if (imageUrls.length === 0 && previousImageUrls.length > 0) {
+      imageUrls = previousImageUrls;
+    }
   } else if (imageUrls.length === 0 && previousImageUrls.length > 0) {
     imageUrls = previousImageUrls;
   }
@@ -660,7 +690,7 @@ export async function upsertRemoteInvoice(value: Invoice): Promise<Invoice> {
 
   return {
     ...value,
-    images: [],
+    images: uploadedAllImages ? [] : value.images,
     imageUrls,
   };
 }

@@ -711,58 +711,6 @@ body {
   transition: stroke-dashoffset 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sos-hygiene-btn {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  text-align: left;
-  color: #fff;
-  background: linear-gradient(135deg, #FF3B30 0%, #D32F2F 100%);
-  box-shadow:
-    0 14px 30px rgba(211, 47, 47, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  animation: pulse-glow 2.5s ease-in-out infinite;
-}
-
-.sos-hygiene-btn::before {
-  content: '';
-  position: absolute;
-  left: -14%;
-  top: -54%;
-  width: 70%;
-  height: 150%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0) 72%);
-  pointer-events: none;
-}
-
-.sos-hygiene-btn:active {
-  transform: scale(0.992);
-}
-
-.sos-hygiene-btn.sos-compact {
-  padding: 10px 14px;
-  border-radius: 12px;
-  gap: 10px;
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow:
-      0 12px 26px rgba(211, 47, 47, 0.34),
-      0 0 0 0 rgba(255, 59, 48, 0.22),
-      inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  }
-  50% {
-    box-shadow:
-      0 18px 34px rgba(211, 47, 47, 0.42),
-      0 0 0 9px rgba(255, 59, 48, 0),
-      inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  }
-}
 
 .alert-card {
   position: relative;
@@ -1048,32 +996,4 @@ body {
 .dark .alert-card {
   background: var(--app-surface);
   border-color: rgba(0, 180, 255, 0.06);
-}
-
-/* SpaceX SOS button — deeper red glow */
-.dark .sos-hygiene-btn {
-  background: linear-gradient(135deg, #ff3344 0%, #cc1122 100%);
-  box-shadow:
-    0 0 30px rgba(255, 50, 50, 0.25),
-    0 12px 24px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-@keyframes pulse-glow-spx {
-  0%, 100% {
-    box-shadow:
-      0 0 25px rgba(255, 50, 50, 0.20),
-      0 0 0 0 rgba(255, 68, 68, 0.18),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  }
-  50% {
-    box-shadow:
-      0 0 35px rgba(255, 50, 50, 0.35),
-      0 0 0 8px rgba(255, 68, 68, 0),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  }
-}
-
-.dark .sos-hygiene-btn {
-  animation: pulse-glow-spx 2.5s ease-in-out infinite;
 }

@@ -6,6 +6,7 @@ import {
   fetchRemoteProducts,
   upsertRemoteProduct,
 } from '../../services/cloudSync';
+import type { ProductTrace } from '../../types';
 import { sanitize } from '../../utils';
 import type { AppState } from '../appStore';
 import { runCloudRead, runCloudTask } from './cloudUtils';
@@ -16,6 +17,16 @@ type ProductSlice = Pick<
   'getProducts' | 'getLatestProductByBarcode' | 'addProduct' | 'updateProduct' | 'markProductAsUsed' | 'deleteProduct'
 >;
 
+function mergeProductMedia(remote: ProductTrace, local?: ProductTrace): ProductTrace {
+  if (!local) return remote;
+  return {
+    ...remote,
+    // Keep local blob when available to avoid losing media if cloud upload failed previously.
+    photo: remote.photo ?? local.photo,
+    photoUrl: remote.photoUrl ?? local.photoUrl,
+  };
+}
+
 export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = () => ({
   getProducts: async (options) => {
     const limit = options?.limit;
@@ -23,15 +34,19 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
 
     const remoteProducts = await runCloudRead('products:list', async () => fetchRemoteProducts(limit, offset));
     if (remoteProducts) {
+      let localById: Map<string, ProductTrace> | null = null;
+      let didFullMerge = false;
       if (offset === 0) {
         const fullRemote = await runCloudRead('products:list:full', async () => fetchRemoteProducts());
         if (fullRemote) {
-          const remoteIds = new Set(fullRemote.map((p) => p.id));
-          const localOnly = await db.productTraces
-            .filter((p) => !remoteIds.has(p.id))
-            .toArray();
+          const localAll = await db.productTraces.toArray();
+          localById = new Map(localAll.map((item) => [item.id, item]));
+          const mergedRemote = fullRemote.map((item) => mergeProductMedia(item, localById?.get(item.id)));
+          const remoteIds = new Set(fullRemote.map((item) => item.id));
+          const localOnly = localAll.filter((item) => !remoteIds.has(item.id));
           await db.productTraces.clear();
-          await db.productTraces.bulkPut([...fullRemote, ...localOnly]);
+          await db.productTraces.bulkPut([...mergedRemote, ...localOnly]);
+          didFullMerge = true;
         }
       }
       if (remoteProducts.length === 0) {
@@ -46,7 +61,17 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
           return seededQuery.toArray();
         }
       }
-      return remoteProducts;
+      if (didFullMerge) {
+        let syncedQuery = db.productTraces.orderBy('scannedAt').reverse();
+        if (offset > 0) syncedQuery = syncedQuery.offset(offset);
+        if (typeof limit === 'number') syncedQuery = syncedQuery.limit(limit);
+        return syncedQuery.toArray();
+      }
+      if (!localById) {
+        const localMatches = await db.productTraces.bulkGet(remoteProducts.map((item) => item.id));
+        return remoteProducts.map((item, index) => mergeProductMedia(item, localMatches[index] ?? undefined));
+      }
+      return remoteProducts.map((item) => mergeProductMedia(item, localById?.get(item.id)));
     }
 
     let localQuery = db.productTraces.orderBy('scannedAt').reverse();
@@ -62,7 +87,10 @@ export const createProductSlice: StateCreator<AppState, [], [], ProductSlice> = 
     const remoteProduct = await runCloudRead('products:latestByBarcode', async () =>
       fetchRemoteLatestProductByBarcode(sanitizedBarcode),
     );
-    if (remoteProduct) return remoteProduct;
+    if (remoteProduct) {
+      const localProduct = await db.productTraces.get(remoteProduct.id);
+      return mergeProductMedia(remoteProduct, localProduct);
+    }
 
     const matches = await db.productTraces
       .where('barcode')

@@ -241,6 +241,9 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
 
 function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => void }) {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const hasCloudImages = Array.isArray(invoice.imageUrls) && invoice.imageUrls.length > 0;
+  const hasLocalImages = Array.isArray(invoice.images) && invoice.images.length > 0;
+  const mediaStatus = hasCloudImages ? 'cloud' : hasLocalImages ? 'local' : 'missing';
 
   useEffect(() => {
     if (invoice.images && invoice.images.length > 0 && invoice.images[0] instanceof Blob) {
@@ -290,6 +293,16 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
       <div className="text-right shrink-0">
         <span className="inline-flex items-center rounded-full px-2 py-1 ios-caption font-bold app-chip">{invoice.totalTTC.toFixed(2)} EUR</span>
         <p className="text-[12px] app-muted mt-1">TTC</p>
+        {mediaStatus === 'local' && (
+          <span className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-[color:var(--app-warning)]/12 text-[color:var(--app-warning)]">
+            Images locales
+          </span>
+        )}
+        {mediaStatus === 'missing' && (
+          <span className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-[color:var(--app-danger)]/12 text-[color:var(--app-danger)]">
+            Sans image
+          </span>
+        )}
       </div>
     </button>
   );

@@ -53,9 +53,14 @@ export default function Settings() {
   const [supabaseSigningIn, setSupabaseSigningIn] = useState(false);
   const [supabaseSigningOut, setSupabaseSigningOut] = useState(false);
   const [storageEstimate, setStorageEstimate] = useState<StorageEstimate | null>(null);
+  const [mediaIntegrity, setMediaIntegrity] = useState({
+    missingProducts: 0,
+    missingInvoices: 0,
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const storageWarnedRef = useRef(false);
+  const mediaWarnedRef = useRef(false);
   const supabaseAuthConfigured = isSupabaseAuthConfigured();
 
   useEffect(() => {
@@ -76,8 +81,29 @@ export default function Settings() {
   }, [settings]);
 
   const refreshStorage = useCallback(async () => {
-    const estimate = await getStorageEstimate();
+    const [estimate, missingProducts, missingInvoices] = await Promise.all([
+      getStorageEstimate(),
+      db.productTraces.filter((product) => !product.photo && !product.photoUrl).count(),
+      db.invoices
+        .filter((invoice) => {
+          const hasLocalImages = Array.isArray(invoice.images) && invoice.images.length > 0;
+          const hasCloudImages = Array.isArray(invoice.imageUrls) && invoice.imageUrls.length > 0;
+          return !hasLocalImages && !hasCloudImages;
+        })
+        .count(),
+    ]);
     setStorageEstimate(estimate);
+    setMediaIntegrity({ missingProducts, missingInvoices });
+
+    const missingMediaTotal = missingProducts + missingInvoices;
+    if (missingMediaTotal > 0 && !mediaWarnedRef.current) {
+      showWarning(`${missingMediaTotal} element(s) sans media local ni URL cloud`);
+      mediaWarnedRef.current = true;
+    }
+    if (missingMediaTotal === 0) {
+      mediaWarnedRef.current = false;
+    }
+
     if (!estimate) return;
     if (estimate.usagePercent >= 80 && !storageWarnedRef.current) {
       showWarning('Stockage local utilise a plus de 80%');
@@ -334,6 +360,7 @@ export default function Settings() {
 
   const inputClass = 'app-input text-[14px]';
   const usagePercent = Math.min(100, Math.max(0, storageEstimate?.usagePercent ?? 0));
+  const missingMediaTotal = mediaIntegrity.missingProducts + mediaIntegrity.missingInvoices;
 
   const formatStorageBytes = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
@@ -530,9 +557,19 @@ export default function Settings() {
         <div className="rounded-2xl app-panel overflow-hidden">
           <div className="ios-settings-row">
             <p className="ios-body app-muted">
-              Exportez vos donnees pour les sauvegarder ou les transferer. Les photos ne sont pas incluses.
+              Exportez vos donnees pour les sauvegarder ou les transferer. Les blobs locaux ne sont pas inclus, mais les URL cloud sont conservees.
             </p>
           </div>
+          {missingMediaTotal > 0 && (
+            <div className="px-4 pb-3">
+              <div className="rounded-xl border border-[color:var(--app-warning)]/35 bg-[color:var(--app-warning)]/10 px-3 py-2">
+                <p className="ios-caption text-[color:var(--app-warning)] font-semibold">Medias potentiellement perdus</p>
+                <p className="ios-caption app-muted">
+                  {mediaIntegrity.missingProducts} produit(s) et {mediaIntegrity.missingInvoices} facture(s) n'ont ni media local ni URL cloud.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="ios-settings-separator" />
           <div className="ios-settings-row">
             <span className="text-[14px] app-text">Backup auto hebdomadaire</span>
@@ -705,4 +742,3 @@ export default function Settings() {
     </div>
   );
 }
-

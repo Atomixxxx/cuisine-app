@@ -11,7 +11,7 @@ import { sanitize } from '../../utils';
 import type { AppState } from '../appStore';
 import { runCloudRead, runCloudTask } from './cloudUtils';
 import { buildPriceKey, compressInvoiceImages } from './sliceUtils';
-import type { PriceHistory } from '../../types';
+import type { Invoice, PriceHistory } from '../../types';
 
 type InvoiceSlice = Pick<
   AppState,
@@ -26,6 +26,16 @@ type InvoiceSlice = Pick<
   | 'clearAllPriceHistory'
 >;
 
+function mergeInvoiceMedia(remote: Invoice, local?: Invoice): Invoice {
+  if (!local) return remote;
+  return {
+    ...remote,
+    // Keep local blobs until cloud upload has definitely produced stable URLs.
+    images: remote.images.length > 0 ? remote.images : local.images,
+    imageUrls: remote.imageUrls && remote.imageUrls.length > 0 ? remote.imageUrls : local.imageUrls,
+  };
+}
+
 export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = () => ({
   getInvoices: async (options) => {
     const limit = options?.limit;
@@ -33,11 +43,19 @@ export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = 
 
     const remoteInvoices = await runCloudRead('invoices:list', async () => fetchRemoteInvoices(limit, offset));
     if (remoteInvoices) {
+      let localById: Map<string, Invoice> | null = null;
+      let didFullMerge = false;
       if (offset === 0) {
         const fullRemote = await runCloudRead('invoices:list:full', async () => fetchRemoteInvoices());
         if (fullRemote) {
+          const localAll = await db.invoices.toArray();
+          localById = new Map(localAll.map((item) => [item.id, item]));
+          const mergedRemote = fullRemote.map((item) => mergeInvoiceMedia(item, localById?.get(item.id)));
+          const remoteIds = new Set(fullRemote.map((item) => item.id));
+          const localOnly = localAll.filter((item) => !remoteIds.has(item.id));
           await db.invoices.clear();
-          await db.invoices.bulkPut(fullRemote);
+          await db.invoices.bulkPut([...mergedRemote, ...localOnly]);
+          didFullMerge = true;
         }
       }
       if (remoteInvoices.length === 0) {
@@ -52,7 +70,17 @@ export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = 
           return seededQuery.toArray();
         }
       }
-      return remoteInvoices;
+      if (didFullMerge) {
+        let syncedQuery = db.invoices.orderBy('scannedAt').reverse();
+        if (offset > 0) syncedQuery = syncedQuery.offset(offset);
+        if (typeof limit === 'number') syncedQuery = syncedQuery.limit(limit);
+        return syncedQuery.toArray();
+      }
+      if (!localById) {
+        const localMatches = await db.invoices.bulkGet(remoteInvoices.map((item) => item.id));
+        return remoteInvoices.map((item, index) => mergeInvoiceMedia(item, localMatches[index] ?? undefined));
+      }
+      return remoteInvoices.map((item) => mergeInvoiceMedia(item, localById?.get(item.id)));
     }
 
     let localQuery = db.invoices.orderBy('scannedAt').reverse();
@@ -124,6 +152,7 @@ export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = 
           averagePrice: Math.round((priceValues.reduce((sum, value) => sum + value, 0) / priceValues.length) * 100) / 100,
           minPrice: Math.min(...priceValues),
           maxPrice: Math.max(...priceValues),
+          unit: item.conditioningUnit || existing.unit,
         });
       } else {
         await db.priceHistory.add({
@@ -134,6 +163,7 @@ export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = 
           averagePrice: item.unitPriceHT,
           minPrice: item.unitPriceHT,
           maxPrice: item.unitPriceHT,
+          unit: item.conditioningUnit,
         });
       }
     }
@@ -160,9 +190,11 @@ export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = 
           averagePrice: 0,
           minPrice: 0,
           maxPrice: 0,
+          unit: undefined,
         };
         existing.itemName = itemName;
         existing.supplier = supplier;
+        existing.unit = item.conditioningUnit || existing.unit;
         existing.prices.push({ date: invoice.invoiceDate, price: item.unitPriceHT });
         map.set(key, existing);
       }

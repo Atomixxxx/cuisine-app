@@ -44,6 +44,9 @@ function ProductCard({
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const isUsed = product.status === 'used';
   const dlcStatus = getDlcStatus(product.expirationDate);
+  const hasCloudPhoto = Boolean(product.photoUrl);
+  const hasLocalPhoto = Boolean(product.photo);
+  const mediaStatus = hasCloudPhoto ? 'cloud' : hasLocalPhoto ? 'local' : 'missing';
 
   useEffect(() => {
     if (product.photo) {
@@ -96,15 +99,27 @@ function ProductCard({
         <h3 className="ios-body font-semibold app-text truncate">{product.productName}</h3>
         <p className="ios-caption app-muted truncate">{product.supplier}</p>
         <p className="text-[12px] app-muted truncate">Lot {product.lotNumber}</p>
-        {isUsed ? (
-          <div className="inline-flex self-start items-center px-2 py-0.5 rounded-full text-[12px] font-medium mt-1 bg-[color:var(--app-surface-3)] app-muted">
-            Utilise
-          </div>
-        ) : (
-          <div className={cn('inline-flex self-start items-center px-2 py-0.5 rounded-full text-[12px] font-medium mt-1', dlcColors[dlcStatus])}>
-            DLC {format(new Date(product.expirationDate), 'dd/MM/yyyy', { locale: fr })}
-          </div>
-        )}
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {isUsed ? (
+            <div className="inline-flex self-start items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-[color:var(--app-surface-3)] app-muted">
+              Utilise
+            </div>
+          ) : (
+            <div className={cn('inline-flex self-start items-center px-2 py-0.5 rounded-full text-[12px] font-medium', dlcColors[dlcStatus])}>
+              DLC {format(new Date(product.expirationDate), 'dd/MM/yyyy', { locale: fr })}
+            </div>
+          )}
+          {mediaStatus === 'local' && (
+            <div className="inline-flex self-start items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[color:var(--app-warning)]/12 text-[color:var(--app-warning)]">
+              Photo locale
+            </div>
+          )}
+          {mediaStatus === 'missing' && (
+            <div className="inline-flex self-start items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[color:var(--app-danger)]/12 text-[color:var(--app-danger)]">
+              Sans photo
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
