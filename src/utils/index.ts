@@ -80,9 +80,12 @@ export async function blobToBase64(blob: Blob): Promise<string> {
     throw new Error('Failed to convert blob to base64');
   }
   const buffer = await source.arrayBuffer();
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(buffer).toString('base64');
-  }
+  const maybeBuffer = (
+    globalThis as unknown as {
+      Buffer?: { from: (value: ArrayBuffer) => { toString: (encoding: 'base64') => string } };
+    }
+  ).Buffer;
+  if (maybeBuffer) return maybeBuffer.from(buffer).toString('base64');
 
   const bytes = new Uint8Array(buffer);
   const chunkSize = 0x8000;
