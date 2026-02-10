@@ -193,7 +193,7 @@ export default function Dashboard() {
                       <button key={p.id} onClick={() => navigate('/traceability')}
                         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg app-surface-2 border border-[color:var(--app-border)] text-left transition-opacity active:opacity-70">
                         <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', expired ? 'bg-[color:var(--app-danger)]' : 'bg-[color:var(--app-warning)]')} />
-                        <span className="text-[11px] font-medium app-text truncate flex-1">{p.name}</span>
+                        <span className="text-[11px] font-medium app-text truncate flex-1">{p.productName}</span>
                         <span className={cn('text-[10px] font-semibold shrink-0', expired ? 'text-[color:var(--app-danger)]' : 'text-[color:var(--app-warning)]')}>
                           {expired ? 'Expire' : `J-${daysLeft}`}
                         </span>
