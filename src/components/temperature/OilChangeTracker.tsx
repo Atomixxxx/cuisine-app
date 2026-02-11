@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   addMonths,
+  differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
   format,
   getDay,
   isSameDay,
+  isWithinInterval,
   startOfDay,
   startOfMonth,
   subMonths,
@@ -36,7 +38,9 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
   const [newFryerName, setNewFryerName] = useState('');
   const [operator, setOperator] = useState('');
   const [records, setRecords] = useState<OilChangeRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<OilChangeRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const monthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
   const monthEnd = useMemo(() => endOfMonth(currentMonth), [currentMonth]);
@@ -53,9 +57,25 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     }
   }, [getOilChangeRecords, monthStart, monthEnd]);
 
+  const loadAllRecords = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await getOilChangeRecords();
+      setAllRecords(data);
+    } catch {
+      showError('Impossible de charger l historique global des friteuses');
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [getOilChangeRecords]);
+
   useEffect(() => {
     void loadRecords();
   }, [loadRecords]);
+
+  useEffect(() => {
+    void loadAllRecords();
+  }, [loadAllRecords]);
 
   useEffect(() => {
     try {
@@ -77,8 +97,9 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     const known = new Set(DEFAULT_FRYERS);
     customFryers.forEach((fryer) => known.add(fryer));
     records.forEach((record) => known.add(record.fryerId));
+    allRecords.forEach((record) => known.add(record.fryerId));
     return Array.from(known);
-  }, [customFryers, records]);
+  }, [customFryers, records, allRecords]);
 
   const calendarDays = useMemo(() => {
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -91,6 +112,75 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     () => records.filter((record) => record.fryerId === selectedFryer),
     [records, selectedFryer],
   );
+
+  const allRecordsSorted = useMemo(
+    () => [...allRecords].sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime()),
+    [allRecords],
+  );
+
+  const fryerOverview = useMemo(() => {
+    const now = startOfDay(new Date());
+    const grouped = new Map<
+      string,
+      {
+        lastChangedAt: Date | null;
+        changesInMonth: number;
+        totalChanges: number;
+      }
+    >();
+
+    fryerOptions.forEach((fryerId) => {
+      grouped.set(fryerId, {
+        lastChangedAt: null,
+        changesInMonth: 0,
+        totalChanges: 0,
+      });
+    });
+
+    allRecordsSorted.forEach((record) => {
+      const changedAt = new Date(record.changedAt);
+      const summary = grouped.get(record.fryerId) ?? {
+        lastChangedAt: null,
+        changesInMonth: 0,
+        totalChanges: 0,
+      };
+
+      summary.totalChanges += 1;
+      if (!summary.lastChangedAt || changedAt > summary.lastChangedAt) {
+        summary.lastChangedAt = changedAt;
+      }
+      if (isWithinInterval(changedAt, { start: monthStart, end: monthEnd })) {
+        summary.changesInMonth += 1;
+      }
+      grouped.set(record.fryerId, summary);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([fryerId, summary]) => {
+        const daysSinceLastChange =
+          summary.lastChangedAt === null
+            ? null
+            : Math.max(0, differenceInCalendarDays(now, startOfDay(summary.lastChangedAt)));
+        const freshnessStatus =
+          daysSinceLastChange === null ? 'none' : daysSinceLastChange <= 2 ? 'ok' : daysSinceLastChange <= 4 ? 'warning' : 'danger';
+        return {
+          fryerId,
+          ...summary,
+          daysSinceLastChange,
+          freshnessStatus,
+        };
+      })
+      .sort((a, b) => {
+        if (a.lastChangedAt && b.lastChangedAt) {
+          return b.lastChangedAt.getTime() - a.lastChangedAt.getTime();
+        }
+        if (a.lastChangedAt) return -1;
+        if (b.lastChangedAt) return 1;
+        return a.fryerId.localeCompare(b.fryerId);
+      });
+  }, [allRecordsSorted, fryerOptions, monthStart, monthEnd]);
+
+  const recentGlobalRecords = useMemo(() => allRecordsSorted.slice(0, 8), [allRecordsSorted]);
 
   const hasRecordForDay = useCallback(
     (day: Date) => selectedRecords.some((record) => isSameDay(new Date(record.changedAt), day)),
@@ -111,7 +201,7 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
       try {
         await removeOilChangeRecord(existing.id);
         showSuccess('Changement retire');
-        await loadRecords();
+        await Promise.all([loadRecords(), loadAllRecords()]);
       } catch {
         showError('Impossible de retirer le changement');
       }
@@ -130,7 +220,7 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
         operator: operator.trim() || undefined,
       });
       showSuccess(`Changement enregistre pour ${selectedFryer}`);
-      await loadRecords();
+      await Promise.all([loadRecords(), loadAllRecords()]);
     } catch {
       showError('Impossible d enregistrer le changement');
     }
@@ -184,6 +274,54 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
           <p>Resultats de tests (visuel, olfactif, chimique)</p>
           <p>Temperature de l huile</p>
           <p>Visa operateur et action</p>
+        </div>
+      </div>
+
+      <div className="app-panel space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="ios-body font-semibold app-text">Vue rapide friteuses</h4>
+          {historyLoading && <span className="text-[12px] app-muted">Chargement...</span>}
+        </div>
+        <p className="ios-caption app-muted">Dernier changement, activite mensuelle et retard eventuel par friteuse.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {fryerOverview.map((summary) => (
+            <button
+              key={`overview-${summary.fryerId}`}
+              onClick={() => setSelectedFryer(summary.fryerId)}
+              className={cn(
+                'rounded-xl border px-3 py-2 text-left app-surface-2 transition-colors active:opacity-70',
+                selectedFryer === summary.fryerId
+                  ? 'border-[color:var(--app-accent)]'
+                  : 'border-[color:var(--app-border)]',
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[14px] font-semibold app-text truncate">{summary.fryerId}</p>
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded-full text-[11px] font-semibold',
+                    summary.freshnessStatus === 'ok'
+                      ? 'app-success-bg'
+                      : summary.freshnessStatus === 'warning'
+                        ? 'app-warning-bg'
+                        : summary.freshnessStatus === 'danger'
+                          ? 'app-danger-bg'
+                          : 'app-surface app-muted',
+                  )}
+                >
+                  {summary.daysSinceLastChange === null ? 'Aucune trace' : `J-${summary.daysSinceLastChange}`}
+                </span>
+              </div>
+              <p className="text-[12px] app-muted mt-1">
+                {summary.lastChangedAt
+                  ? `Dernier changement: ${format(summary.lastChangedAt, 'dd/MM/yyyy HH:mm', { locale: fr })}`
+                  : 'Aucun changement enregistre'}
+              </p>
+              <p className="text-[12px] app-muted mt-1">
+                {summary.changesInMonth} ce mois · {summary.totalChanges} au total
+              </p>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -289,6 +427,25 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
             ))}
           </div>
         )}
+
+        <div className="mt-4 pt-3 border-t border-[color:var(--app-border)]">
+          <h5 className="text-[14px] font-semibold app-text mb-2">Derniers changements (toutes friteuses)</h5>
+          {recentGlobalRecords.length === 0 ? (
+            <p className="ios-caption app-muted">Aucun changement enregistre.</p>
+          ) : (
+            <div className="space-y-2">
+              {recentGlobalRecords.map((record) => (
+                <div key={`recent-${record.id}`} className="rounded-xl app-surface-2 border border-[color:var(--app-border)] px-3 py-2">
+                  <p className="text-[13px] font-semibold app-text">{record.fryerId}</p>
+                  <p className="text-[12px] app-muted">
+                    {format(new Date(record.changedAt), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                    {record.operator ? ` - Operateur: ${record.operator}` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
