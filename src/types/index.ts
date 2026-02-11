@@ -123,7 +123,7 @@ export interface Recipe {
   id: string;
   title: string;
   portions: number;
-  salePriceHT: number;
+  salePriceHT?: number;
   createdAt: Date;
   updatedAt: Date;
   allergens?: string[];

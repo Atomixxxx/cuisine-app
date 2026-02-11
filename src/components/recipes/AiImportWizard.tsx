@@ -365,7 +365,10 @@ export default function AiImportWizard({
       return sum + conv * Math.max(0, price || 0);
     }, 0);
     const sp = Number.isFinite(reviewDraft.salePriceHT) && reviewDraft.salePriceHT > 0 ? reviewDraft.salePriceHT : 0;
-    const rate = sp > 0 ? totalCost / sp : 0;
+    if (sp <= 0) {
+      return { totalCost, grossMargin: 0, foodCostRate: 0, warningLevel: 'ok' };
+    }
+    const rate = totalCost / sp;
     return { totalCost, grossMargin: sp - totalCost, foodCostRate: rate, warningLevel: rate > 0.3 ? 'danger' : rate > 0.25 ? 'warning' : 'ok' };
   }, [reviewDraft, ingredientMap]);
 
@@ -400,7 +403,6 @@ export default function AiImportWizard({
     if (!reviewDraft) return;
     const trimmedTitle = reviewDraft.title.trim();
     if (!trimmedTitle) { showError('Titre obligatoire'); return; }
-    if (!Number.isFinite(reviewDraft.salePriceHT) || reviewDraft.salePriceHT <= 0) { showError('Prix de vente HT obligatoire'); return; }
     const filtered = reviewDraft.lines.filter((l) => l.requiredQuantity > 0);
     if (!filtered.length) { showError('Ajoute au moins un ingredient'); return; }
 
@@ -409,7 +411,17 @@ export default function AiImportWizard({
       const nextLines = await materializeLines(filtered);
       const now = new Date();
       const recipeId = crypto.randomUUID();
-      const recipe: Recipe = { id: recipeId, title: trimmedTitle, portions: Math.max(1, Math.round(reviewDraft.portions || 1)), salePriceHT: Math.max(0, reviewDraft.salePriceHT || 0), createdAt: now, updatedAt: now, allergens: [] };
+      const normalizedSalePrice =
+        Number.isFinite(reviewDraft.salePriceHT) && reviewDraft.salePriceHT > 0 ? reviewDraft.salePriceHT : undefined;
+      const recipe: Recipe = {
+        id: recipeId,
+        title: trimmedTitle,
+        portions: Math.max(1, Math.round(reviewDraft.portions || 1)),
+        salePriceHT: normalizedSalePrice,
+        createdAt: now,
+        updatedAt: now,
+        allergens: [],
+      };
       const linked: RecipeIngredient[] = nextLines.map((l) => ({ ...l, recipeId }));
       await saveRecipeWithIngredients(recipe, linked);
 
@@ -564,7 +576,7 @@ export default function AiImportWizard({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <input type="text" value={reviewDraft.title} onChange={(e) => setReviewDraft((p) => p ? { ...p, title: e.target.value } : p)} placeholder="Titre" className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[14px] border-0 focus:outline-none" />
             <input type="number" min="1" value={reviewDraft.portions} onChange={(e) => setReviewDraft((p) => p ? { ...p, portions: Math.max(1, parseInt(e.target.value, 10) || 1) } : p)} placeholder="Portions" className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[14px] border-0 focus:outline-none" />
-            <input type="number" min="0" step="0.01" value={reviewDraft.salePriceHT} onChange={(e) => setReviewDraft((p) => p ? { ...p, salePriceHT: Math.max(0, parseFloat(e.target.value) || 0) } : p)} placeholder="Prix HT" className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[14px] border-0 focus:outline-none" />
+            <input type="number" min="0" step="0.01" value={reviewDraft.salePriceHT} onChange={(e) => setReviewDraft((p) => p ? { ...p, salePriceHT: Math.max(0, parseFloat(e.target.value) || 0) } : p)} placeholder="Prix HT (optionnel)" className="px-3 py-2.5 rounded-xl app-surface-2 app-text text-[14px] border-0 focus:outline-none" />
           </div>
 
           {/* Lines */}
@@ -613,7 +625,13 @@ export default function AiImportWizard({
           </div>
 
           {/* Cost summary */}
-          {reviewSummary && <CostSummaryBar summary={reviewSummary} portions={reviewDraft.portions} sticky={false} />}
+          {reviewSummary && (
+            <CostSummaryBar
+              summary={reviewSummary}
+              portions={reviewDraft.portions}
+              salePriceHT={reviewDraft.salePriceHT > 0 ? reviewDraft.salePriceHT : undefined}
+            />
+          )}
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">

@@ -68,7 +68,7 @@ export default function RecipeEditor({
 
   const [title, setTitle] = useState(recipe?.title || '');
   const [portions, setPortions] = useState(String(recipe?.portions || 1));
-  const [salePriceHT, setSalePriceHT] = useState(String(recipe?.salePriceHT || 0));
+  const [salePriceHT, setSalePriceHT] = useState(recipe?.salePriceHT ? String(recipe.salePriceHT) : '');
   const [manualAllergens, setManualAllergens] = useState<string[]>(recipe?.allergens ?? []);
   const [createdAt] = useState<Date>(recipe ? new Date(recipe.createdAt) : new Date());
   const [lines, setLines] = useState<RecipeLineDraft[]>([]);
@@ -92,7 +92,8 @@ export default function RecipeEditor({
     [localIngredients],
   );
 
-  const parsedSalePrice = Number.parseFloat(salePriceHT) || 0;
+  const parsedSalePrice = Number.parseFloat(salePriceHT);
+  const normalizedSalePrice = Number.isFinite(parsedSalePrice) && parsedSalePrice > 0 ? parsedSalePrice : undefined;
   const parsedPortions = Math.max(1, Number.parseInt(portions, 10) || 1);
   const autoDetectedAllergens = useMemo(() => {
     const ingredientIds = lines.map((line) => line.ingredientId).filter(Boolean);
@@ -108,9 +109,9 @@ export default function RecipeEditor({
       computeRecipeCostFromLines(
         lines.filter((l) => l.ingredientId).map((l) => ({ ingredientId: l.ingredientId, requiredQuantity: l.requiredQuantity || 0, requiredUnit: l.requiredUnit })),
         ingredientMap,
-        parsedSalePrice,
+        normalizedSalePrice,
       ),
-    [lines, ingredientMap, parsedSalePrice],
+    [lines, ingredientMap, normalizedSalePrice],
   );
 
   useEffect(() => {
@@ -293,9 +294,10 @@ export default function RecipeEditor({
   const handleSave = async () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) { showError('Le titre est obligatoire'); return; }
-    if (!Number.isFinite(parsedSalePrice) || parsedSalePrice <= 0) { showError('Le prix de vente HT doit etre superieur a 0'); return; }
-    const priceErr = validateRange(parsedSalePrice, 0, 99999, 'Le prix de vente');
-    if (priceErr) { showError(priceErr); return; }
+    if (normalizedSalePrice !== undefined) {
+      const priceErr = validateRange(normalizedSalePrice, 0, 99999, 'Le prix de vente');
+      if (priceErr) { showError(priceErr); return; }
+    }
     const portionsErr = validateRange(parsedPortions, 1, 9999, 'Les portions');
     if (portionsErr) { showError(portionsErr); return; }
 
@@ -307,7 +309,7 @@ export default function RecipeEditor({
         id: recipeId,
         title: trimmedTitle,
         portions: parsedPortions,
-        salePriceHT: parsedSalePrice,
+        salePriceHT: normalizedSalePrice,
         createdAt,
         updatedAt: now,
         allergens: mergedAllergens,
@@ -355,8 +357,9 @@ export default function RecipeEditor({
         {showCreationWizard && <div className="w-[44px]" />}
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-44">
-        <div className="app-page-wrap max-w-2xl space-y-3 pt-3">
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className={cn('flex-1 min-h-0 overflow-y-auto', showCreationWizard ? 'pb-28' : 'pb-6')}>
+          <div className="app-page-wrap max-w-2xl space-y-3 pt-3 pb-4">
 
           {/* ===== CREATION WIZARD (new recipe only) ===== */}
           {showCreationWizard && !creationMode && (
@@ -552,7 +555,7 @@ export default function RecipeEditor({
                       className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text text-[16px] border-0 focus:outline-none" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[14px] app-muted">Prix vente HT</label>
+                    <label className="text-[14px] app-muted">Prix vente HT (optionnel)</label>
                     <input type="number" min="0" step="0.01" value={salePriceHT} onChange={(e) => setSalePriceHT(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-xl app-surface-2 app-text text-[16px] border-0 focus:outline-none" />
                   </div>
@@ -621,24 +624,42 @@ export default function RecipeEditor({
                 </div>
               </div>
 
-              {/* Cost summary */}
-              <CostSummaryBar summary={liveSummary} portions={parsedPortions}
-                lastSavedRate={recipe ? lastSavedSummary.foodCostRate : undefined} />
-
-              {/* Actions */}
-              <div className="flex gap-2 pb-4">
-                <button onClick={() => { void handleSave(); }} disabled={saving}
-                  className={cn('flex-1 py-3 rounded-xl text-[16px] font-semibold active:opacity-70', saving ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg')}>
-                  {saving ? 'Enregistrement...' : 'Enregistrer la fiche'}
-                </button>
-                {recipe && (
-                  <button onClick={() => { void handleDelete(); }}
-                    className="px-4 py-3 rounded-xl app-danger-bg ios-body font-semibold active:opacity-70">Supprimer</button>
-                )}
-              </div>
             </>
           )}
         </div>
+      </div>
+        {!showCreationWizard && (
+          <div className="border-t border-[color:var(--app-border)] app-surface px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="app-page-wrap max-w-2xl space-y-2">
+              <CostSummaryBar
+                summary={liveSummary}
+                portions={parsedPortions}
+                salePriceHT={normalizedSalePrice}
+                lastSavedRate={lastSavedSummary.foodCostRate}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { void handleSave(); }}
+                  disabled={saving}
+                  className={cn(
+                    'flex-1 py-3 rounded-xl text-[16px] font-semibold active:opacity-70',
+                    saving ? 'app-surface-2 app-muted cursor-not-allowed' : 'app-accent-bg',
+                  )}
+                >
+                  {saving ? 'Enregistrement...' : 'Enregistrer la fiche'}
+                </button>
+                {recipe && (
+                  <button
+                    onClick={() => { void handleDelete(); }}
+                    className="px-4 py-3 rounded-xl app-danger-bg ios-body font-semibold active:opacity-70"
+                  >
+                    Supprimer
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

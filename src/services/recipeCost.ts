@@ -34,7 +34,7 @@ function convertQuantity(value: number, fromUnit: RecipeUnit, toUnit: RecipeUnit
 export function computeRecipeCostFromLines(
   lines: RecipeCostInputLine[],
   ingredientMap: Map<string, Ingredient>,
-  salePriceHT: number,
+  salePriceHT?: number,
 ): RecipeCostSummary {
   const totalCost = lines.reduce((sum, line) => {
     const ingredient = ingredientMap.get(line.ingredientId);
@@ -47,8 +47,17 @@ export function computeRecipeCostFromLines(
     return sum + convertedQty * getEffectiveUnitPrice(ingredient);
   }, 0);
 
-  const safeSalePrice = Number.isFinite(salePriceHT) && salePriceHT > 0 ? salePriceHT : 0;
-  const foodCostRate = safeSalePrice > 0 ? totalCost / safeSalePrice : 0;
+  const safeSalePrice = Number.isFinite(salePriceHT) && (salePriceHT ?? 0) > 0 ? (salePriceHT as number) : undefined;
+  if (!safeSalePrice) {
+    return {
+      totalCost,
+      grossMargin: 0,
+      foodCostRate: 0,
+      warningLevel: 'ok',
+    };
+  }
+
+  const foodCostRate = totalCost / safeSalePrice;
   const grossMargin = safeSalePrice - totalCost;
 
   let warningLevel: RecipeCostSummary['warningLevel'] = 'ok';

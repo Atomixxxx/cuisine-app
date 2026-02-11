@@ -41,4 +41,24 @@ describe('recipeCost', () => {
     expect(summary.foodCostRate).toBeGreaterThan(0.3);
     expect(summary.warningLevel).toBe('danger');
   });
+
+  it('returns cost-only summary when sale price is not provided', () => {
+    const ingredient: Ingredient = {
+      id: 'i3',
+      name: 'Lait',
+      unit: 'l',
+      unitPrice: 1.2,
+    };
+    const map = new Map([[ingredient.id, ingredient]]);
+    const summary = computeRecipeCostFromLines(
+      [{ ingredientId: 'i3', requiredQuantity: 500, requiredUnit: 'ml' }],
+      map,
+      undefined,
+    );
+
+    expect(summary.totalCost).toBeCloseTo(0.6, 5);
+    expect(summary.grossMargin).toBe(0);
+    expect(summary.foodCostRate).toBe(0);
+    expect(summary.warningLevel).toBe('ok');
+  });
 });
