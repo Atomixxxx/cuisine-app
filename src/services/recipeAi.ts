@@ -139,8 +139,10 @@ function buildRecipePrompt(label: string, options: RecipeGenerationOptions): str
     .join('\n');
 
   const catalogBlock = catalogPreview
-    ? `Cadencier ingredient disponible (prioriser ces noms exacts si pertinents):
-${catalogPreview}`
+    ? `Cadencier ingredient disponible (PRIX EFFECTIFS par unite de base, deja divises par conditionnement):
+${catalogPreview}
+
+NOTE: Ces prix sont deja les prix effectifs par unite de base (prix achat / conditionnement). Utilise-les directement pour calculer le food cost.`
     : 'Cadencier ingredient non fourni.';
 
   return `Tu es un chef executif expert food cost.
@@ -337,8 +339,17 @@ Regles:
 export interface IngredientPriceEstimate {
   name: string;
   unit: RecipeUnit;
-  estimatedPrice: number;
+  /** Prix total du conditionnement (ce qu'on paie au fournisseur) */
+  bulkPrice: number;
+  /** Nombre d'unites de base dans le conditionnement (ex: 90 oeufs, 25 kg) */
+  conditioningQuantity: number;
+  /** Prix effectif par unite de base = bulkPrice / conditioningQuantity */
+  effectiveUnitPrice: number;
+  /** Description du conditionnement (ex: "carton 90 oeufs", "sac 25kg") */
+  conditioningReasoning: string;
   source: string;
+  /** @deprecated Utiliser bulkPrice a la place */
+  estimatedPrice: number;
 }
 
 /**
@@ -357,23 +368,45 @@ export async function searchIngredientPrices(
   const list = ingredientNames.map((i) => `- ${i.name} (${i.unit})`).join('\n');
 
   const prompt = `Tu es un expert en achat pour la restauration professionnelle en France.
-Donne-moi le prix moyen professionnel (prix fournisseur, pas grande surface) pour chaque ingredient.
+Pour chaque ingredient, fournis le prix professionnel REEL en tenant compte du conditionnement.
 
 Ingredients a estimer:
 ${list}
 
+IMPORTANT - Logique de pricing avec conditionnement:
+- Les fournisseurs pro vendent par conditionnement (carton, sac, bidon, pot, botte, etc.)
+- bulkPrice = prix du conditionnement complet (ce qu'on paie)
+- conditioningQuantity = nombre d'unites de base dans ce conditionnement
+- effectiveUnitPrice = prix par unite de base = bulkPrice / conditioningQuantity
+
+Exemples concrets:
+1. Oeufs (unite): bulkPrice=8.50 (carton 90), conditioning=90, effective=0.094
+2. Farine (kg): bulkPrice=35.00 (sac 25kg), conditioning=25, effective=1.40
+3. Huile tournesol (l): bulkPrice=25.00 (bidon 5L), conditioning=5, effective=5.00
+4. Estragon frais (ml): bulkPrice=3.50 (botte ~50ml), conditioning=50, effective=0.07
+5. Sel fin (kg): bulkPrice=1.20 (paquet 1kg), conditioning=1, effective=1.20
+
 Reponds UNIQUEMENT avec un JSON valide (pas de markdown):
 {
   "prices": [
-    { "name": "Nom ingredient", "unit": "kg|g|l|ml|unite", "estimatedPrice": 0.00, "source": "estimation marche pro France 2025" }
+    {
+      "name": "Nom ingredient",
+      "unit": "kg|g|l|ml|unite",
+      "bulkPrice": 0.00,
+      "conditioningQuantity": 1,
+      "effectiveUnitPrice": 0.00,
+      "conditioningReasoning": "description du conditionnement",
+      "source": "estimation marche pro France 2025"
+    }
   ]
 }
 
 Regles:
-- Prix en EUR, par unite indiquee (ex: prix au kg si unite=kg).
-- Utilise des prix moyens professionnels realistes (Metro, Transgourmet, Pomona).
-- Si tu n'es pas sur, donne une fourchette basse plutot que haute.
-- "source" doit indiquer la base de ton estimation.`;
+- Prix pro realistes (Metro, Transgourmet, Pomona, Gineys).
+- conditioningQuantity >= 1 (1 si vendu a l'unite simple sans suremballage).
+- effectiveUnitPrice DOIT etre egal a bulkPrice / conditioningQuantity.
+- Si tu n'es pas sur, favorise une fourchette basse.
+- VERIFIE: bulkPrice / conditioningQuantity = effectiveUnitPrice.`;
 
   try {
     const textContent = await callGemini(apiKey, [{ text: prompt }], { temperature: 0.3 });
@@ -382,13 +415,27 @@ Regles:
     const parsed = extractJson(textContent);
     const prices = Array.isArray(parsed.prices) ? (parsed.prices as Record<string, unknown>[]) : [];
     return prices
-      .map((p) => ({
-        name: sanitize(String(p.name || '')),
-        unit: normalizeUnit(String(p.unit || 'kg')),
-        estimatedPrice: Math.max(0, Number(p.estimatedPrice) || 0),
-        source: sanitize(String(p.source || 'estimation IA')),
-      }))
-      .filter((p) => p.name && p.estimatedPrice > 0);
+      .map((p) => {
+        const bulkPrice = Math.max(0, Number(p.bulkPrice) || Number(p.estimatedPrice) || 0);
+        const conditioning = Math.max(1, Math.round(Number(p.conditioningQuantity) || 1));
+        const aiEffective = Math.max(0, Number(p.effectiveUnitPrice) || 0);
+        // Validate math: recalculate if AI's effective price is inconsistent
+        const expectedEffective = bulkPrice / conditioning;
+        const effectiveUnitPrice = aiEffective > 0 && Math.abs(aiEffective - expectedEffective) < 0.01
+          ? aiEffective
+          : expectedEffective;
+        return {
+          name: sanitize(String(p.name || '')),
+          unit: normalizeUnit(String(p.unit || 'kg')),
+          bulkPrice,
+          conditioningQuantity: conditioning,
+          effectiveUnitPrice,
+          conditioningReasoning: sanitize(String(p.conditioningReasoning || '')),
+          source: sanitize(String(p.source || 'estimation IA')),
+          estimatedPrice: effectiveUnitPrice, // compat
+        };
+      })
+      .filter((p) => p.name && p.bulkPrice > 0);
   } catch {
     return [];
   }

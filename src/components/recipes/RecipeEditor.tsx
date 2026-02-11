@@ -20,7 +20,6 @@ import {
   type RecipeAiCatalogIngredient,
   type GeneratedRecipeTemplate,
 } from '../../services/recipeAi';
-import { autoFixSuspiciousPrices } from '../../services/conditioningDetect';
 import { normalizeName, nameSimilarity } from '../../services/ingredientMatch';
 import { computeAutoRecipeAllergens, mergeRecipeAllergens } from '../../services/recipeAllergens';
 import IngredientLineEditor from './IngredientLineEditor';
@@ -190,10 +189,14 @@ export default function RecipeEditor({
 
         for (const est of estimates) {
           const matching = missingPrices.find((m) => normalizeName(m.name) === normalizeName(est.name));
-          if (matching && est.estimatedPrice > 0) {
+          if (matching && est.bulkPrice > 0) {
             const existing = currentIngredients.find((i) => i.id === matching.ingredientId);
             if (existing && existing.unitPrice <= 0) {
-              const updated = { ...existing, unitPrice: est.estimatedPrice };
+              const updated: Ingredient = {
+                ...existing,
+                unitPrice: est.bulkPrice,
+                conditioningQuantity: est.conditioningQuantity > 1 ? est.conditioningQuantity : undefined,
+              };
               await updateIngredient(updated);
               const idx = currentIngredients.findIndex((i) => i.id === existing.id);
               if (idx >= 0) currentIngredients[idx] = updated;
@@ -212,20 +215,6 @@ export default function RecipeEditor({
       setAnalyzeStatus('');
     }
 
-    // Auto-detect and fix suspicious prices (bulk price without conditioning)
-    try {
-      setAnalyzeStatus('Verification des conditionnements...');
-      const fixed = await autoFixSuspiciousPrices(currentIngredients);
-      if (fixed > 0) {
-        // Reload ingredients to get updated conditioning
-        const refreshed = await useAppStore.getState().getIngredients();
-        currentIngredients = refreshed;
-        setLocalIngredients(refreshed);
-        showSuccess(`${fixed} conditionnement(s) detecte(s) automatiquement`);
-      }
-    } catch {
-      // Silent fail
-    }
     setAnalyzeStatus('');
   };
 

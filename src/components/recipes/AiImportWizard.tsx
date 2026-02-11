@@ -18,6 +18,7 @@ import { getEffectiveUnitPrice } from '../../services/recipeCost';
 import { upsertSupplierProductMapping } from '../../services/supplierMapping';
 import { buildSupplierQuickPicks, canonicalizeSupplierName } from '../../services/suppliers';
 import { nameSimilarity } from '../../services/ingredientMatch';
+import { autoFixSuspiciousPrices } from '../../services/conditioningDetect';
 
 type ReviewPriceSource = 'ingredient' | 'cadencier' | 'manual' | 'none';
 
@@ -396,6 +397,17 @@ export default function AiImportWizard({
       nextIngredients.push(created);
       nextLines.push({ id: crypto.randomUUID(), ingredientId: created.id, requiredQuantity: line.requiredQuantity, requiredUnit: line.requiredUnit });
     }
+
+    // Safety net: fix any newly created ingredients with suspicious bulk prices
+    const newlyCreated = nextIngredients.filter((ing) => ing.unitPrice > 0 && !ing.conditioningQuantity);
+    if (newlyCreated.length > 0) {
+      try {
+        await autoFixSuspiciousPrices(newlyCreated);
+      } catch {
+        // Silent fail — conditioning detection is best-effort
+      }
+    }
+
     return nextLines;
   };
 
