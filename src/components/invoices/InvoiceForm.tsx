@@ -16,6 +16,8 @@ interface InvoiceFormProps {
   existingInvoice?: Invoice;
 }
 
+const INVOICE_VAT_RATE = 0.055;
+
 const invoiceItemSchema = z.object({
   designation: z.string().trim().min(1, 'La designation est requise'),
   quantity: z
@@ -139,7 +141,7 @@ export default function InvoiceForm({
 
   const totals = useMemo(() => {
     const totalHT = items.reduce((sum, item) => sum + (item.totalPriceHT || 0), 0);
-    const totalTVA = Math.round(totalHT * 0.2 * 100) / 100;
+    const totalTVA = Math.round(totalHT * INVOICE_VAT_RATE * 100) / 100;
     const totalTTC = Math.round((totalHT + totalTVA) * 100) / 100;
     return {
       totalHT: Math.round(totalHT * 100) / 100,
@@ -558,7 +560,7 @@ export default function InvoiceForm({
           </span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="app-muted">TVA (20%)</span>
+          <span className="app-muted">TVA (5,5%)</span>
           <span className="font-medium app-text">
             {totals.totalTVA.toFixed(2)} EUR
           </span>
