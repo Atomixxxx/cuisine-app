@@ -137,6 +137,8 @@ export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = 
       const itemName = sanitize(item.designation).trim();
       const supplier = sanitize(invoice.supplier).trim();
       if (!itemName || !supplier) continue;
+      // Skip items with no price data
+      if (item.unitPriceHT <= 0) continue;
 
       const key = buildPriceKey(itemName, supplier);
       const existing = await db.priceHistory.get(key);
@@ -180,6 +182,8 @@ export const createInvoiceSlice: StateCreator<AppState, [], [], InvoiceSlice> = 
       for (const item of invoice.items) {
         const itemName = item.designation.trim();
         if (!itemName) continue;
+        // Skip items with no price data
+        if (item.unitPriceHT <= 0) continue;
 
         const key = buildPriceKey(itemName, supplier);
         const existing = map.get(key) ?? {

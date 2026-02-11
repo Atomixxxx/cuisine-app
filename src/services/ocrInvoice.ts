@@ -9,6 +9,17 @@ import {
   reserveOcrSlot,
 } from './ocrUtils';
 
+/** Parse a number that may use French formatting (comma decimal, spaces) */
+function parseNumFr(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (value == null) return 0;
+  const cleaned = String(value)
+    .replace(/\s/g, '')       // remove spaces (thousand separators)
+    .replace(/,/g, '.');      // replace comma with dot
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export interface OCRResult {
   text: string;
   supplier: string;
@@ -123,14 +134,23 @@ Regles:
 
     const items: InvoiceItem[] = Array.isArray(parsed.items)
       ? (parsed.items as Record<string, unknown>[]).map((item) => {
-          const conditioningQuantity = Number(item.conditioningQuantity) || 0;
+          const conditioningQuantity = parseNumFr(item.conditioningQuantity) || 0;
           const conditioningUnitRaw = String(item.conditioningUnit || '').toLowerCase().trim();
           const validUnits = ['kg', 'g', 'l', 'ml', 'unite'];
+          const quantity = parseNumFr(item.quantity) || 1;
+          let unitPriceHT = parseNumFr(item.unitPriceHT) || 0;
+          let totalPriceHT = parseNumFr(item.totalPriceHT) || 0;
+          // Fallback: compute missing price from the other
+          if (unitPriceHT <= 0 && totalPriceHT > 0 && quantity > 0) {
+            unitPriceHT = Math.round((totalPriceHT / quantity) * 100) / 100;
+          } else if (totalPriceHT <= 0 && unitPriceHT > 0 && quantity > 0) {
+            totalPriceHT = Math.round(unitPriceHT * quantity * 100) / 100;
+          }
           return {
             designation: sanitize(String(item.designation || '')),
-            quantity: Number(item.quantity) || 1,
-            unitPriceHT: Number(item.unitPriceHT) || 0,
-            totalPriceHT: Number(item.totalPriceHT) || 0,
+            quantity,
+            unitPriceHT,
+            totalPriceHT,
             conditioningQuantity: conditioningQuantity > 1 ? conditioningQuantity : undefined,
             conditioningUnit:
               conditioningQuantity > 1 && validUnits.includes(conditioningUnitRaw)
@@ -146,9 +166,9 @@ Regles:
       invoiceNumber: sanitize(String(parsed.invoiceNumber || '')),
       invoiceDate: String(parsed.invoiceDate || new Date().toISOString().split('T')[0]),
       items,
-      totalHT: Number(parsed.totalHT) || 0,
-      totalTVA: Number(parsed.totalTVA) || 0,
-      totalTTC: Number(parsed.totalTTC) || 0,
+      totalHT: parseNumFr(parsed.totalHT),
+      totalTVA: parseNumFr(parsed.totalTVA),
+      totalTTC: parseNumFr(parsed.totalTTC),
     };
   } finally {
     releaseSlot();
