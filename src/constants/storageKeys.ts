@@ -17,4 +17,5 @@ export const STORAGE_KEYS = {
   supabaseAuthSession: 'cuisine_supabase_auth_session',
   textRepairMigrationVersion: 'cuisine_text_repair_migration_version',
   oilFryerPresets: 'cuisine_oil_fryer_presets',
+  priceRepairMigrationVersion: 'cuisine_price_repair_migration_version',
 } as const;

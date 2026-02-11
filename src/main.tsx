@@ -12,6 +12,7 @@ import { showError, showSuccess } from "./stores/toastStore";
 import { logger } from "./services/logger";
 import { migrateLegacyPinIfNeeded } from "./services/pin";
 import { runTextRepairMigration } from "./services/textRepairMigration";
+import { runPriceRepairMigration } from "./services/priceRepairMigration";
 
 async function requestPersistentStorage(): Promise<void> {
   if (typeof navigator === "undefined" || !navigator.storage?.persist) return;
@@ -45,6 +46,15 @@ async function bootstrapApp(): Promise<void> {
     }
   } catch (error) {
     logger.warn("runTextRepairMigration failed", { error });
+  }
+
+  try {
+    const status = await runPriceRepairMigration();
+    if (status === "done") {
+      logger.info("price repair migration completed");
+    }
+  } catch (error) {
+    logger.warn("runPriceRepairMigration failed", { error });
   }
 
   try {
