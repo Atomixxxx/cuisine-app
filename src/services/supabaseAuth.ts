@@ -144,6 +144,37 @@ export function clearSupabaseSession(): void {
   writeSession(null);
 }
 
+/**
+ * Restaure la session au démarrage de l'app.
+ * Si un refresh_token existe, tente de le rafraîchir pour obtenir
+ * un access_token valide. Retourne true si la session est active.
+ */
+export async function restoreSession(): Promise<boolean> {
+  if (!isSupabaseAuthConfigured()) return false;
+
+  const session = readSession();
+  if (!session) return false;
+
+  // Token encore valide → session OK
+  if (session.expiresAt && Math.floor(Date.now() / 1000) < session.expiresAt - 30) {
+    logger.info('supabase session restored (token still valid)', { email: session.email });
+    return true;
+  }
+
+  // Token expiré → tenter un refresh
+  if (session.refreshToken) {
+    const newToken = await refreshSession();
+    if (newToken) {
+      logger.info('supabase session restored via refresh', { email: readSession()?.email });
+      return true;
+    }
+  }
+
+  // Refresh échoué → session perdue
+  logger.info('supabase session expired and refresh failed');
+  return false;
+}
+
 export async function signInSupabase(email: string, password: string): Promise<{ email?: string; userId?: string }> {
   if (!isSupabaseAuthConfigured()) {
     throw new Error('Supabase non configure');

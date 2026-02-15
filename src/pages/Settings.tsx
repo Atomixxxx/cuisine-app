@@ -25,6 +25,7 @@ import { STORAGE_KEYS } from '../constants/storageKeys';
 import {
   getSupabaseSession,
   isSupabaseAuthConfigured,
+  restoreSession,
   signInSupabase,
   signOutSupabase,
 } from '../services/supabaseAuth';
@@ -83,8 +84,11 @@ export default function Settings() {
     setPinEnabled(isPinConfigured());
     getApiKey().then((k) => setGeminiKey(k));
     hasApiKey().then((v) => setGeminiConnected(v));
-    const session = getSupabaseSession();
-    setSupabaseUserEmail(session?.email ?? null);
+    // Tenter de restaurer la session (refresh si token expiré)
+    restoreSession().then(() => {
+      const session = getSupabaseSession();
+      setSupabaseUserEmail(session?.email ?? null);
+    });
   }, [settings]);
 
   const refreshStorage = useCallback(async () => {

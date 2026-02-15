@@ -13,6 +13,7 @@ import { logger } from "./services/logger";
 import { migrateLegacyPinIfNeeded } from "./services/pin";
 import { runTextRepairMigration } from "./services/textRepairMigration";
 import { runPriceRepairMigration } from "./services/priceRepairMigration";
+import { restoreSession } from "./services/supabaseAuth";
 
 async function requestPersistentStorage(): Promise<void> {
   if (typeof navigator === "undefined" || !navigator.storage?.persist) return;
@@ -38,6 +39,12 @@ async function bootstrapApp(): Promise<void> {
   }
 
   await requestPersistentStorage();
+
+  try {
+    await restoreSession();
+  } catch (error) {
+    logger.warn("restoreSession failed", { error });
+  }
 
   try {
     const status = await runTextRepairMigration();
