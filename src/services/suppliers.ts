@@ -1,6 +1,18 @@
 const LEGAL_SUFFIXES = ['sas', 'sasu', 'sarl', 'sa', 'eurl', 'sci', 'snc', 'inc', 'llc', 'ltd'];
 
-export const KNOWN_SUPPLIERS = ['Metro', 'Pomona', 'Transgourmet', 'Sysco', 'PassionFroid', 'Pro a Pro', 'Brake France', "Giney's"];
+export const KNOWN_SUPPLIERS = [
+  'Metro',
+  'Pomona',
+  'Transgourmet',
+  'Sysco',
+  'PassionFroid',
+  'Pro a Pro',
+  'Brake France',
+  "Giney's",
+  'Terrazur',
+  'Toute la Maree',
+  'AJE',
+];
 
 const SUPPLIER_ALIASES: Record<string, string> = {
   metro: 'Metro',
@@ -18,6 +30,10 @@ const SUPPLIER_ALIASES: Record<string, string> = {
   gineys: "Giney's",
   giney: "Giney's",
   gineyssas: "Giney's",
+  terrazur: 'Terrazur',
+  tlm: 'Toute la Maree',
+  toutelamaree: 'Toute la Maree',
+  aje: 'AJE',
 };
 
 export function normalizeSupplierKey(value: string): string {

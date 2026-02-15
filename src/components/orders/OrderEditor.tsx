@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { buildSupplierQuickPicks, canonicalizeSupplierName } from '../../services/suppliers';
 import { calculateOrderTotal, canTransitionStatus, getNextStatuses, orderSchema } from '../../services/orderHelpers';
-import type { Invoice, Order, OrderItem, OrderStatus } from '../../types';
+import type { IngredientUnit, Invoice, Order, OrderItem, OrderStatus } from '../../types';
 import OrderItemEditor from './OrderItemEditor';
 import OrderStatusBadge from './OrderStatusBadge';
 
@@ -33,6 +33,79 @@ function makeEmptyItem(): OrderItem {
     unitPriceHT: 0,
     totalPriceHT: 0,
   };
+}
+
+function normalizeUnitToken(unitRaw?: string): IngredientUnit {
+  const normalized = (unitRaw ?? '').trim().toLowerCase();
+  if (normalized === 'kg') return 'kg';
+  if (normalized === 'g') return 'g';
+  if (normalized === 'l') return 'l';
+  if (normalized === 'ml') return 'ml';
+  if (normalized === 'u' || normalized === 'unite' || normalized === 'unites') return 'unite';
+  return 'unite';
+}
+
+function toNumber(valueRaw: string): number {
+  const normalized = valueRaw.replace(',', '.').trim();
+  const parsed = Number.parseFloat(normalized);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 1;
+  return parsed;
+}
+
+function parseHandwrittenItems(noteText: string): OrderItem[] {
+  const lines = noteText
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.map((line) => {
+    const leadingPattern = /^(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|u|unite|unites)?\s+(.+)$/i.exec(line);
+    if (leadingPattern) {
+      const quantity = toNumber(leadingPattern[1]);
+      const unit = normalizeUnitToken(leadingPattern[2]);
+      return {
+        id: crypto.randomUUID(),
+        productName: leadingPattern[3].trim(),
+        quantity,
+        unit,
+        unitPriceHT: 0,
+        totalPriceHT: 0,
+      };
+    }
+
+    const trailingPattern = /^(.+?)\s+[xX]\s*(\d+(?:[.,]\d+)?)$/i.exec(line);
+    if (trailingPattern) {
+      return {
+        id: crypto.randomUUID(),
+        productName: trailingPattern[1].trim(),
+        quantity: toNumber(trailingPattern[2]),
+        unit: 'unite',
+        unitPriceHT: 0,
+        totalPriceHT: 0,
+      };
+    }
+
+    const productWithUnitAtEndPattern = /^(.+?)\s+(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|u|unite|unites)$/i.exec(line);
+    if (productWithUnitAtEndPattern) {
+      return {
+        id: crypto.randomUUID(),
+        productName: productWithUnitAtEndPattern[1].trim(),
+        quantity: toNumber(productWithUnitAtEndPattern[2]),
+        unit: normalizeUnitToken(productWithUnitAtEndPattern[3]),
+        unitPriceHT: 0,
+        totalPriceHT: 0,
+      };
+    }
+
+    return {
+      id: crypto.randomUUID(),
+      productName: line,
+      quantity: 1,
+      unit: 'unite',
+      unitPriceHT: 0,
+      totalPriceHT: 0,
+    };
+  });
 }
 
 function buildDraft(order: Order | null, orderNumber: string): Order {
@@ -134,6 +207,25 @@ export default function OrderEditor({
   const handleRemoveItem = (itemId: string) => {
     if (draft.items.length <= 1) return;
     updateItems(draft.items.filter((item) => item.id !== itemId));
+  };
+
+  const handleConvertNotesToItems = () => {
+    const noteText = draft.notes?.trim() ?? '';
+    if (!noteText) {
+      setError('Ajoute une note avant de convertir en articles.');
+      return;
+    }
+
+    const parsedItems = parseHandwrittenItems(noteText).filter((item) => item.productName.trim().length > 0);
+    if (parsedItems.length === 0) {
+      setError('Aucune ligne de note exploitable.');
+      return;
+    }
+
+    const nonEmptyCurrentItems = draft.items.filter((item) => item.productName.trim().length > 0);
+    const nextItems = nonEmptyCurrentItems.length > 0 ? [...nonEmptyCurrentItems, ...parsedItems] : parsedItems;
+    updateItems(nextItems);
+    setError(null);
   };
 
   const applyStatus = (nextStatus: OrderStatus, invoiceId?: string) => {
@@ -303,14 +395,23 @@ export default function OrderEditor({
         </div>
 
         <div className="app-panel space-y-2">
-          <label className="block text-[11px] app-muted">Notes</label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="block text-[11px] app-muted">Note manuscrite (rattachee au fournisseur)</label>
+            <button
+              type="button"
+              onClick={handleConvertNotesToItems}
+              className="px-2.5 py-1.5 rounded-lg app-surface-2 app-text text-xs font-semibold"
+            >
+              Ajouter aux articles
+            </button>
+          </div>
           <textarea
             value={draft.notes ?? ''}
             onChange={(e) =>
               setDraft((prev) => ({ ...prev, notes: e.target.value, updatedAt: new Date() }))
             }
             className="app-input w-full min-h-24 resize-y"
-            placeholder="Details commande"
+            placeholder={"Ex:\n3 kg tomates\nCitron x12\n2 l huile"}
           />
           <div className="flex justify-between text-sm">
             <span className="app-muted">Total HT</span>
