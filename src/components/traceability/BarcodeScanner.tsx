@@ -10,7 +10,6 @@ interface BarcodeScannerProps {
 }
 
 const SCANNER_REGION_ID = 'barcode-scanner-region';
-const MAX_CAPTURE_WIDTH = 1600;
 
 export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabel }: BarcodeScannerProps) {
   const [scannedBarcode, setScannedBarcode] = useState('');
@@ -147,54 +146,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
     e.target.value = '';
   }, [applyCapturedPhoto]);
 
-  const capturePhotoFromStream = useCallback(async () => {
-    const scannerRegion = document.getElementById(SCANNER_REGION_ID);
-    const scannerVideo = scannerRegion?.querySelector('video');
-    if (!(scannerVideo instanceof HTMLVideoElement)) {
-      setScannerError('Flux camera indisponible. Utilisez le mode photo de secours.');
-      return;
-    }
 
-    const { videoWidth, videoHeight } = scannerVideo;
-    if (!videoWidth || !videoHeight) {
-      setScannerError('La camera est en cours d\'initialisation. Reessayez dans un instant.');
-      return;
-    }
-
-    const scale = videoWidth > MAX_CAPTURE_WIDTH ? MAX_CAPTURE_WIDTH / videoWidth : 1;
-    const captureWidth = Math.round(videoWidth * scale);
-    const captureHeight = Math.round(videoHeight * scale);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = captureWidth;
-    canvas.height = captureHeight;
-    const context = canvas.getContext('2d');
-    if (!context) {
-      canvas.width = 0;
-      canvas.height = 0;
-      setScannerError('Impossible de capturer la photo depuis le flux camera.');
-      return;
-    }
-
-    let frameBlob: Blob | null = null;
-    try {
-      context.drawImage(scannerVideo, 0, 0, captureWidth, captureHeight);
-      frameBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, 'image/jpeg', 0.92);
-      });
-    } finally {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      canvas.width = 0;
-      canvas.height = 0;
-    }
-
-    if (!frameBlob) {
-      setScannerError('La capture photo a echoue. Reessayez.');
-      return;
-    }
-
-    await applyCapturedPhoto(frameBlob);
-  }, [applyCapturedPhoto]);
   const handleContinue = useCallback(() => {
     const barcode = scannedBarcode || manualBarcode || undefined;
     onScanComplete(barcode, capturedPhoto ?? undefined);
@@ -251,18 +203,16 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
         />
       </div>
 
-      {/* Photo capture */}
+      {/* Photo capture – always uses native camera */}
       <div>
-        {scannerError && (
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileChange}
+          className="hidden"
+        />
 
         {photoPreviewUrl ? (
           <div className="relative">
@@ -273,7 +223,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
             />
             <button
               type="button"
-              onClick={scannerError ? handleTakeFallbackPhoto : capturePhotoFromStream}
+              onClick={handleTakeFallbackPhoto}
               className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 app-surface app-border rounded-lg text-sm font-medium app-text shadow"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -285,14 +235,14 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
         ) : (
           <button
             type="button"
-            onClick={scannerError ? handleTakeFallbackPhoto : capturePhotoFromStream}
+            onClick={handleTakeFallbackPhoto}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed app-border rounded-lg app-muted active:border-[color:var(--app-accent)] hover:text-[color:var(--app-accent)] hover:border-[color:var(--app-accent)] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            {scannerError ? 'Prendre photo' : "Capturer l'etiquette"}
+            Prendre photo de l'etiquette
           </button>
         )}
       </div>
