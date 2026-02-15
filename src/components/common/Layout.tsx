@@ -19,7 +19,7 @@ const tabs: TabDef[] = [
     label: "Accueil",
     color: "#f5f5f7",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
         <polyline points="9 22 9 12 15 12 15 22" />
       </svg>
@@ -30,7 +30,7 @@ const tabs: TabDef[] = [
     label: "Controles",
     color: "#2997FF",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
       </svg>
     ),
@@ -40,7 +40,7 @@ const tabs: TabDef[] = [
     label: "Tracabilite",
     color: "#0EA5E9",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M4 7V5a1 1 0 011-1h2M20 7V5a1 1 0 00-1-1h-2M4 17v2a1 1 0 001 1h2M20 17v2a1 1 0 01-1 1h-2M7 12h10" />
       </svg>
     ),
@@ -50,7 +50,7 @@ const tabs: TabDef[] = [
     label: "Taches",
     color: "#34C759",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M8 6h11M8 12h11M8 18h11M4 6h.01M4 12h.01M4 18h.01" />
       </svg>
     ),
@@ -60,9 +60,22 @@ const tabs: TabDef[] = [
     label: "Fiches",
     color: "#2997FF",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7V4z" />
         <path d="M7 4H6a2 2 0 00-2 2v12a2 2 0 002 2h1M10 9h6M10 13h6" />
+      </svg>
+    ),
+  },
+  {
+    path: "/orders",
+    label: "Commandes",
+    color: "#FF6B35",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 6h15l-1.5 8.5H8.2L6 6z" />
+        <path d="M6 6L5 3H2" />
+        <circle cx="9" cy="19" r="1.5" />
+        <circle cx="18" cy="19" r="1.5" />
       </svg>
     ),
   },
@@ -71,7 +84,7 @@ const tabs: TabDef[] = [
     label: "Factures",
     color: "#FF9F0A",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="5" y="3.5" width="14" height="17" rx="2" />
         <path d="M8 8h8M8 12h8M8 16h5" />
       </svg>
@@ -82,7 +95,7 @@ const tabs: TabDef[] = [
     label: "Agent IA",
     color: "#38bdf8",
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="4" y="4" width="16" height="11" rx="3" />
         <path d="M12 15v3M9 20h6M9 9h.01M15 9h.01" />
       </svg>
@@ -250,7 +263,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 aria-selected={active}
                 aria-current={active ? "page" : undefined}
                 onClick={() => navigate(tab.path)}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[42px] sm:min-h-[46px] px-0.5 transition-all duration-300 active:opacity-60"
+                className="flex flex-col items-center justify-center flex-1 min-h-[42px] sm:min-h-[46px] px-0.5 transition-all duration-300 active:opacity-60"
                 style={{ color: active ? tab.color : undefined }}
               >
                 <span
@@ -269,7 +282,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   )}
                 </span>
                 <span
-                  className="text-[8px] sm:text-[9px] font-medium leading-tight uppercase tracking-[0.06em] transition-colors duration-300"
+                  className="text-[7px] sm:text-[8px] font-medium leading-tight uppercase tracking-[0.06em] transition-colors duration-300"
                   style={active ? { color: tab.color } : undefined}
                 >
                   {tab.label}

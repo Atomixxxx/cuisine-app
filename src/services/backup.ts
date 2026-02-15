@@ -6,6 +6,8 @@ import type {
   Equipment,
   Invoice,
   InvoiceItem,
+  Order,
+  OrderItem,
   PriceHistory,
   ProductTrace,
   Task,
@@ -27,6 +29,7 @@ export interface BackupPayload {
   temperatureRecords: TemperatureRecord[];
   oilChangeRecords: OilChangeRecord[];
   tasks: Task[];
+  orders: Order[];
   productTraces: ProductTrace[];
   invoices: Invoice[];
   priceHistory: PriceHistory[];
@@ -138,24 +141,39 @@ function parseTask(value: unknown): Task | null {
   const order = toNumber(value.order);
   const estimatedTime = toNumber(value.estimatedTime);
   const notes = toOptionalSanitizedString(value.notes);
-  const validCategory =
+  let normalizedCategory: Task['category'] | null = null;
+  if (
     category === 'entrees' ||
     category === 'plats' ||
     category === 'desserts' ||
     category === 'mise_en_place' ||
     category === 'nettoyage' ||
-    category === 'commandes' ||
-    category === 'autre';
+    category === 'autre'
+  ) {
+    normalizedCategory = category;
+  } else if (category === 'commandes') {
+    // Legacy backups may still contain "commandes"; fallback to task category "autre".
+    normalizedCategory = 'autre';
+  }
   const validPriority = priority === 'high' || priority === 'normal' || priority === 'low';
   const validRecurring = recurring === null || recurring === 'daily' || recurring === 'weekly';
-  if (!id || !title || !validCategory || !validPriority || completed === null || !createdAt || archived === null || order === null) {
+  if (
+    !id ||
+    !title ||
+    !normalizedCategory ||
+    !validPriority ||
+    completed === null ||
+    !createdAt ||
+    archived === null ||
+    order === null
+  ) {
     return null;
   }
   if (!validRecurring) return null;
   return {
     id,
     title,
-    category,
+    category: normalizedCategory,
     priority,
     completed,
     recurring,
@@ -165,6 +183,83 @@ function parseTask(value: unknown): Task | null {
     order: Math.round(order),
     estimatedTime: estimatedTime ?? undefined,
     notes,
+  };
+}
+
+function parseOrderItem(value: unknown): OrderItem | null {
+  if (!isObject(value)) return null;
+  const id = toSanitizedString(value.id);
+  const productName = toSanitizedString(value.productName);
+  const quantity = toNumber(value.quantity);
+  const unit = value.unit;
+  const unitPriceHT = toNumber(value.unitPriceHT);
+  const totalPriceHT = toNumber(value.totalPriceHT);
+  const notes = toOptionalSanitizedString(value.notes);
+  const validUnit =
+    unit === 'kg' ||
+    unit === 'g' ||
+    unit === 'l' ||
+    unit === 'ml' ||
+    unit === 'unite';
+  if (!id || !productName || quantity === null || quantity <= 0 || !validUnit) return null;
+  return {
+    id,
+    productName,
+    quantity,
+    unit,
+    unitPriceHT: unitPriceHT ?? undefined,
+    totalPriceHT: totalPriceHT ?? undefined,
+    notes,
+  };
+}
+
+function parseOrder(value: unknown): Order | null {
+  if (!isObject(value)) return null;
+  const id = toSanitizedString(value.id);
+  const orderNumber = toSanitizedString(value.orderNumber);
+  const supplier = toSanitizedString(value.supplier);
+  const status = value.status;
+  const orderDate = toDate(value.orderDate);
+  const expectedDeliveryDate = toDate(value.expectedDeliveryDate);
+  const actualDeliveryDate = toDate(value.actualDeliveryDate);
+  const totalHT = toNumber(value.totalHT);
+  const notes = toOptionalSanitizedString(value.notes);
+  const invoiceId = toOptionalSanitizedString(value.invoiceId);
+  const createdAt = toDate(value.createdAt);
+  const updatedAt = toDate(value.updatedAt);
+  const validStatus =
+    status === 'draft' ||
+    status === 'sent' ||
+    status === 'received' ||
+    status === 'invoiced';
+  if (
+    !id ||
+    !orderNumber ||
+    !supplier ||
+    !validStatus ||
+    !orderDate ||
+    totalHT === null ||
+    !createdAt ||
+    !updatedAt
+  ) {
+    return null;
+  }
+  const parsedItems = parseArray(value.items, parseOrderItem);
+  if (!parsedItems) return null;
+  return {
+    id,
+    orderNumber,
+    supplier,
+    status,
+    items: parsedItems,
+    orderDate,
+    expectedDeliveryDate: expectedDeliveryDate ?? undefined,
+    actualDeliveryDate: actualDeliveryDate ?? undefined,
+    totalHT,
+    notes,
+    invoiceId,
+    createdAt,
+    updatedAt,
   };
 }
 
@@ -317,12 +412,13 @@ export function validateBackupImportPayload(value: unknown): ValidatedBackupPayl
   const temperatureRecords = parseArray(value.temperatureRecords, parseTemperatureRecord);
   const oilChangeRecords = parseArray(value.oilChangeRecords, parseOilChangeRecord);
   const tasks = parseArray(value.tasks, parseTask);
+  const orders = parseArray(value.orders, parseOrder);
   const productTraces = parseArray(value.productTraces, parseProductTrace);
   const invoices = parseArray(value.invoices, parseInvoice);
   const priceHistory = parseArray(value.priceHistory, parsePriceHistory);
   const settings = parseArray(value.settings, parseSettings);
 
-  if (!equipment || !temperatureRecords || !oilChangeRecords || !tasks || !productTraces || !invoices || !priceHistory || !settings) {
+  if (!equipment || !temperatureRecords || !oilChangeRecords || !tasks || !orders || !productTraces || !invoices || !priceHistory || !settings) {
     return null;
   }
 
@@ -333,6 +429,7 @@ export function validateBackupImportPayload(value: unknown): ValidatedBackupPayl
     temperatureRecords,
     oilChangeRecords,
     tasks,
+    orders,
     productTraces,
     invoices,
     priceHistory,
@@ -361,6 +458,7 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
     temperatureRecords: await db.temperatureRecords.toArray(),
     oilChangeRecords: await db.oilChangeRecords.toArray(),
     tasks: await db.tasks.toArray(),
+    orders: await db.orders.toArray(),
     productTraces: (await db.productTraces.toArray()).map((p) => ({
       ...p,
       photo: undefined,

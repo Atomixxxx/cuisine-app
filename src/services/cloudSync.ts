@@ -23,6 +23,12 @@ export {
 } from './cloud-sync/tasks';
 
 export {
+  fetchRemoteOrders,
+  upsertRemoteOrder,
+  deleteRemoteOrder,
+} from './cloud-sync/orders';
+
+export {
   fetchRemoteProducts,
   fetchRemoteLatestProductByBarcode,
   upsertRemoteProduct,

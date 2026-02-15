@@ -4,6 +4,8 @@ import type {
   Equipment,
   Ingredient,
   Invoice,
+  Order,
+  OrderFilters,
   OilChangeRecord,
   PriceHistory,
   ProductTrace,
@@ -13,6 +15,7 @@ import type {
   TemperatureRecord,
 } from '../types';
 import { createInvoiceSlice } from './invoiceSlice';
+import { createOrderSlice } from './orderSlice';
 import { createProductSlice } from './productSlice';
 import { createRecipeSlice } from './recipeSlice';
 import { createSettingsSlice } from './settingsSlice';
@@ -50,6 +53,12 @@ export interface AppState {
   updateTask: (t: Task) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
+  getOrders: (filters?: OrderFilters) => Promise<Order[]>;
+  addOrder: (o: Order) => Promise<void>;
+  updateOrder: (o: Order) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
+  generateOrderNumber: () => Promise<string>;
+
   getProducts: (options?: { limit?: number; offset?: number }) => Promise<ProductTrace[]>;
   getLatestProductByBarcode: (barcode: string) => Promise<ProductTrace | null>;
   addProduct: (p: ProductTrace) => Promise<void>;
@@ -85,6 +94,7 @@ export const useAppStore = create<AppState>()((...args) => ({
   ...createSettingsSlice(...args),
   ...createTemperatureSlice(...args),
   ...createTaskSlice(...args),
+  ...createOrderSlice(...args),
   ...createProductSlice(...args),
   ...createInvoiceSlice(...args),
   ...createRecipeSlice(...args),

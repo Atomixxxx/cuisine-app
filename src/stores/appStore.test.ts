@@ -10,6 +10,7 @@ beforeEach(async () => {
   await db.tasks.clear();
   await db.productTraces.clear();
   await db.invoices.clear();
+  await db.orders.clear();
   await db.priceHistory.clear();
   await db.settings.clear();
   await db.ingredients.clear();

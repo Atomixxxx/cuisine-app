@@ -216,12 +216,13 @@ export default function Settings() {
 
         await db.transaction(
           'rw',
-          [db.equipment, db.temperatureRecords, db.oilChangeRecords, db.tasks, db.productTraces, db.invoices, db.priceHistory, db.settings],
+          [db.equipment, db.temperatureRecords, db.oilChangeRecords, db.tasks, db.orders, db.productTraces, db.invoices, db.priceHistory, db.settings],
           async () => {
             await db.equipment.clear();
             await db.temperatureRecords.clear();
             await db.oilChangeRecords.clear();
             await db.tasks.clear();
+            await db.orders.clear();
             await db.productTraces.clear();
             await db.invoices.clear();
             await db.priceHistory.clear();
@@ -231,6 +232,7 @@ export default function Settings() {
             if (data.temperatureRecords?.length) await db.temperatureRecords.bulkAdd(data.temperatureRecords);
             if (data.oilChangeRecords?.length) await db.oilChangeRecords.bulkAdd(data.oilChangeRecords);
             if (data.tasks?.length) await db.tasks.bulkAdd(data.tasks);
+            if (data.orders?.length) await db.orders.bulkAdd(data.orders);
             if (data.productTraces?.length) await db.productTraces.bulkAdd(data.productTraces);
             if (data.invoices?.length) await db.invoices.bulkAdd(data.invoices);
             if (data.priceHistory?.length) await db.priceHistory.bulkAdd(data.priceHistory);

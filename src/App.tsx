@@ -13,6 +13,7 @@ const TraceabilityPage = lazy(() => import("./pages/Traceability"));
 const TasksPage = lazy(() => import("./pages/Tasks"));
 const InvoicesPage = lazy(() => import("./pages/Invoices"));
 const RecipesPage = lazy(() => import("./pages/Recipes"));
+const OrdersPage = lazy(() => import("./pages/Orders"));
 const AssistantPage = lazy(() => import("./pages/Assistant"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
@@ -117,8 +118,9 @@ export default function App() {
               <Route path="/temperature" element={withSection('Controles', <TemperaturePage />)} />
               <Route path="/traceability" element={withSection('Tracabilite', <TraceabilityPage />)} />
               <Route path="/tasks" element={withSection('Taches', <TasksPage />)} />
-              <Route path="/invoices" element={withSection('Factures', <InvoicesPage />)} />
               <Route path="/recipes" element={withSection('Fiches techniques', <RecipesPage />)} />
+              <Route path="/orders" element={withSection('Commandes', <OrdersPage />)} />
+              <Route path="/invoices" element={withSection('Factures', <InvoicesPage />)} />
               <Route path="/assistant" element={withSection('Agent IA', <AssistantPage />)} />
               <Route path="/dashboard" element={withSection('Dashboard', <Dashboard />)} />
               <Route path="/settings" element={withSection('Parametres', <SettingsPage />)} />

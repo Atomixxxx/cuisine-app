@@ -44,7 +44,7 @@ export interface ProductTrace {
 }
 
 export type TaskPriority = 'high' | 'normal' | 'low';
-export type TaskCategory = 'entrees' | 'plats' | 'desserts' | 'mise_en_place' | 'nettoyage' | 'commandes' | 'autre';
+export type TaskCategory = 'entrees' | 'plats' | 'desserts' | 'mise_en_place' | 'nettoyage' | 'autre';
 export type RecurringType = 'daily' | 'weekly' | null;
 
 export interface Task {
@@ -60,6 +60,41 @@ export interface Task {
   completedAt?: Date;
   archived: boolean;
   order: number;
+}
+
+export type OrderStatus = 'draft' | 'sent' | 'received' | 'invoiced';
+
+export interface OrderItem {
+  id: string;
+  productName: string;
+  quantity: number;
+  unit: IngredientUnit;
+  unitPriceHT?: number;
+  totalPriceHT?: number;
+  notes?: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  supplier: string;
+  status: OrderStatus;
+  items: OrderItem[];
+  orderDate: Date;
+  expectedDeliveryDate?: Date;
+  actualDeliveryDate?: Date;
+  totalHT: number;
+  notes?: string;
+  invoiceId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderFilters {
+  status?: OrderStatus | OrderStatus[];
+  supplier?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 export interface Invoice {
@@ -173,8 +208,21 @@ export const CATEGORIES: Record<TaskCategory, string> = {
   desserts: 'Desserts',
   mise_en_place: 'Mise en place',
   nettoyage: 'Nettoyage',
-  commandes: 'Commandes',
   autre: 'Autre',
+};
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  draft: 'Brouillon',
+  sent: 'Envoyee',
+  received: 'Recue',
+  invoiced: 'Facturee',
+};
+
+export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
+  draft: '#64748B',
+  sent: '#2563EB',
+  received: '#16A34A',
+  invoiced: '#7C3AED',
 };
 
 export const PRODUCT_CATEGORIES = [

@@ -4,6 +4,7 @@ import type {
   TemperatureRecord,
   ProductTrace,
   Task,
+  Order,
   Invoice,
   PriceHistory,
   AppSettings,
@@ -22,6 +23,7 @@ class CuisineDB extends Dexie {
   oilChangeRecords!: Table<OilChangeRecord>;
   productTraces!: Table<ProductTrace>;
   tasks!: Table<Task>;
+  orders!: Table<Order>;
   invoices!: Table<Invoice>;
   priceHistory!: Table<PriceHistory>;
   settings!: Table<AppSettings>;
@@ -123,6 +125,62 @@ class CuisineDB extends Dexie {
             row.status = 'active';
           }
         });
+      });
+
+    this.version(9)
+      .stores({
+        orders: 'id, supplier, status, orderDate, createdAt, orderNumber',
+      })
+      .upgrade(async (tx) => {
+        type LegacyTaskRecord = Omit<Task, 'category'> & { category: Task['category'] | 'commandes' };
+
+        const taskTable = tx.table<LegacyTaskRecord>('tasks');
+        const orderTable = tx.table<Order>('orders');
+        const legacyTasks = await taskTable.toArray();
+        const commandTasks = legacyTasks.filter((task) => task.category === 'commandes');
+        if (commandTasks.length === 0) return;
+
+        const sequenceByYear = new Map<number, number>();
+        commandTasks.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+        const migratedOrders: Order[] = commandTasks.map((task) => {
+          const orderDate = Number.isFinite(new Date(task.createdAt).getTime())
+            ? new Date(task.createdAt)
+            : new Date();
+          const year = orderDate.getFullYear();
+          const nextSeq = (sequenceByYear.get(year) ?? 0) + 1;
+          sequenceByYear.set(year, nextSeq);
+          const paddedSeq = String(nextSeq).padStart(3, '0');
+
+          return {
+            id: task.id,
+            orderNumber: `CMD-${year}-${paddedSeq}`,
+            supplier: 'A definir',
+            status: task.completed ? 'received' : 'draft',
+            items: [
+              {
+                id: `${task.id}-1`,
+                productName: task.title,
+                quantity: 1,
+                unit: 'unite',
+                notes: task.notes,
+              },
+            ],
+            orderDate,
+            expectedDeliveryDate: undefined,
+            actualDeliveryDate: task.completedAt ? new Date(task.completedAt) : undefined,
+            totalHT: 0,
+            notes: task.notes,
+            invoiceId: undefined,
+            createdAt: orderDate,
+            updatedAt: task.completedAt ? new Date(task.completedAt) : orderDate,
+          };
+        });
+
+        if (migratedOrders.length > 0) {
+          await orderTable.bulkPut(migratedOrders);
+          await taskTable.bulkDelete(commandTasks.map((task) => task.id));
+        }
       });
   }
 }
