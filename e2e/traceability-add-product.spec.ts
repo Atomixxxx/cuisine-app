@@ -6,6 +6,9 @@ test.describe('Traceability product flow', () => {
 
     await page.goto('/traceability?tab=scanner&quick=scan');
 
+    // Step 1: skip barcode, go to photo step
+    await page.getByRole('button', { name: /photo etiquette/i }).click();
+    // Step 2: skip photo, continue to form
     await page.getByRole('button', { name: /continuer/i }).click();
 
     await page.getByPlaceholder(/filet de saumon/i).fill(productName);
