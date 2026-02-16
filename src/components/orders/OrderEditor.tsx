@@ -150,12 +150,14 @@ export default function OrderEditor({
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     const nextDraft = buildDraft(order, defaultOrderNumber);
     setDraft(nextDraft);
     setSelectedInvoiceId(nextDraft.invoiceId ?? '');
     setError(null);
+    setShowDetails(false);
   }, [order, defaultOrderNumber]);
 
   const supplierQuickPicks = useMemo(
@@ -175,6 +177,11 @@ export default function OrderEditor({
   const linkedInvoice = useMemo(
     () => invoices.find((invoice) => invoice.id === draft.invoiceId),
     [draft.invoiceId, invoices],
+  );
+  const parsedNoteItems = useMemo(
+    () =>
+      parseHandwrittenItems(draft.notes ?? '').filter((item) => item.productName.trim().length > 0),
+    [draft.notes],
   );
 
   const nextStatuses = getNextStatuses(draft.status);
@@ -200,32 +207,9 @@ export default function OrderEditor({
     updateItems(nextItems);
   };
 
-  const handleAddItem = () => {
-    updateItems([...draft.items, makeEmptyItem()]);
-  };
-
   const handleRemoveItem = (itemId: string) => {
     if (draft.items.length <= 1) return;
     updateItems(draft.items.filter((item) => item.id !== itemId));
-  };
-
-  const handleConvertNotesToItems = () => {
-    const noteText = draft.notes?.trim() ?? '';
-    if (!noteText) {
-      setError('Ajoute une note avant de convertir en articles.');
-      return;
-    }
-
-    const parsedItems = parseHandwrittenItems(noteText).filter((item) => item.productName.trim().length > 0);
-    if (parsedItems.length === 0) {
-      setError('Aucune ligne de note exploitable.');
-      return;
-    }
-
-    const nonEmptyCurrentItems = draft.items.filter((item) => item.productName.trim().length > 0);
-    const nextItems = nonEmptyCurrentItems.length > 0 ? [...nonEmptyCurrentItems, ...parsedItems] : parsedItems;
-    updateItems(nextItems);
-    setError(null);
   };
 
   const applyStatus = (nextStatus: OrderStatus, invoiceId?: string) => {
@@ -239,11 +223,18 @@ export default function OrderEditor({
   };
 
   const handleSave = async () => {
+    const manualItems = draft.items.filter((item) => item.productName.trim().length > 0);
+    const itemsFromNotes = parseHandwrittenItems(draft.notes ?? '').filter(
+      (item) => item.productName.trim().length > 0,
+    );
+    const finalItems = itemsFromNotes.length > 0 ? itemsFromNotes : manualItems;
+    const finalTotalHT = calculateOrderTotal(finalItems);
+
     const validation = orderSchema.safeParse({
       supplier: canonicalizeSupplierName(draft.supplier),
-      items: draft.items,
+      items: finalItems,
       orderDate: new Date(draft.orderDate),
-      totalHT: draft.totalHT,
+      totalHT: finalTotalHT,
       notes: draft.notes,
     });
     if (!validation.success) {
@@ -258,7 +249,8 @@ export default function OrderEditor({
       const payload: Order = {
         ...draft,
         supplier: canonicalSupplier,
-        totalHT: calculateOrderTotal(draft.items),
+        items: finalItems,
+        totalHT: finalTotalHT,
         updatedAt: new Date(),
       };
       await onSave(payload);
@@ -298,11 +290,6 @@ export default function OrderEditor({
       <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-20">
         <div className="app-panel space-y-3">
           <div>
-            <label className="block text-[11px] app-muted mb-1">Numero de commande</label>
-            <input value={draft.orderNumber} readOnly className="app-input w-full opacity-80" />
-          </div>
-
-          <div>
             <label className="block text-[11px] app-muted mb-1">Fournisseur</label>
             <input
               value={draft.supplier}
@@ -335,88 +322,90 @@ export default function OrderEditor({
               </div>
             )}
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[11px] app-muted mb-1">Date commande</label>
-              <input
-                type="date"
-                value={toDateInput(draft.orderDate)}
-                onChange={(e) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    orderDate: new Date(e.target.value),
-                    updatedAt: new Date(),
-                  }))
-                }
-                className="app-input w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] app-muted mb-1">Livraison prevue</label>
-              <input
-                type="date"
-                value={toDateInput(draft.expectedDeliveryDate)}
-                onChange={(e) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    expectedDeliveryDate: e.target.value ? new Date(e.target.value) : undefined,
-                    updatedAt: new Date(),
-                  }))
-                }
-                className="app-input w-full"
-              />
-            </div>
-          </div>
         </div>
 
         <div className="app-panel space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold app-text">Articles</h3>
-            <button
-              type="button"
-              onClick={handleAddItem}
-              className="px-2.5 py-1.5 rounded-lg app-surface-2 app-text text-xs font-semibold"
-            >
-              Ajouter
-            </button>
-          </div>
-          {draft.items.map((item, index) => (
-            <OrderItemEditor
-              key={item.id}
-              index={index}
-              item={item}
-              canRemove={draft.items.length > 1}
-              ingredientSuggestions={ingredientSuggestions}
-              onChange={(patch) => handleItemChange(item.id, patch)}
-              onRemove={() => handleRemoveItem(item.id)}
-            />
-          ))}
-        </div>
-
-        <div className="app-panel space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <label className="block text-[11px] app-muted">Note manuscrite (rattachee au fournisseur)</label>
-            <button
-              type="button"
-              onClick={handleConvertNotesToItems}
-              className="px-2.5 py-1.5 rounded-lg app-surface-2 app-text text-xs font-semibold"
-            >
-              Ajouter aux articles
-            </button>
-          </div>
+          <label className="block text-[11px] app-muted">
+            Note manuscrite (enregistree directement sur ce fournisseur)
+          </label>
           <textarea
             value={draft.notes ?? ''}
             onChange={(e) =>
               setDraft((prev) => ({ ...prev, notes: e.target.value, updatedAt: new Date() }))
             }
-            className="app-input w-full min-h-24 resize-y"
+            className="app-input w-full min-h-28 resize-y"
             placeholder={"Ex:\n3 kg tomates\nCitron x12\n2 l huile"}
           />
+          <div className="flex items-center justify-between text-xs app-muted">
+            <span>{parsedNoteItems.length} ligne(s) detectee(s)</span>
+            <span>Conversion auto a la sauvegarde</span>
+          </div>
           <div className="flex justify-between text-sm">
             <span className="app-muted">Total HT</span>
             <span className="font-semibold app-text">{draft.totalHT.toFixed(2)} EUR</span>
           </div>
+        </div>
+
+        <div className="app-panel">
+          <button
+            type="button"
+            onClick={() => setShowDetails((previous) => !previous)}
+            className="w-full flex items-center justify-between text-sm font-semibold app-text"
+          >
+            <span>Details (optionnel)</span>
+            <span className="app-muted">{showDetails ? 'Masquer' : 'Afficher'}</span>
+          </button>
+          {showDetails && (
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] app-muted mb-1">Date commande</label>
+                  <input
+                    type="date"
+                    value={toDateInput(draft.orderDate)}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        orderDate: new Date(e.target.value),
+                        updatedAt: new Date(),
+                      }))
+                    }
+                    className="app-input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] app-muted mb-1">Livraison prevue</label>
+                  <input
+                    type="date"
+                    value={toDateInput(draft.expectedDeliveryDate)}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        expectedDeliveryDate: e.target.value ? new Date(e.target.value) : undefined,
+                        updatedAt: new Date(),
+                      }))
+                    }
+                    className="app-input w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold app-text">Articles details</h3>
+                {draft.items.map((item, index) => (
+                  <OrderItemEditor
+                    key={item.id}
+                    index={index}
+                    item={item}
+                    canRemove={draft.items.length > 1}
+                    ingredientSuggestions={ingredientSuggestions}
+                    onChange={(patch) => handleItemChange(item.id, patch)}
+                    onRemove={() => handleRemoveItem(item.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="app-panel space-y-2">
