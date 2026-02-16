@@ -139,6 +139,7 @@ function formatBackupStatus(lastBackupAt: string | null): string {
 export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isDashboardRoute = location.pathname === '/dashboard';
   const online = useOnlineStatus();
   const expiringCount = useBadgeStore(s => s.expiringCount);
   const darkMode = useAppStore((s) => s.darkMode);
@@ -178,73 +179,74 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 app-header px-3 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between hairline-b">
-        <h1 className="text-[13px] sm:text-[14px] font-semibold tracking-tight app-text truncate">
-          CuisineControl
-        </h1>
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full app-surface-2">
-            {online ? (
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-[color:var(--app-success)]"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
-              </svg>
-            ) : (
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-[color:var(--app-warning)]"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
-              </svg>
-            )}
-            <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-[color:var(--app-success)]' : 'bg-[color:var(--app-warning)]'}`} />
-            <span className="ios-small app-muted">{online ? 'En ligne' : 'Hors ligne'}</span>
-          </div>
-          <div className="hidden md:block ios-small app-muted">
-            {formatBackupStatus(lastBackupAt)}
-          </div>
-          <button
-            onClick={() => navigate('/settings')}
-            className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
-            aria-label="Parametres"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
-            aria-label="Basculer le mode sombre"
-          >
-            {darkMode ? (
+      {!isDashboardRoute && (
+        <header className="sticky top-0 z-40 app-header px-3 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between hairline-b">
+          <h1 className="text-[13px] sm:text-[14px] font-semibold tracking-tight app-text truncate">
+            CuisineControl
+          </h1>
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full app-surface-2">
+              {online ? (
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-[color:var(--app-success)]"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
+                </svg>
+              ) : (
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-[color:var(--app-warning)]"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              )}
+              <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-[color:var(--app-success)]' : 'bg-[color:var(--app-warning)]'}`} />
+              <span className="ios-small app-muted">{online ? 'En ligne' : 'Hors ligne'}</span>
+            </div>
+            <div className="hidden md:block ios-small app-muted">
+              {formatBackupStatus(lastBackupAt)}
+            </div>
+            <button
+              onClick={() => navigate('/settings')}
+              className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+              aria-label="Parametres"
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
               </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </header>
+            </button>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center app-muted active:opacity-60 transition-opacity"
+              aria-label="Basculer le mode sombre"
+            >
+              {darkMode ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </header>
+      )}
 
       {/* Page content */}
       <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto pb-14">
