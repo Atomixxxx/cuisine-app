@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import OrderEditor from '../../components/orders/OrderEditor';
 import OrderList, { type OrderListFilters } from '../../components/orders/OrderList';
 import { canTransitionStatus } from '../../services/orderHelpers';
@@ -157,7 +157,7 @@ export default function OrdersPage() {
 
   return (
     <div className="app-page-wrap h-full pb-24">
-      <div className="app-hero-card space-y-2">
+      <div className="glass-card glass-hero space-y-2 animate-fade-in-up">
         <h1 className="ios-title app-text">Commandes</h1>
         <p className="text-[11px] sm:text-[12px] app-muted">
           Suivi des bons de commande fournisseur, du brouillon a la facture.
@@ -195,3 +195,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+

@@ -165,7 +165,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
-    <div className="min-h-screen app-bg app-text flex flex-col">
+    <div className="min-h-screen app-glass-bg app-text flex flex-col">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 px-3 py-2 rounded-lg app-accent-bg"
@@ -180,7 +180,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {!isDashboardRoute && (
-        <header className="sticky top-0 z-40 app-header px-3 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between hairline-b">
+        <header className="sticky top-0 z-40 glass-header px-3 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between">
           <h1 className="text-[13px] sm:text-[14px] font-semibold tracking-tight app-text truncate">
             CuisineControl
           </h1>
@@ -254,7 +254,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Bottom tab bar — SpaceX style */}
-      <nav aria-label="Navigation principale" className="fixed bottom-0 inset-x-0 z-40 app-nav hairline-t pb-safe">
+      <nav aria-label="Navigation principale" className="fixed bottom-0 inset-x-0 z-40 glass-header hairline-t pb-safe">
         <div className="flex items-stretch justify-around" role="tablist">
           {tabs.map((tab) => {
             const active = isActive(tab.path);

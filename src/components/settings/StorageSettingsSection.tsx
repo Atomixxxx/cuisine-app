@@ -1,4 +1,4 @@
-import type { StorageEstimate } from '../../services/db';
+﻿import type { StorageEstimate } from '../../services/db';
 import { cn } from '../../utils';
 
 interface StorageSettingsSectionProps {
@@ -15,7 +15,7 @@ export default function StorageSettingsSection({
   return (
     <div>
       <h2 className="ios-caption-upper app-muted mb-2">Stockage local</h2>
-      <div className="rounded-2xl app-panel overflow-hidden">
+      <div className="rounded-2xl glass-card glass-panel overflow-hidden">
         <div className="ios-settings-row flex-col items-stretch gap-2">
           {storageEstimate ? (
             <>
@@ -46,3 +46,4 @@ export default function StorageSettingsSection({
     </div>
   );
 }
+

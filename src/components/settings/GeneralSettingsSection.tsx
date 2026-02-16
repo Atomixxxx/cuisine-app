@@ -1,4 +1,4 @@
-import { cn } from '../../utils';
+﻿import { cn } from '../../utils';
 
 interface GeneralSettingsSectionProps {
   inputClass: string;
@@ -22,7 +22,7 @@ export default function GeneralSettingsSection({
   return (
     <div>
       <h2 className="ios-caption-upper app-muted mb-2">General</h2>
-      <div className="rounded-2xl app-panel overflow-hidden">
+      <div className="rounded-2xl glass-card glass-panel overflow-hidden">
         <div className="ios-settings-row flex-col items-stretch gap-1.5">
           <label className="text-[14px] app-text">Nom de l'etablissement</label>
           <input
@@ -62,3 +62,4 @@ export default function GeneralSettingsSection({
     </div>
   );
 }
+

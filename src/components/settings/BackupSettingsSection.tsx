@@ -1,4 +1,4 @@
-import type { ChangeEvent, RefObject } from 'react';
+﻿import type { ChangeEvent, RefObject } from 'react';
 import { cn } from '../../utils';
 
 interface MediaIntegrityState {
@@ -32,7 +32,7 @@ export default function BackupSettingsSection({
   return (
     <div>
       <h2 className="ios-caption-upper app-muted mb-2">Sauvegarde</h2>
-      <div className="rounded-2xl app-panel overflow-hidden">
+      <div className="rounded-2xl glass-card glass-panel overflow-hidden">
         <div className="ios-settings-row">
           <p className="ios-body app-muted">
             Exportez vos donnees pour les sauvegarder ou les transferer. Les blobs locaux ne sont pas inclus, mais les URL cloud sont conservees.
@@ -91,3 +91,4 @@ export default function BackupSettingsSection({
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { Component } from 'react';
+﻿import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { logger } from '../../services/logger';
 import { reportError } from '../../services/errorTracking';
@@ -46,7 +46,7 @@ export default class SectionErrorBoundary extends Component<
 
     return (
       <div className="app-page-wrap py-8">
-        <div className="app-panel rounded-2xl p-5 text-center space-y-3">
+        <div className="glass-card glass-panel rounded-2xl p-5 text-center space-y-3">
           <div className="mx-auto w-12 h-12 rounded-full bg-[color:var(--app-warning)]/15 text-[color:var(--app-warning)] flex items-center justify-center">
             <svg
               width="22"
@@ -89,3 +89,4 @@ export default class SectionErrorBoundary extends Component<
     );
   }
 }
+

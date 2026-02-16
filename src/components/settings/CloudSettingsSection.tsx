@@ -1,4 +1,4 @@
-import { cn } from '../../utils';
+﻿import { cn } from '../../utils';
 
 interface CloudSettingsSectionProps {
   inputClass: string;
@@ -30,7 +30,7 @@ export default function CloudSettingsSection({
   return (
     <div>
       <h2 className="ios-caption-upper app-muted mb-2">Cloud Supabase</h2>
-      <div className="rounded-2xl app-panel overflow-hidden">
+      <div className="rounded-2xl glass-card glass-panel overflow-hidden">
         <div className="ios-settings-row">
           <span className="text-[14px] app-text">Configuration</span>
           <span className={cn('ios-body font-medium', supabaseAuthConfigured ? 'text-[color:var(--app-success)]' : 'app-muted')}>
@@ -95,3 +95,4 @@ export default function CloudSettingsSection({
     </div>
   );
 }
+

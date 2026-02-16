@@ -1,4 +1,4 @@
-import type { Order, OrderStatus } from '../../types';
+﻿import type { Order, OrderStatus } from '../../types';
 import EmptyState from '../common/EmptyState';
 import OrderCard from './OrderCard';
 import OrderKpiCards from './OrderKpiCards';
@@ -45,7 +45,7 @@ export default function OrderList({
     <div className="space-y-3">
       <OrderKpiCards orders={allOrders} />
 
-      <div className="app-panel space-y-2">
+      <div className="glass-card glass-panel space-y-2">
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {STATUS_FILTERS.map((statusFilter) => (
             <button
@@ -129,3 +129,4 @@ export default function OrderList({
     </div>
   );
 }
+

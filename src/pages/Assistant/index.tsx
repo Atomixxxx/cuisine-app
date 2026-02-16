@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { processAssistantMessage } from '../../services/assistant';
 import { cn } from '../../utils';
@@ -76,12 +76,12 @@ export default function AssistantPage() {
 
   return (
     <div className="app-page-wrap h-full pb-24">
-      <div className="app-hero-card space-y-2 spx-scan-line">
+      <div className="glass-card glass-hero space-y-2 spx-scan-line animate-fade-in-up">
         <h1 className="ios-title app-text">Assistant IA</h1>
         <p className="text-[14px] app-muted">{helperText}</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto app-panel space-y-3">
+      <div className="flex-1 overflow-y-auto glass-card glass-panel space-y-3 animate-fade-in-up stagger-2">
         {messages.map((message) => (
           <div key={message.id} className={cn('max-w-[92%] rounded-2xl px-3 py-2.5 text-[14px] whitespace-pre-wrap border', message.role === 'assistant' ? 'mr-auto app-surface-2 app-text border-[color:var(--app-border)]' : 'ml-auto app-accent-bg border-transparent')}>
             {message.text}
@@ -123,3 +123,4 @@ export default function AssistantPage() {
     </div>
   );
 }
+

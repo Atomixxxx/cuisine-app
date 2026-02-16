@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -311,41 +311,41 @@ export default function Traceability() {
 
   return (
     <div className="flex flex-col h-full app-bg app-page-wrap pb-24">
-      <div className="app-hero-card space-y-3 spx-scan-line">
+      <div className="glass-card glass-hero space-y-3 spx-scan-line animate-fade-in-up">
         <div>
           <h1 className="ios-title app-text">Tracabilite</h1>
           <p className="text-[11px] sm:text-[12px] app-muted">Lots, DLC et historique des produits.</p>
         </div>
         <div className="app-kpi-grid">
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Produits charges</p>
             <p className="app-kpi-value">{products.length}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Resultats filtres</p>
             <p className="app-kpi-value">{filteredProducts.length}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">DLC critiques</p>
             <p className="app-kpi-value">{urgentProducts}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Fournisseurs</p>
             <p className="app-kpi-value">{suppliers.length}</p>
           </div>
         </div>
       </div>
 
-      <div className="ios-segmented">
+      <div className="pill-toggle glass-card">
         <button
           onClick={() => setActiveTab('scanner')}
-          className={cn('ios-segmented-item', activeTab === 'scanner' && 'active')}
+          className={cn('pill-toggle-btn', activeTab === 'scanner' && 'active')}
         >
           Scanner
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={cn('ios-segmented-item', activeTab === 'history' && 'active')}
+          className={cn('pill-toggle-btn', activeTab === 'history' && 'active')}
         >
           Historique
         </button>
@@ -434,7 +434,7 @@ export default function Traceability() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col gap-2 p-3 rounded-2xl app-panel">
+            <div className="flex flex-col gap-2 p-3 rounded-2xl glass-card glass-panel">
               {/* Search */}
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 app-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -456,7 +456,7 @@ export default function Traceability() {
                   onChange={(e) => setFilterCategory(e.target.value)}
                   className="px-3 py-2.5 rounded-xl app-surface-2 app-text ios-body border-0 focus:outline-none focus:ring-2 focus:ring-[color:var(--app-accent)]"
                 >
-                  <option value="">Toutes catégories</option>
+                  <option value="">Toutes catÃ©gories</option>
                   {PRODUCT_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
@@ -521,7 +521,7 @@ export default function Traceability() {
               {(searchText || filterCategory || filterSupplier || dateFrom || dateTo || showUsed) && (
                 <div className="flex items-center justify-between">
                   <span className="ios-caption app-muted">
-                    {filteredProducts.length} résultat{filteredProducts.length !== 1 ? 's' : ''}
+                    {filteredProducts.length} rÃ©sultat{filteredProducts.length !== 1 ? 's' : ''}
                   </span>
                   <button
                     onClick={() => {
@@ -623,7 +623,7 @@ export default function Traceability() {
   );
 }
 
-/* ── List View (inline sub-component) ── */
+/* â”€â”€ List View (inline sub-component) â”€â”€ */
 
 function ProductListView({
   products,
@@ -640,7 +640,7 @@ function ProductListView({
         <svg className="w-16 h-16 app-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
-        <p className="ios-title3 app-muted">Aucun produit enregistré</p>
+        <p className="ios-title3 app-muted">Aucun produit enregistrÃ©</p>
       </div>
     );
   }
@@ -718,3 +718,4 @@ function ProductListView({
     </div>
   );
 }
+

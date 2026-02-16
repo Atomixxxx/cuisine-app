@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, memo } from 'react';
+﻿import { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Invoice } from '../../types';
 import { cn, formatDateShort, generateSupplierColor, blobToUrl, revokeUrl } from '../../utils';
@@ -98,28 +98,28 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
 
   return (
     <div className="space-y-3">
-      <div className="app-panel">
+      <div className="glass-card glass-panel">
         <div className="app-kpi-grid">
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Resultats</p>
             <p className="app-kpi-value">{filtered.length}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Fournisseurs</p>
             <p className="app-kpi-value">{suppliers.length}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Total TTC filtre</p>
             <p className="app-kpi-value text-[16px] font-semibold">{filteredAmount.toFixed(2)} EUR</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Regroupement</p>
             <p className="app-kpi-value text-[16px] font-semibold">{groupBySupplier ? 'Actif' : 'Off'}</p>
           </div>
         </div>
       </div>
 
-      <div className="app-panel space-y-2.5">
+      <div className="glass-card glass-panel space-y-2.5">
         <div className="relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 app-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <circle cx="11" cy="11" r="8" />
@@ -181,7 +181,7 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
       {loading && <ListSkeleton count={4} Card={InvoiceCardSkeleton} />}
 
       {!loading && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 text-center app-panel">
+        <div className="flex flex-col items-center justify-center py-20 text-center glass-card glass-panel">
           <svg className="w-16 h-16 app-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
           </svg>
@@ -220,7 +220,7 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
       {!loading && groupBySupplier && grouped && (
         <div className="space-y-4">
           {Array.from(grouped.entries()).map(([supplier, invs]) => (
-            <div key={supplier} className="app-panel">
+            <div key={supplier} className="glass-card glass-panel">
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: generateSupplierColor(supplier) }} />
                 <h3 className="ios-body font-semibold app-text">{supplier}</h3>
@@ -308,3 +308,4 @@ const InvoiceCard = memo(function InvoiceCard({ invoice, onClick }: { invoice: I
     </button>
   );
 });
+

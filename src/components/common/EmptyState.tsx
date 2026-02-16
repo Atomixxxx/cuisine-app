@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 interface EmptyStateProps {
   icon: React.ReactNode;
@@ -14,7 +14,7 @@ export default function EmptyState({
   action,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-6 text-center app-panel">
+    <div className="flex flex-col items-center justify-center py-20 px-6 text-center glass-card glass-panel">
       <div className="mb-5 app-muted">{icon}</div>
       <h3 className="ios-title3 app-text mb-2">
         {title}
@@ -26,4 +26,5 @@ export default function EmptyState({
     </div>
   );
 }
+
 

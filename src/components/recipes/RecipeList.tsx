@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import type { Recipe, RecipeCostSummary } from '../../types';
 import RecipeCard from './RecipeCard';
 import EmptyState from '../common/EmptyState';
@@ -53,18 +53,18 @@ export default function RecipeList({ recipes, costMap, onSelectRecipe, onNewReci
   return (
     <div className="space-y-3">
       {/* Hero */}
-      <div className="app-hero-card space-y-2">
+      <div className="glass-card glass-hero space-y-2 animate-fade-in-up">
         <h1 className="ios-title app-text">Fiches techniques</h1>
         <p className="ios-body app-muted">
           {recipes.length > 0
-            ? `${recipes.length} fiche${recipes.length > 1 ? 's' : ''} · Food cost moyen: ${(avgFoodCost * 100).toFixed(1)}%`
+            ? `${recipes.length} fiche${recipes.length > 1 ? 's' : ''} Â· Food cost moyen: ${(avgFoodCost * 100).toFixed(1)}%`
             : 'Recettes, cout matiere et food cost en temps reel.'}
         </p>
       </div>
 
       {/* Search + Sort */}
       {recipes.length > 0 && (
-        <div className="app-panel p-3 space-y-2">
+        <div className="glass-card glass-panel p-3 space-y-2 animate-fade-in-up stagger-2">
           <input
             type="text"
             value={search}
@@ -147,4 +147,5 @@ export default function RecipeList({ recipes, costMap, onSelectRecipe, onNewReci
     </div>
   );
 }
+
 

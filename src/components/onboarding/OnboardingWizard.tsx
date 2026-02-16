@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../stores/appStore';
 import { analytics } from '../../services/analytics';
@@ -96,7 +96,7 @@ export default function OnboardingWizard() {
 
         {/* Step-specific content */}
         {step === 0 && 'features' in current && (
-          <div className="app-panel space-y-2">
+          <div className="glass-card glass-panel space-y-2">
             {current.features.map((feature) => (
               <div key={feature} className="flex items-center gap-3 p-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[color:var(--app-success)] shrink-0">
@@ -116,7 +116,7 @@ export default function OnboardingWizard() {
                 onClick={() => {
                   void handleComplete().then(() => navigate(action.path));
                 }}
-                className="w-full p-3.5 rounded-xl app-panel text-left ios-body font-medium app-text flex items-center justify-between active:opacity-70 transition-opacity"
+                className="w-full p-3.5 rounded-xl glass-card glass-panel text-left ios-body font-medium app-text flex items-center justify-between active:opacity-70 transition-opacity"
               >
                 {action.label}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="app-muted">
@@ -148,3 +148,4 @@ export default function OnboardingWizard() {
     </div>
   );
 }
+

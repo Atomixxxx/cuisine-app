@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { buildSupplierQuickPicks, canonicalizeSupplierName } from '../../services/suppliers';
 import { calculateOrderTotal, canTransitionStatus, getNextStatuses, orderSchema } from '../../services/orderHelpers';
@@ -288,7 +288,7 @@ export default function OrderEditor({
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-20">
-        <div className="app-panel space-y-3">
+        <div className="glass-card glass-panel space-y-3">
           <div>
             <label className="block text-[11px] app-muted mb-1">Fournisseur</label>
             <input
@@ -324,7 +324,7 @@ export default function OrderEditor({
           </div>
         </div>
 
-        <div className="app-panel space-y-2">
+        <div className="glass-card glass-panel space-y-2">
           <label className="block text-[11px] app-muted">
             Note manuscrite (enregistree directement sur ce fournisseur)
           </label>
@@ -346,7 +346,7 @@ export default function OrderEditor({
           </div>
         </div>
 
-        <div className="app-panel">
+        <div className="glass-card glass-panel">
           <button
             type="button"
             onClick={() => setShowDetails((previous) => !previous)}
@@ -408,7 +408,7 @@ export default function OrderEditor({
           )}
         </div>
 
-        <div className="app-panel space-y-2">
+        <div className="glass-card glass-panel space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold app-text">Statut</h3>
             <OrderStatusBadge status={draft.status} />
@@ -470,7 +470,7 @@ export default function OrderEditor({
         </div>
 
         {error && (
-          <div className="app-panel border border-[color:var(--app-danger)]/40 text-[color:var(--app-danger)] text-sm">
+          <div className="glass-card glass-panel border border-[color:var(--app-danger)]/40 text-[color:var(--app-danger)] text-sm">
             {error}
           </div>
         )}
@@ -478,3 +478,4 @@ export default function OrderEditor({
     </div>
   );
 }
+

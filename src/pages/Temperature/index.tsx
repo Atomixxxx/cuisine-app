@@ -1,4 +1,4 @@
-import React, { useState, useCallback, Suspense, lazy } from 'react';
+﻿import React, { useState, useCallback, Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -94,7 +94,7 @@ export default function TemperaturePage() {
   return (
     <div className="app-page-wrap h-full pb-24">
       <div className="flex-shrink-0 space-y-3">
-        <div className="app-hero-card space-y-3 spx-scan-line">
+        <div className="glass-card glass-hero space-y-3 spx-scan-line animate-fade-in-up">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="ios-title app-text">Controles</h1>
@@ -136,38 +136,38 @@ export default function TemperaturePage() {
           <div className="app-kpi-grid">
             {activeCategory === 'cold' ? (
               <>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Equipements froid</p>
                   <p className="app-kpi-value">{equipment.length}</p>
                 </div>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Vue active</p>
                   <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">{SUB_VIEWS.find((sv) => sv.key === activeView)?.label}</p>
                 </div>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Debut export</p>
                   <p className="app-kpi-value ![font-size:12px] sm:![font-size:13px] font-semibold truncate">{exportFrom}</p>
                 </div>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Fin export</p>
                   <p className="app-kpi-value ![font-size:12px] sm:![font-size:13px] font-semibold truncate">{exportTo}</p>
                 </div>
               </>
             ) : (
               <>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Categorie</p>
                   <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">Huile</p>
                 </div>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Saisie</p>
                   <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">Par calendrier</p>
                 </div>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Trace</p>
                   <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">Historique</p>
                 </div>
-                <div className="app-kpi-card">
+                <div className="glass-card glass-kpi">
                   <p className="app-kpi-label">Export</p>
                   <p className="app-kpi-value !text-[13px] sm:!text-[14px] font-semibold">PDF</p>
                 </div>
@@ -176,7 +176,7 @@ export default function TemperaturePage() {
           </div>
         </div>
 
-        <div className="ios-segmented">
+        <div className="pill-toggle glass-card">
           {CONTROL_CATEGORIES.map((category) => (
             <button
               key={category.key}
@@ -184,7 +184,7 @@ export default function TemperaturePage() {
                 setActiveCategory(category.key);
                 if (category.key === 'oil') setShowExportPanel(false);
               }}
-              className={cn('ios-segmented-item', activeCategory === category.key && 'active')}
+              className={cn('pill-toggle-btn', activeCategory === category.key && 'active')}
             >
               {category.label}
             </button>
@@ -192,7 +192,7 @@ export default function TemperaturePage() {
         </div>
 
         {activeCategory === 'cold' && showExportPanel && (
-          <div className="app-panel space-y-3">
+          <div className="glass-card glass-panel space-y-3 animate-fade-in-up stagger-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block ios-caption font-medium app-muted mb-1">Du</label>
@@ -228,9 +228,9 @@ export default function TemperaturePage() {
         )}
 
         {activeCategory === 'cold' && (
-          <div className="ios-segmented">
+          <div className="pill-toggle glass-card">
             {SUB_VIEWS.map((sv) => (
-              <button key={sv.key} onClick={() => setActiveView(sv.key)} className={cn('ios-segmented-item', activeView === sv.key && 'active')}>
+              <button key={sv.key} onClick={() => setActiveView(sv.key)} className={cn('pill-toggle-btn', activeView === sv.key && 'active')}>
                 {sv.label}
               </button>
             ))}
@@ -259,4 +259,5 @@ export default function TemperaturePage() {
     </div>
   );
 }
+
 

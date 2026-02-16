@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   addMonths,
   differenceInCalendarDays,
@@ -261,7 +261,7 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
 
   return (
     <div className="space-y-3">
-      <div className="app-panel space-y-3">
+      <div className="glass-card glass-panel space-y-3">
         <h3 className="text-[16px] font-semibold app-text">Suivi huile friteuse (HACCP)</h3>
         <p className="ios-caption app-muted">
           Une feuille de changement d huile est un document de suivi utilise en restauration pour controler la qualite et le renouvellement des huiles de friture,
@@ -277,7 +277,7 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
         </div>
       </div>
 
-      <div className="app-panel space-y-3">
+      <div className="glass-card glass-panel space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="ios-body font-semibold app-text">Vue rapide friteuses</h4>
           {historyLoading && <span className="text-[12px] app-muted">Chargement...</span>}
@@ -318,14 +318,14 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
                   : 'Aucun changement enregistre'}
               </p>
               <p className="text-[12px] app-muted mt-1">
-                {summary.changesInMonth} ce mois · {summary.totalChanges} au total
+                {summary.changesInMonth} ce mois Â· {summary.totalChanges} au total
               </p>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="app-panel space-y-3">
+      <div className="glass-card glass-panel space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-[1fr,1fr,auto] gap-2">
           <select value={selectedFryer} onChange={(e) => setSelectedFryer(e.target.value)} className="app-input">
             {fryerOptions.map((fryer) => (
@@ -406,7 +406,7 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
         <p className="text-[12px] app-muted">Clique une date pour marquer que {selectedFryer} a ete changee.</p>
       </div>
 
-      <div className="app-panel">
+      <div className="glass-card glass-panel">
         <div className="flex items-center justify-between mb-2">
           <h4 className="ios-body font-semibold app-text">Historique ({selectedRecords.length})</h4>
           {loading && <span className="text-[12px] app-muted">Chargement...</span>}
@@ -450,4 +450,5 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
     </div>
   );
 }
+
 

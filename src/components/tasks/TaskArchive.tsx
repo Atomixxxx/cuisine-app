@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CATEGORIES, type Task, type TaskCategory } from '../../types';
@@ -110,7 +110,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
       </div>
 
       {/* Filters */}
-      <div className="m-3 mb-0 p-3 rounded-2xl app-panel space-y-3">
+      <div className="m-3 mb-0 p-3 rounded-2xl glass-card glass-panel space-y-3">
         {/* Category filter */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
           <button
@@ -168,7 +168,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
         {loading ? (
           <ListSkeleton count={5} Card={TaskItemSkeleton} />
         ) : filteredTasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center app-panel">
+          <div className="flex flex-col items-center justify-center py-20 text-center glass-card glass-panel">
             <svg
               className="w-16 h-16 app-muted mb-4"
               viewBox="0 0 24 24"
@@ -191,7 +191,7 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
               {filteredTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="app-panel p-3.5"
+                  className="glass-card glass-panel p-3.5"
                 >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -256,5 +256,6 @@ const TaskArchive: React.FC<TaskArchiveProps> = ({ onClose }) => {
 };
 
 export default TaskArchive;
+
 
 

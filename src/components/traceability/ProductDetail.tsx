@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { ProductTrace } from '../../types';
@@ -228,7 +228,7 @@ export default function ProductDetail({
             <InfoRow label="Fournisseur" value={product.supplier} />
             <InfoRow label="Numero de lot" value={product.lotNumber} />
             <InfoRow label="Allergenes" value={product.allergens?.length ? product.allergens.join(', ') : 'Aucun renseigne'} />
-            <InfoRow label="Catégorie" value={product.category} />
+            <InfoRow label="CatÃ©gorie" value={product.category} />
             <InfoRow
               label="Date de reception"
               value={format(new Date(product.receptionDate), 'dd MMMM yyyy', { locale: fr })}
@@ -250,7 +250,7 @@ export default function ProductDetail({
       {/* Delete confirmation overlay */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
-          <div role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-desc" className="app-panel p-6 max-w-sm w-full">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-desc" className="glass-card glass-panel p-6 max-w-sm w-full">
             <h3 id="delete-confirm-title" className="text-lg font-semibold app-text mb-2">
               Supprimer ce produit ?
             </h3>
@@ -290,4 +290,5 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
     </div>
   );
 }
+
 

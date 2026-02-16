@@ -1,4 +1,4 @@
-import { cn } from '../../utils';
+﻿import { cn } from '../../utils';
 
 interface SecuritySettingsSectionProps {
   inputClass: string;
@@ -30,7 +30,7 @@ export default function SecuritySettingsSection({
   return (
     <div>
       <h2 className="ios-caption-upper app-muted mb-2">Securite</h2>
-      <div className="rounded-2xl app-panel overflow-hidden">
+      <div className="rounded-2xl glass-card glass-panel overflow-hidden">
         <div className="ios-settings-row">
           <span className="text-[14px] app-text">Code PIN</span>
           <span className={cn('ios-body font-medium', pinEnabled ? 'text-[color:var(--app-success)]' : 'app-muted')}>
@@ -109,3 +109,4 @@ export default function SecuritySettingsSection({
     </div>
   );
 }
+

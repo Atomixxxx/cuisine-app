@@ -1,4 +1,4 @@
-import { cn } from '../../utils';
+﻿import { cn } from '../../utils';
 
 interface ApiSettingsSectionProps {
   inputClass: string;
@@ -18,7 +18,7 @@ export default function ApiSettingsSection({
   return (
     <div>
       <h2 className="ios-caption-upper app-muted mb-2">API Gemini</h2>
-      <div className="rounded-2xl app-panel overflow-hidden">
+      <div className="rounded-2xl glass-card glass-panel overflow-hidden">
         <div className="ios-settings-row">
           <span className="text-[14px] app-text">Statut</span>
           <span className={cn('flex items-center gap-1.5 ios-body font-medium', geminiConnected ? 'text-[color:var(--app-success)]' : 'app-muted')}>
@@ -50,3 +50,4 @@ export default function ApiSettingsSection({
     </div>
   );
 }
+

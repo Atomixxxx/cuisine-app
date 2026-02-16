@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+﻿import { useState, useMemo, useCallback } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { showError } from '../../stores/toastStore';
 import type { Invoice } from '../../types';
@@ -62,7 +62,7 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
 
   return (
     <div className="flex flex-col h-full app-bg app-page-wrap pb-24">
-      <div className="app-hero-card">
+      <div className="glass-card glass-hero">
         <div className="flex items-center justify-between gap-2">
           <button onClick={onClose} className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl app-surface-2 app-muted active:opacity-70" aria-label="Retour">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -88,7 +88,7 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
 
       <div className="flex-1 overflow-y-auto py-2 space-y-3">
         {imageUrls.length > 0 && (
-          <div className="app-panel overflow-hidden">
+          <div className="glass-card glass-panel overflow-hidden">
             <div className="relative overflow-hidden app-surface-2" style={{ minHeight: 200 }}>
               <img
                 src={imageUrls[currentPage]}
@@ -129,7 +129,7 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
           </div>
         )}
 
-        <div className="app-panel space-y-3">
+        <div className="glass-card glass-panel space-y-3">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full" style={{ backgroundColor: generateSupplierColor(invoice.supplier || '') }} />
             <h3 className="font-semibold app-text">{invoice.supplier || 'Fournisseur inconnu'}</h3>
@@ -147,7 +147,7 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
         </div>
 
         {invoice.items.length > 0 && (
-          <div className="app-panel overflow-hidden">
+          <div className="glass-card glass-panel overflow-hidden">
             <div className="p-3 border-b app-border">
               <h4 className="text-sm font-semibold app-text">Articles ({invoice.items.length})</h4>
             </div>
@@ -167,7 +167,7 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
           </div>
         )}
 
-        <div className="app-panel space-y-2">
+        <div className="glass-card glass-panel space-y-2">
           <div className="flex justify-between text-sm">
             <span className="app-muted">Total HT</span>
             <span className="app-text">{invoice.totalHT.toFixed(2)} EUR</span>
@@ -195,7 +195,7 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="app-panel p-6 max-w-sm w-full space-y-4">
+          <div className="glass-card glass-panel p-6 max-w-sm w-full space-y-4">
             <h3 className="text-lg font-bold app-text">Supprimer cette facture ?</h3>
             <p className="text-sm app-muted">Cette action est irreversible.</p>
             <div className="flex gap-3">
@@ -212,3 +212,4 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
     </div>
   );
 }
+

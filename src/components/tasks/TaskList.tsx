@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { CATEGORIES, type Task, type TaskCategory } from '../../types';
 import { cn } from '../../utils';
 import TaskItem from './TaskItem';
@@ -50,7 +50,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, grouped, onToggle, onEdit, o
 
   if (tasks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center app-panel">
+      <div className="flex flex-col items-center justify-center py-20 text-center glass-card glass-panel">
         <svg className="w-16 h-16 app-muted mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 11l3 3L22 4" />
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
@@ -67,7 +67,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, grouped, onToggle, onEdit, o
         Object.entries(groupedTasks).map(([cat, catTasks]) => {
           const isCollapsed = collapsedCategories.has(cat);
           return (
-            <div key={cat} className="app-panel">
+            <div key={cat} className="glass-card glass-panel">
               <button onClick={() => toggleCategory(cat)} className="flex items-center gap-2 w-full py-1 px-1 text-left">
                 <svg className={cn('w-4 h-4 app-muted transition-transform duration-200', isCollapsed && '-rotate-90')} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9" />
@@ -94,7 +94,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, grouped, onToggle, onEdit, o
       )}
 
       {completedTasks.length > 0 && (
-        <div className="app-panel mt-4">
+        <div className="glass-card glass-panel mt-4">
           <button onClick={() => setShowCompleted((p) => !p)} className="flex items-center gap-2 w-full py-1 px-1 text-left">
             <svg className={cn('w-4 h-4 app-muted transition-transform duration-200', !showCompleted && '-rotate-90')} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9" />
@@ -116,4 +116,5 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, grouped, onToggle, onEdit, o
 };
 
 export default TaskList;
+
 

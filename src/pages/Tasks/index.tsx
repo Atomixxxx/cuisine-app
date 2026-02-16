@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { isToday } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../stores/appStore';
@@ -148,7 +148,7 @@ const TasksPage: React.FC = () => {
 
   return (
     <div className="app-page-wrap h-full pb-28">
-      <div className="app-hero-card space-y-3 spx-scan-line">
+      <div className="glass-card glass-hero space-y-3 spx-scan-line animate-fade-in-up">
         <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="ios-title app-text">Taches</h1>
@@ -170,19 +170,19 @@ const TasksPage: React.FC = () => {
         </div>
 
         <div className="app-kpi-grid">
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Actives</p>
             <p className="app-kpi-value">{activeTasks.length}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Creees aujourd'hui</p>
             <p className="app-kpi-value">{todayTotal}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Terminees aujourd'hui</p>
             <p className="app-kpi-value">{todayCompleted}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Progression</p>
             <p className="app-kpi-value">{progressPercent}%</p>
           </div>
@@ -203,12 +203,12 @@ const TasksPage: React.FC = () => {
         )}
       </div>
 
-      <div className="app-panel space-y-3">
-        <div className="ios-segmented">
-          <button onClick={() => setGrouped(true)} className={cn('ios-segmented-item', grouped && 'active')}>
+      <div className="glass-card glass-panel space-y-3 animate-fade-in-up stagger-2">
+        <div className="pill-toggle glass-card">
+          <button onClick={() => setGrouped(true)} className={cn('pill-toggle-btn', grouped && 'active')}>
             Par categorie
           </button>
-          <button onClick={() => setGrouped(false)} className={cn('ios-segmented-item', !grouped && 'active')}>
+          <button onClick={() => setGrouped(false)} className={cn('pill-toggle-btn', !grouped && 'active')}>
             Liste
           </button>
         </div>
@@ -268,4 +268,5 @@ const TasksPage: React.FC = () => {
 };
 
 export default TasksPage;
+
 

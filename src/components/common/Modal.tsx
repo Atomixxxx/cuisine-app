@@ -90,7 +90,7 @@ export default function Modal({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={[
-          "animate-slide-up w-full rounded-t-[20px] sm:rounded-[20px] app-card outline-none shadow-[0_18px_42px_rgba(15,23,42,0.35)]",
+          "animate-slide-up w-full rounded-t-[20px] sm:rounded-[20px] glass-card glass-modal outline-none",
           sizeClasses[size],
         ].join(" ")}
       >

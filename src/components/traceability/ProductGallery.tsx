@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { differenceInDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -162,7 +162,7 @@ export default function ProductGallery({ products, onSelect, onDelete }: Product
 
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center app-panel">
+      <div className="flex flex-col items-center justify-center py-20 text-center glass-card glass-panel">
         <svg className="w-16 h-16 app-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
@@ -204,3 +204,4 @@ export default function ProductGallery({ products, onSelect, onDelete }: Product
     </div>
   );
 }
+

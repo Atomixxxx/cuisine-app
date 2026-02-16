@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Suspense, lazy, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, Suspense, lazy, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../../stores/appStore';
 import type { Invoice } from '../../types';
@@ -111,34 +111,34 @@ export default function InvoicesPage() {
 
   return (
     <div className="app-page-wrap h-full pb-24">
-      <div className="app-hero-card space-y-3 spx-scan-line">
+      <div className="glass-card glass-hero space-y-3 spx-scan-line animate-fade-in-up">
         <div>
           <h1 className="ios-title app-text">Factures</h1>
           <p className="text-[11px] sm:text-[12px] app-muted">Scan OCR, historique et cadencier prix.</p>
         </div>
         <div className="app-kpi-grid">
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Factures chargees</p>
             <p className="app-kpi-value">{invoices.length}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Fournisseurs detectes</p>
             <p className="app-kpi-value">{supplierCount}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Pagination</p>
             <p className="app-kpi-value text-[13px] font-semibold">{hasMoreInvoices ? 'Disponible' : 'Fin'}</p>
           </div>
-          <div className="app-kpi-card">
+          <div className="glass-card glass-kpi">
             <p className="app-kpi-label">Mode</p>
             <p className="app-kpi-value text-[13px] font-semibold">{activeSubTab}</p>
           </div>
         </div>
       </div>
 
-      <div className="ios-segmented">
+      <div className="pill-toggle glass-card">
         {TAB_CONFIG.map(({ key, label }) => (
-          <button key={key} onClick={() => handleTabChange(key)} className={cn('ios-segmented-item', activeSubTab === key && 'active')}>
+          <button key={key} onClick={() => handleTabChange(key)} className={cn('pill-toggle-btn', activeSubTab === key && 'active')}>
             {label}
           </button>
         ))}
@@ -200,4 +200,5 @@ export default function InvoicesPage() {
     </div>
   );
 }
+
 
