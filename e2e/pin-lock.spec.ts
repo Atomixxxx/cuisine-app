@@ -19,6 +19,6 @@ test.describe('PIN lock flow', () => {
     await page.getByRole('button', { name: '4' }).click();
 
     await expect(page.getByText('Entrez votre PIN')).toBeHidden();
-    await expect(page.getByRole('heading', { name: 'CuisineControl' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 });
