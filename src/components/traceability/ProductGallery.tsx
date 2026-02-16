@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { differenceInDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -32,7 +32,7 @@ const dlcBorderColors: Record<string, string> = {
   ok: '',
 };
 
-function ProductCard({
+const ProductCard = memo(function ProductCard({
   product,
   onSelect,
   onDelete,
@@ -41,25 +41,26 @@ function ProductCard({
   onSelect: () => void;
   onDelete: () => void;
 }) {
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const isUsed = product.status === 'used';
   const dlcStatus = getDlcStatus(product.expirationDate);
   const hasCloudPhoto = Boolean(product.photoUrl);
   const hasLocalPhoto = Boolean(product.photo);
   const mediaStatus = hasCloudPhoto ? 'cloud' : hasLocalPhoto ? 'local' : 'missing';
 
-  useEffect(() => {
+  const photoUrl = useMemo(() => {
     if (product.photo) {
-      const url = blobToUrl(product.photo);
-      setPhotoUrl(url);
-      return () => revokeUrl(url);
+      return blobToUrl(product.photo);
     }
     if (product.photoUrl) {
-      setPhotoUrl(product.photoUrl);
-      return;
+      return product.photoUrl;
     }
-    setPhotoUrl(null);
+    return null;
   }, [product.photo, product.photoUrl]);
+
+  useEffect(() => {
+    if (!photoUrl?.startsWith('blob:')) return;
+    return () => revokeUrl(photoUrl);
+  }, [photoUrl]);
 
   return (
     <div
@@ -123,7 +124,7 @@ function ProductCard({
       </div>
     </div>
   );
-}
+});
 
 export default function ProductGallery({ products, onSelect, onDelete }: ProductGalleryProps) {
   const parentRef = useRef<HTMLDivElement | null>(null);
@@ -203,4 +204,3 @@ export default function ProductGallery({ products, onSelect, onDelete }: Product
     </div>
   );
 }
-

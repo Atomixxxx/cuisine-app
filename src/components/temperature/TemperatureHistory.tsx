@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, startOfDay, endOfDay, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../stores/appStore';
@@ -25,7 +25,8 @@ export default function TemperatureHistory() {
     loadEquipment();
   }, [loadEquipment]);
 
-  const loadRecords = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
     let start: Date;
     let end: Date;
 
@@ -37,13 +38,15 @@ export default function TemperatureHistory() {
       end = endOfDay(selectedDate);
     }
 
-    const data = await getTemperatureRecords(start, end, filterEquipmentId || undefined);
-    setRecords(data);
+    const load = async () => {
+      const data = await getTemperatureRecords(start, end, filterEquipmentId || undefined);
+      if (!cancelled) setRecords(data);
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedDate, filterEquipmentId, getTemperatureRecords, dateRangeMode, rangeStart, rangeEnd]);
-
-  useEffect(() => {
-    loadRecords();
-  }, [loadRecords]);
 
   // Calendar data
   const calendarDays = useMemo(() => {

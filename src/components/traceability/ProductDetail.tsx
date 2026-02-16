@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { ProductTrace } from '../../types';
-import { cn, blobToUrl } from '../../utils';
+import { blobToUrl, cn, revokeUrl } from '../../utils';
 
 interface ProductDetailProps {
   product: ProductTrace;
@@ -23,7 +23,6 @@ export default function ProductDetail({
   onEdit,
   onNavigate,
 }: ProductDetailProps) {
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isUsed = product.status === 'used';
@@ -36,31 +35,29 @@ export default function ProductDetail({
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < products.length - 1;
 
-  useEffect(() => {
+  const photoUrl = useMemo(() => {
     if (product.photo) {
-      const url = blobToUrl(product.photo);
-      setPhotoUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else if (product.photoUrl) {
-      setPhotoUrl(product.photoUrl);
-    } else {
-      setPhotoUrl(null);
+      return blobToUrl(product.photo);
     }
+    if (product.photoUrl) return product.photoUrl;
+    return null;
   }, [product.photo, product.photoUrl]);
 
-  // Reset zoom on product change
   useEffect(() => {
-    setZoom(1);
-  }, [product.id]);
+    if (!photoUrl?.startsWith('blob:')) return;
+    return () => revokeUrl(photoUrl);
+  }, [photoUrl]);
 
   const handlePrev = useCallback(() => {
     if (hasPrev) {
+      setZoom(1);
       onNavigate(products[currentIndex - 1]);
     }
   }, [hasPrev, currentIndex, products, onNavigate]);
 
   const handleNext = useCallback(() => {
     if (hasNext) {
+      setZoom(1);
       onNavigate(products[currentIndex + 1]);
     }
   }, [hasNext, currentIndex, products, onNavigate]);

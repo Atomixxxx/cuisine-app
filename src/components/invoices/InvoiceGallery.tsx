@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Invoice } from '../../types';
 import { cn, formatDateShort, generateSupplierColor, blobToUrl, revokeUrl } from '../../utils';
@@ -239,30 +239,31 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
   );
 }
 
-function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => void }) {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+const InvoiceCard = memo(function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => void }) {
   const hasCloudImages = Array.isArray(invoice.imageUrls) && invoice.imageUrls.length > 0;
   const hasLocalImages = Array.isArray(invoice.images) && invoice.images.length > 0;
   const mediaStatus = hasCloudImages ? 'cloud' : hasLocalImages ? 'local' : 'missing';
 
-  useEffect(() => {
+  const thumbnailUrl = useMemo(() => {
     if (invoice.images && invoice.images.length > 0 && invoice.images[0] instanceof Blob) {
-      const url = blobToUrl(invoice.images[0]);
-      setThumbnailUrl(url);
-      return () => revokeUrl(url);
+      return blobToUrl(invoice.images[0]);
     }
     if (invoice.imageUrls && invoice.imageUrls.length > 0) {
-      setThumbnailUrl(invoice.imageUrls[0]);
-      return;
+      return invoice.imageUrls[0];
     }
-    setThumbnailUrl(null);
+    return null;
   }, [invoice.images, invoice.imageUrls]);
+
+  useEffect(() => {
+    if (!thumbnailUrl?.startsWith('blob:')) return;
+    return () => revokeUrl(thumbnailUrl);
+  }, [thumbnailUrl]);
 
   return (
     <button onClick={onClick} className="w-full flex items-center gap-3 p-3.5 rounded-2xl app-card text-left active:opacity-70 transition-opacity">
       <div className="w-14 h-18 rounded-xl overflow-hidden app-surface-2 shrink-0 flex items-center justify-center border border-[color:var(--app-border)]">
         {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
+          <img src={thumbnailUrl} alt={`Facture ${invoice.supplier || 'fournisseur inconnu'}`} loading="lazy" className="w-full h-full object-cover" />
         ) : (
           <svg className="w-6 h-6 app-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
@@ -306,5 +307,4 @@ function InvoiceCard({ invoice, onClick }: { invoice: Invoice; onClick: () => vo
       </div>
     </button>
   );
-}
-
+});

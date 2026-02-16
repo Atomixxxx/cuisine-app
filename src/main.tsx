@@ -14,6 +14,8 @@ import { migrateLegacyPinIfNeeded } from "./services/pin";
 import { runTextRepairMigration } from "./services/textRepairMigration";
 import { runPriceRepairMigration } from "./services/priceRepairMigration";
 import { restoreSession } from "./services/supabaseAuth";
+import { initWebVitals } from "./services/webVitals";
+import { initErrorTracking } from "./services/errorTracking";
 
 async function requestPersistentStorage(): Promise<void> {
   if (typeof navigator === "undefined" || !navigator.storage?.persist) return;
@@ -25,6 +27,8 @@ async function requestPersistentStorage(): Promise<void> {
 }
 
 async function bootstrapApp(): Promise<void> {
+  initErrorTracking();
+
   try {
     await migrateLegacyPinIfNeeded();
   } catch (error) {
@@ -92,6 +96,8 @@ async function bootstrapApp(): Promise<void> {
     logger.error("refreshBadges failed", { error });
     showError("Mise a jour des badges indisponible");
   }
+
+  void initWebVitals();
 }
 
 bootstrapApp().finally(() => {

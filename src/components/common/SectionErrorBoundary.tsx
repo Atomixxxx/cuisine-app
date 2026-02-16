@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { logger } from '../../services/logger';
+import { reportError } from '../../services/errorTracking';
 
 interface SectionErrorBoundaryProps {
   section: string;
@@ -27,6 +28,10 @@ export default class SectionErrorBoundary extends Component<
       section: this.props.section,
       error,
       componentStack: info.componentStack,
+    });
+    reportError(error, {
+      section: this.props.section,
+      componentStack: info.componentStack ?? undefined,
     });
   }
 

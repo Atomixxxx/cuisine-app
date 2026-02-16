@@ -33,7 +33,7 @@ export default function RecipeList({ recipes, costMap, onSelectRecipe, onNewReci
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    let list = q ? recipes.filter((r) => r.title.toLowerCase().includes(q)) : [...recipes];
+    const list = q ? recipes.filter((r) => r.title.toLowerCase().includes(q)) : [...recipes];
 
     list.sort((a, b) => {
       if (sort === 'name') return a.title.localeCompare(b.title);

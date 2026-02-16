@@ -52,8 +52,40 @@ export default function RecipesPage() {
   }, [getIngredients, getRecipes, getPriceHistory]);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let cancelled = false;
+
+    const loadInitialData = async () => {
+      try {
+        const [loadedIngredients, loadedRecipes, loadedPriceHistory] = await Promise.all([
+          getIngredients(),
+          getRecipes(),
+          getPriceHistory(),
+        ]);
+        if (cancelled) return;
+        setIngredients(loadedIngredients);
+        setRecipes(loadedRecipes);
+        setPriceHistory(loadedPriceHistory);
+
+        const newCostMap = new Map<string, RecipeCostSummary>();
+        for (const recipe of loadedRecipes) {
+          try {
+            const summary = await calculateRecipeCost(recipe.id);
+            newCostMap.set(recipe.id, summary);
+          } catch {
+            newCostMap.set(recipe.id, DEFAULT_SUMMARY);
+          }
+        }
+        if (!cancelled) setCostMap(newCostMap);
+      } catch {
+        if (!cancelled) showError('Impossible de charger les fiches techniques');
+      }
+    };
+
+    void loadInitialData();
+    return () => {
+      cancelled = true;
+    };
+  }, [getIngredients, getPriceHistory, getRecipes]);
 
   const handleSelectRecipe = (recipe: Recipe) => {
     setEditingRecipe(recipe);
@@ -70,7 +102,7 @@ export default function RecipesPage() {
     setEditingRecipe(null);
   };
 
-  const handleRecipeSaved = (_recipeId: string) => {
+  const handleRecipeSaved = () => {
     void loadData();
     setView('list');
     setEditingRecipe(null);
@@ -86,7 +118,7 @@ export default function RecipesPage() {
     setShowAiWizard(true);
   };
 
-  const handleAiRecipeCreated = (_recipeId: string) => {
+  const handleAiRecipeCreated = () => {
     void loadData();
     setShowAiWizard(false);
   };

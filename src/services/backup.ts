@@ -470,7 +470,11 @@ export async function buildBackupPayload(): Promise<BackupPayload> {
       imageUrls: (i.imageUrls ?? []).filter((url): url is string => typeof url === 'string' && url.trim().length > 0),
     })),
     priceHistory: await db.priceHistory.toArray(),
-    settings: (await db.settings.toArray()).map(({ geminiApiKey: _removed, ...rest }) => rest as AppSettings),
+    settings: (await db.settings.toArray()).map((setting) => {
+      const { geminiApiKey, ...rest } = setting as AppSettings & { geminiApiKey?: string };
+      void geminiApiKey;
+      return rest as AppSettings;
+    }),
   };
 }
 

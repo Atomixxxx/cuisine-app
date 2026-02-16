@@ -18,6 +18,7 @@ const TaskItemComponent: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, on
   const [expanded, setExpanded] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [completing, setCompleting] = useState(false);
+  const [isSwiping, setIsSwiping] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const swiping = useRef(false);
@@ -26,6 +27,7 @@ const TaskItemComponent: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, on
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     swiping.current = false;
+    setIsSwiping(false);
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -34,6 +36,7 @@ const TaskItemComponent: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, on
 
     if (!swiping.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
       swiping.current = true;
+      setIsSwiping(true);
     }
 
     if (swiping.current) {
@@ -50,6 +53,7 @@ const TaskItemComponent: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, on
       setSwipeX(0);
     }
     swiping.current = false;
+    setIsSwiping(false);
   }, [swipeX]);
 
   const handleToggle = useCallback(() => {
@@ -101,7 +105,7 @@ const TaskItemComponent: React.FC<TaskItemProps> = ({ task, onToggle, onEdit, on
           'relative rounded-2xl app-card transition-all duration-200',
           completing && 'bg-[color:var(--app-success)]/10'
         )}
-        style={{ transform: `translateX(${swipeX}px)`, transition: swiping.current ? 'none' : 'transform 0.2s ease-out' }}
+        style={{ transform: `translateX(${swipeX}px)`, transition: isSwiping ? 'none' : 'transform 0.2s ease-out' }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

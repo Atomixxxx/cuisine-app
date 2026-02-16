@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://cuisinecontrol.app/</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/dashboard</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/temperature</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/traceability</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/tasks</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/recipes</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/orders</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/invoices</loc>
+  </url>
+  <url>
+    <loc>https://cuisinecontrol.app/assistant</loc>
+  </url>
+</urlset>

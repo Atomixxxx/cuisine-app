@@ -144,7 +144,7 @@ export default function RecipeEditor({
     setPortions(String(template.portions));
     if (template.salePriceHT > 0) setSalePriceHT(String(template.salePriceHT));
 
-    let currentIngredients = [...localIngredients];
+    const currentIngredients = [...localIngredients];
     const newLines: RecipeLineDraft[] = [];
     const missingPrices: Array<{ name: string; unit: RecipeUnit; ingredientId: string }> = [];
 
@@ -653,4 +653,3 @@ export default function RecipeEditor({
     </div>
   );
 }
-

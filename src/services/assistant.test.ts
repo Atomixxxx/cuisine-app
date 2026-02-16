@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Equipment, TemperatureRecord } from '../types';
+import type { Equipment } from '../types';
 import { processAssistantMessage } from './assistant';
 
 const equipment: Equipment[] = [
@@ -10,7 +10,7 @@ const equipment: Equipment[] = [
 
 describe('assistant service', () => {
   it('registers batch temperature for fridges from natural language command', async () => {
-    const addTemperatureRecord = vi.fn(async (_record: TemperatureRecord) => undefined);
+    const addTemperatureRecord = vi.fn(async () => undefined);
     const getTemperatureRecords = vi.fn(async () => []);
 
     const response = await processAssistantMessage('Tous les frigos sont a 2 degres, enregistre la saisie', {
@@ -25,7 +25,7 @@ describe('assistant service', () => {
   });
 
   it('answers equipment count question without write action', async () => {
-    const addTemperatureRecord = vi.fn(async (_record: TemperatureRecord) => undefined);
+    const addTemperatureRecord = vi.fn(async () => undefined);
     const getTemperatureRecords = vi.fn(async () => []);
 
     const response = await processAssistantMessage('Combien de frigos ai-je ?', {
@@ -39,4 +39,3 @@ describe('assistant service', () => {
     expect(addTemperatureRecord).toHaveBeenCalledTimes(0);
   });
 });
-

@@ -17,7 +17,7 @@ const tabs: TabDef[] = [
   {
     path: "/dashboard",
     label: "Accueil",
-    color: "#f5f5f7",
+    color: "var(--tab-home)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -28,7 +28,7 @@ const tabs: TabDef[] = [
   {
     path: "/temperature",
     label: "Controles",
-    color: "#2997FF",
+    color: "var(--tab-controls)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
@@ -38,7 +38,7 @@ const tabs: TabDef[] = [
   {
     path: "/traceability",
     label: "Tracabilite",
-    color: "#0EA5E9",
+    color: "var(--tab-traceability)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M4 7V5a1 1 0 011-1h2M20 7V5a1 1 0 00-1-1h-2M4 17v2a1 1 0 001 1h2M20 17v2a1 1 0 01-1 1h-2M7 12h10" />
@@ -48,7 +48,7 @@ const tabs: TabDef[] = [
   {
     path: "/tasks",
     label: "Taches",
-    color: "#34C759",
+    color: "var(--tab-tasks)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M8 6h11M8 12h11M8 18h11M4 6h.01M4 12h.01M4 18h.01" />
@@ -58,7 +58,7 @@ const tabs: TabDef[] = [
   {
     path: "/recipes",
     label: "Fiches",
-    color: "#2997FF",
+    color: "var(--tab-recipes)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7V4z" />
@@ -69,7 +69,7 @@ const tabs: TabDef[] = [
   {
     path: "/orders",
     label: "Commandes",
-    color: "#FF6B35",
+    color: "var(--tab-orders)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M6 6h15l-1.5 8.5H8.2L6 6z" />
@@ -82,7 +82,7 @@ const tabs: TabDef[] = [
   {
     path: "/invoices",
     label: "Factures",
-    color: "#FF9F0A",
+    color: "var(--tab-invoices)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="5" y="3.5" width="14" height="17" rx="2" />
@@ -93,7 +93,7 @@ const tabs: TabDef[] = [
   {
     path: "/assistant",
     label: "Agent IA",
-    color: "#38bdf8",
+    color: "var(--tab-assistant)",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="4" y="4" width="16" height="11" rx="3" />

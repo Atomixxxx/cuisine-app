@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type TouchEvent } from 'react';
+import { memo, useCallback, useRef, useState, type TouchEvent } from 'react';
 import type { Order } from '../../types';
 import { formatDateShort } from '../../utils';
 import OrderStatusBadge from './OrderStatusBadge';
@@ -9,7 +9,7 @@ interface OrderCardProps {
   onDelete: (id: string) => void;
 }
 
-export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
+function OrderCardComponent({ order, onEdit, onDelete }: OrderCardProps) {
   const [swipeX, setSwipeX] = useState(0);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -82,3 +82,6 @@ export default function OrderCard({ order, onEdit, onDelete }: OrderCardProps) {
     </div>
   );
 }
+
+const OrderCard = memo(OrderCardComponent);
+export default OrderCard;

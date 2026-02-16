@@ -23,6 +23,15 @@
   --app-warning: #FF9F0A;
   --app-danger: #FF3B30;
   --app-info: #0EA5E9;
+
+  --tab-home: #f5f5f7;
+  --tab-controls: #2997FF;
+  --tab-traceability: #0EA5E9;
+  --tab-tasks: #34C759;
+  --tab-recipes: #2997FF;
+  --tab-orders: #FF6B35;
+  --tab-invoices: #FF9F0A;
+  --tab-assistant: #38bdf8;
 }
 
 .dark {
@@ -40,6 +49,15 @@
   --app-danger: #ff4444;
   --app-info: #00b4ff;
   --app-glow: rgba(0, 180, 255, 0.06);
+
+  --tab-home: #f5f5f7;
+  --tab-controls: #00b4ff;
+  --tab-traceability: #00b4ff;
+  --tab-tasks: #00d68f;
+  --tab-recipes: #00b4ff;
+  --tab-orders: #FF6B35;
+  --tab-invoices: #ffaa00;
+  --tab-assistant: #38bdf8;
 }
 
 html {

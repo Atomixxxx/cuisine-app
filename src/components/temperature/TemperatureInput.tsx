@@ -204,10 +204,29 @@ export default function TemperatureInput() {
   }, [loadEquipment]);
 
   useEffect(() => {
-    if (equipment.length > 0) {
-      loadRecent();
-    }
-  }, [equipment, loadRecent]);
+    if (equipment.length === 0) return;
+    let cancelled = false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    getTemperatureRecords(today)
+      .then((records) => {
+        if (cancelled) return;
+        const latest = new Map<string, TemperatureRecord>();
+        for (const r of records) {
+          const existing = latest.get(r.equipmentId);
+          if (!existing || new Date(r.timestamp).getTime() > new Date(existing.timestamp).getTime()) {
+            latest.set(r.equipmentId, r);
+          }
+        }
+        setRecentRecords(latest);
+      })
+      .catch(() => {
+        if (!cancelled) showError('Impossible de charger les releves recents');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [equipment, getTemperatureRecords]);
 
   const handleSubmit = async (value: number) => {
     if (!selectedEquipment) return;

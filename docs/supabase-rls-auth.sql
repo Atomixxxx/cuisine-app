@@ -65,6 +65,7 @@ drop policy if exists "anon_all_equipment" on public.equipment;
 drop policy if exists "anon_all_temperature_records" on public.temperature_records;
 drop policy if exists "anon_all_oil_change_records" on public.oil_change_records;
 drop policy if exists "anon_all_tasks" on public.tasks;
+drop policy if exists "anon_all_orders" on public.orders;
 drop policy if exists "anon_all_product_traces" on public.product_traces;
 drop policy if exists "anon_all_invoices" on public.invoices;
 drop policy if exists "anon_all_price_history" on public.price_history;
@@ -99,6 +100,12 @@ with check (public.is_workspace_member(workspace_id));
 drop policy if exists "auth_workspace_tasks" on public.tasks;
 create policy "auth_workspace_tasks"
 on public.tasks for all to authenticated
+using (public.is_workspace_member(workspace_id))
+with check (public.is_workspace_member(workspace_id));
+
+drop policy if exists "auth_workspace_orders" on public.orders;
+create policy "auth_workspace_orders"
+on public.orders for all to authenticated
 using (public.is_workspace_member(workspace_id))
 with check (public.is_workspace_member(workspace_id));
 

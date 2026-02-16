@@ -38,6 +38,9 @@ Redeploy after adding vars.
 
 If Supabase is empty and your local app already has data, the app seeds remote data on first reads/writes.
 
+If your database was created before the `orders` feature, re-run `docs/supabase-schema.sql`.
+It now creates `public.orders` and migrates legacy task category `commandes` into orders.
+
 ## 5. Secure mode (recommended)
 
 1. Create users in Supabase Authentication.

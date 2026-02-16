@@ -57,15 +57,22 @@ export default function PriceTracker() {
   const threshold = settings?.priceAlertThreshold ?? 10;
   const [confirmClearAll, setConfirmClearAll] = useState(false);
 
-  const reload = useCallback(() => {
-    setLoading(true);
+  useEffect(() => {
+    let cancelled = false;
     getPriceHistory()
-      .then((data) => setPriceData(data))
-      .catch(() => showError('Impossible de charger le cadencier de prix'))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!cancelled) setPriceData(data);
+      })
+      .catch(() => {
+        if (!cancelled) showError('Impossible de charger le cadencier de prix');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [getPriceHistory]);
-
-  useEffect(() => { reload(); }, [reload]);
 
   const handleDeleteItem = useCallback(async (id: string) => {
     try {

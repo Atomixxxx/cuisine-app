@@ -54,7 +54,7 @@ create table if not exists public.tasks (
   workspace_id text not null default 'default',
   id text not null,
   title text not null,
-  category text not null check (category in ('entrees', 'plats', 'desserts', 'mise_en_place', 'nettoyage', 'commandes', 'autre')),
+  category text not null check (category in ('entrees', 'plats', 'desserts', 'mise_en_place', 'nettoyage', 'autre')),
   priority text not null check (priority in ('high', 'normal', 'low')),
   completed boolean not null default false,
   estimated_time numeric null,
@@ -67,6 +67,27 @@ create table if not exists public.tasks (
   primary key (workspace_id, id)
 );
 create index if not exists idx_tasks_workspace_order on public.tasks (workspace_id, sort_order);
+
+create table if not exists public.orders (
+  workspace_id text not null default 'default',
+  id text not null,
+  order_number text not null,
+  supplier text not null,
+  status text not null check (status in ('draft', 'sent', 'received', 'invoiced')),
+  items jsonb not null default '[]'::jsonb,
+  order_date timestamptz not null,
+  expected_delivery_date timestamptz null,
+  actual_delivery_date timestamptz null,
+  total_ht numeric not null default 0,
+  notes text null,
+  invoice_id text null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  primary key (workspace_id, id)
+);
+create index if not exists idx_orders_workspace_created on public.orders (workspace_id, created_at desc);
+create index if not exists idx_orders_workspace_supplier on public.orders (workspace_id, supplier);
+create index if not exists idx_orders_workspace_status on public.orders (workspace_id, status);
 
 create table if not exists public.product_traces (
   workspace_id text not null default 'default',
@@ -153,12 +174,80 @@ create table if not exists public.recipe_ingredients (
 );
 create index if not exists idx_recipe_ingredients_workspace_recipe on public.recipe_ingredients (workspace_id, recipe_id);
 
+-- Legacy migration: convert old "commandes" tasks into orders.
+with legacy_commands as (
+  select
+    t.workspace_id,
+    t.id,
+    t.title,
+    t.notes,
+    t.created_at,
+    t.completed,
+    t.completed_at,
+    extract(year from t.created_at)::int as created_year,
+    row_number() over (
+      partition by t.workspace_id, extract(year from t.created_at)
+      order by t.created_at, t.id
+    ) as year_sequence
+  from public.tasks t
+  where t.category = 'commandes'
+)
+insert into public.orders (
+  workspace_id,
+  id,
+  order_number,
+  supplier,
+  status,
+  items,
+  order_date,
+  expected_delivery_date,
+  actual_delivery_date,
+  total_ht,
+  notes,
+  invoice_id,
+  created_at,
+  updated_at
+)
+select
+  lc.workspace_id,
+  lc.id,
+  format('CMD-%s-%s', lc.created_year, lpad(lc.year_sequence::text, 3, '0')),
+  'A definir',
+  case when lc.completed then 'received' else 'draft' end,
+  jsonb_build_array(
+    jsonb_build_object(
+      'id', lc.id || '-1',
+      'productName', lc.title,
+      'quantity', 1,
+      'unit', 'unite',
+      'notes', lc.notes
+    )
+  ),
+  lc.created_at,
+  null::timestamptz,
+  case when lc.completed then lc.completed_at else null end,
+  0::numeric,
+  lc.notes,
+  null::text,
+  lc.created_at,
+  coalesce(lc.completed_at, lc.created_at)
+from legacy_commands lc
+on conflict (workspace_id, id) do nothing;
+
+delete from public.tasks where category = 'commandes';
+
+-- Enforce latest task categories (without "commandes").
+alter table if exists public.tasks drop constraint if exists tasks_category_check;
+alter table if exists public.tasks add constraint tasks_category_check
+  check (category in ('entrees', 'plats', 'desserts', 'mise_en_place', 'nettoyage', 'autre'));
+
 -- RLS: simple shared workspace mode.
 alter table public.settings enable row level security;
 alter table public.equipment enable row level security;
 alter table public.temperature_records enable row level security;
 alter table public.oil_change_records enable row level security;
 alter table public.tasks enable row level security;
+alter table public.orders enable row level security;
 alter table public.product_traces enable row level security;
 alter table public.invoices enable row level security;
 alter table public.price_history enable row level security;
@@ -176,6 +265,8 @@ drop policy if exists "anon_all_oil_change_records" on public.oil_change_records
 create policy "anon_all_oil_change_records" on public.oil_change_records for all to anon using (true) with check (true);
 drop policy if exists "anon_all_tasks" on public.tasks;
 create policy "anon_all_tasks" on public.tasks for all to anon using (true) with check (true);
+drop policy if exists "anon_all_orders" on public.orders;
+create policy "anon_all_orders" on public.orders for all to anon using (true) with check (true);
 drop policy if exists "anon_all_product_traces" on public.product_traces;
 create policy "anon_all_product_traces" on public.product_traces for all to anon using (true) with check (true);
 drop policy if exists "anon_all_invoices" on public.invoices;

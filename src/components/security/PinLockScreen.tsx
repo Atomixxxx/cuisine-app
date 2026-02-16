@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { showError } from '../../stores/toastStore';
 import {
   clearPinUnlocked,
@@ -24,7 +24,7 @@ export default function PinLockScreen({ children }: { children: React.ReactNode 
   });
   const [lockRemainingMs, setLockRemainingMs] = useState<number>(() => getPinLockRemainingMs());
 
-  const hasPin = useMemo(() => isPinConfigured(), [unlocked]);
+  const hasPin = isPinConfigured();
 
   useEffect(() => {
     const onStorage = () => {

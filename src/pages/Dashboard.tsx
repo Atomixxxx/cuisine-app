@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -71,14 +71,18 @@ export default function Dashboard() {
   const [todayRecords, setTodayRecords] = useState<TemperatureRecord[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [products, setProducts] = useState<ProductTrace[]>([]);
+  const [currentTimestamp, setCurrentTimestamp] = useState(0);
   const [dashboardView, setDashboardView] = useState<DashboardView>('overview');
   const { canShow: showInstall, install: installPwa, dismiss: dismissInstall } = usePwaInstall();
   const refreshTimerRef = useRef<number | null>(null);
 
   const refreshAll = useCallback(() => {
     loadEquipment();
-    const today = new Date();
-    getTemperatureRecords(startOfDay(today), endOfDay(today)).then(setTodayRecords).catch(() => showError('Impossible de charger les temperatures'));
+    const now = new Date();
+    getTemperatureRecords(startOfDay(now), endOfDay(now))
+      .then(setTodayRecords)
+      .catch(() => showError('Impossible de charger les temperatures'))
+      .finally(() => setCurrentTimestamp(now.getTime()));
     getTasks(false).then(setTasks).catch(() => showError('Impossible de charger les taches'));
     getProducts().then(setProducts).catch(() => showError('Impossible de charger les produits'));
   }, [loadEquipment, getTemperatureRecords, getTasks, getProducts]);
@@ -118,16 +122,17 @@ export default function Dashboard() {
   const checkedEquipment = new Set(todayRecords.map((r) => r.equipmentId)).size;
   const totalEquipment = equipment.length;
   const activeProducts = products.filter((p) => p.status !== 'used');
+  const getDaysLeft = useCallback(
+    (expirationDate: Date | string) => Math.ceil((new Date(expirationDate).getTime() - currentTimestamp) / 864e5),
+    [currentTimestamp],
+  );
   const expiringProducts = activeProducts.filter((p) => {
-    const d = Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5);
+    const d = getDaysLeft(p.expirationDate);
     return d <= 3;
   });
-  const expiredCount = activeProducts.filter((p) => Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5) < 0).length;
+  const expiredCount = activeProducts.filter((p) => getDaysLeft(p.expirationDate) < 0).length;
 
-  const smartAlerts = useMemo(
-    () => buildSmartAlerts({ equipment, todayRecords, tasks, products: activeProducts }),
-    [equipment, todayRecords, tasks, activeProducts],
-  );
+  const smartAlerts = buildSmartAlerts({ equipment, todayRecords, tasks, products: activeProducts });
 
   const tempProgress = totalEquipment > 0 ? checkedEquipment / totalEquipment : 0;
   const tempTone: KpiTone = totalEquipment === 0 ? 'warning' : checkedEquipment === totalEquipment ? 'success' : 'warning';
@@ -223,7 +228,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="space-y-1">
                     {expiringProducts.slice(0, 5).map((p) => {
-                      const daysLeft = Math.ceil((new Date(p.expirationDate).getTime() - Date.now()) / 864e5);
+                      const daysLeft = getDaysLeft(p.expirationDate);
                       const expired = daysLeft < 0;
                       return (
                         <button key={p.id} onClick={() => navigate('/traceability')}

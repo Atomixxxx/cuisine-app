@@ -14,7 +14,7 @@ interface SyncResult {
 export async function syncInvoiceToIngredients(invoice: Invoice): Promise<SyncResult> {
   const allIngredients = await db.ingredients.toArray();
   let updated = 0;
-  let created = 0;
+  const created = 0;
 
   for (const item of invoice.items) {
     const designation = item.designation.trim();

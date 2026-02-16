@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import {
   LineChart,
   Line,
@@ -25,6 +25,23 @@ interface ChartPoint {
   label: string;
 }
 
+function TemperatureDot(props: { cx?: number; cy?: number; payload?: ChartPoint }) {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null || !payload) return null;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={5}
+      fill={payload.isCompliant ? 'var(--app-success)' : 'var(--app-danger)'}
+      stroke="var(--app-surface)"
+      strokeWidth={2}
+    />
+  );
+}
+
+const TEMPERATURE_DOT = <TemperatureDot />;
+
 export default function TemperatureChart() {
   const equipment = useAppStore(s => s.equipment);
   const loadEquipment = useAppStore(s => s.loadEquipment);
@@ -38,15 +55,10 @@ export default function TemperatureChart() {
   useEffect(() => {
     loadEquipment();
   }, [loadEquipment]);
+  const effectiveSelectedEquipmentId = selectedEquipmentId || equipment[0]?.id || '';
 
   useEffect(() => {
-    if (equipment.length > 0 && !selectedEquipmentId) {
-      setSelectedEquipmentId(equipment[0].id);
-    }
-  }, [equipment, selectedEquipmentId]);
-
-  useEffect(() => {
-    if (!selectedEquipmentId) return;
+    if (!effectiveSelectedEquipmentId) return;
 
     let start: Date;
     let end: Date = endOfDay(new Date());
@@ -61,12 +73,12 @@ export default function TemperatureChart() {
       end = endOfDay(new Date(customEnd));
     }
 
-    getTemperatureRecords(start, end, selectedEquipmentId).then(setRecords).catch(() => showError('Impossible de charger les releves'));
-  }, [selectedEquipmentId, rangeOption, customStart, customEnd, getTemperatureRecords]);
+    getTemperatureRecords(start, end, effectiveSelectedEquipmentId).then(setRecords).catch(() => showError('Impossible de charger les releves'));
+  }, [effectiveSelectedEquipmentId, rangeOption, customStart, customEnd, getTemperatureRecords]);
 
   const selectedEquipment = useMemo(
-    () => equipment.find(e => e.id === selectedEquipmentId),
-    [equipment, selectedEquipmentId]
+    () => equipment.find(e => e.id === effectiveSelectedEquipmentId),
+    [equipment, effectiveSelectedEquipmentId]
   );
 
   const chartData: ChartPoint[] = useMemo(() => {
@@ -79,21 +91,6 @@ export default function TemperatureChart() {
         label: format(new Date(r.timestamp), 'dd/MM HH:mm', { locale: fr }),
       }));
   }, [records]);
-
-  const CustomDot = (props: { cx?: number; cy?: number; payload?: ChartPoint }) => {
-    const { cx, cy, payload } = props;
-    if (cx == null || cy == null || !payload) return null;
-    return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={5}
-        fill={payload.isCompliant ? 'var(--app-success)' : 'var(--app-danger)'}
-        stroke="var(--app-surface)"
-        strokeWidth={2}
-      />
-    );
-  };
 
   const rangeButtons: { key: RangeOption; label: string }[] = [
     { key: '7d', label: '7 jours' },
@@ -111,7 +108,7 @@ export default function TemperatureChart() {
             onClick={() => setSelectedEquipmentId(eq.id)}
             className={cn(
               'px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
-              selectedEquipmentId === eq.id
+              effectiveSelectedEquipmentId === eq.id
                 ? 'app-surface border-[color:var(--app-accent)] text-[color:var(--app-accent)]'
                 : 'app-surface-2 app-text border app-border active:border-[color:var(--app-accent)]'
             )}
@@ -187,7 +184,7 @@ export default function TemperatureChart() {
                   color: 'var(--app-text)',
                 }}
                 formatter={(value: number | undefined) => [`${value ?? 0}°C`, 'Température']}
-                labelFormatter={(label: any) => String(label)}
+                labelFormatter={(label: ReactNode) => String(label ?? '')}
               />
               {selectedEquipment && (
                 <>
@@ -210,7 +207,7 @@ export default function TemperatureChart() {
                 dataKey="temperature"
                 stroke="var(--app-accent)"
                 strokeWidth={2}
-                dot={<CustomDot />}
+                dot={TEMPERATURE_DOT}
                 activeDot={{ r: 7, stroke: 'var(--app-accent)', strokeWidth: 2 }}
               />
             </LineChart>
