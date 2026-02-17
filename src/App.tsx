@@ -16,6 +16,7 @@ const RecipesPage = lazy(() => import("./pages/Recipes"));
 const OrdersPage = lazy(() => import("./pages/Orders"));
 const AssistantPage = lazy(() => import("./pages/Assistant"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AnalyticsPage = lazy(() => import("./pages/Analytics"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 
 function LoadingSpinner() {
@@ -123,6 +124,7 @@ export default function App() {
               <Route path="/invoices" element={withSection('Factures', <InvoicesPage />)} />
               <Route path="/assistant" element={withSection('Agent IA', <AssistantPage />)} />
               <Route path="/dashboard" element={withSection('Dashboard', <Dashboard />)} />
+              <Route path="/analytics" element={withSection('Analytics', <AnalyticsPage />)} />
               <Route path="/settings" element={withSection('Parametres', <SettingsPage />)} />
             </Routes>
           </Suspense>
