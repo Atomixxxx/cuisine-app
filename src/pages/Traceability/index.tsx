@@ -8,7 +8,6 @@ import { PRODUCT_CATEGORIES } from '../../types';
 import { cn, vibrate } from '../../utils';
 import { showError } from '../../stores/toastStore';
 import { useBadgeStore } from '../../stores/badgeStore';
-import { generateTraceabilityPDF, generateTraceabilityCSV, downloadCSV } from '../../services/pdf';
 import { buildProductFormPrefill, mapLabelOcrToPrefill, mergePrefills, type ProductFormPrefill } from '../../services/productScan';
 import { analyzeLabelImage, hasApiKey } from '../../services/ocr';
 import { logger } from '../../services/logger';
@@ -301,10 +300,12 @@ export default function Traceability() {
     const label = dateFrom || dateTo
       ? `${dateFrom || '...'} - ${dateTo || '...'}`
       : 'Toutes les dates';
+    const { generateTraceabilityPDF } = await import('../../services/pdf');
     await generateTraceabilityPDF(filteredProducts, settings?.establishmentName ?? '', label);
   }, [filteredProducts, settings, dateFrom, dateTo]);
 
-  const handleExportCSV = useCallback(() => {
+  const handleExportCSV = useCallback(async () => {
+    const { generateTraceabilityCSV, downloadCSV } = await import('../../services/pdf');
     const csv = generateTraceabilityCSV(filteredProducts);
     downloadCSV(csv, `tracabilite_${format(new Date(), 'yyyy-MM-dd')}.csv`);
   }, [filteredProducts]);
@@ -388,7 +389,9 @@ export default function Traceability() {
                 PDF
               </button>
               <button
-                onClick={handleExportCSV}
+                onClick={() => {
+                  void handleExportCSV();
+                }}
                 disabled={filteredProducts.length === 0}
                 className="flex items-center gap-1.5 px-3 py-2 app-success-bg rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed active:opacity-70 transition-opacity"
               >

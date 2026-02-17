@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { showError } from '../../stores/toastStore';
 import type { Ingredient, PriceHistory, Recipe, RecipeCostSummary } from '../../types';
 import { calculateRecipeCost } from '../../services/recipeCost';
 import RecipeList from '../../components/recipes/RecipeList';
-import RecipeEditor from '../../components/recipes/RecipeEditor';
-import AiImportWizard from '../../components/recipes/AiImportWizard';
+
+const RecipeEditor = lazy(() => import('../../components/recipes/RecipeEditor'));
+const AiImportWizard = lazy(() => import('../../components/recipes/AiImportWizard'));
 
 type View = 'list' | 'editor' | 'ai';
 
@@ -136,25 +137,43 @@ export default function RecipesPage() {
       )}
 
       {view === 'editor' && (
-        <RecipeEditor
-          recipe={editingRecipe}
-          ingredients={ingredients}
-          priceHistory={priceHistory}
-          onClose={handleEditorClose}
-          onSaved={handleRecipeSaved}
-          onDeleted={handleRecipeDeleted}
-          onOpenAiImport={handleOpenAiImport}
-        />
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-12">
+              <div className="w-8 h-8 border-3 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <RecipeEditor
+            recipe={editingRecipe}
+            ingredients={ingredients}
+            priceHistory={priceHistory}
+            onClose={handleEditorClose}
+            onSaved={handleRecipeSaved}
+            onDeleted={handleRecipeDeleted}
+            onOpenAiImport={handleOpenAiImport}
+          />
+        </Suspense>
       )}
 
-      <AiImportWizard
-        isOpen={showAiWizard}
-        onClose={() => setShowAiWizard(false)}
-        ingredients={ingredients}
-        priceHistory={priceHistory}
-        recipes={recipes}
-        onRecipeCreated={handleAiRecipeCreated}
-      />
+      {showAiWizard && (
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-12">
+              <div className="w-8 h-8 border-3 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <AiImportWizard
+            isOpen={showAiWizard}
+            onClose={() => setShowAiWizard(false)}
+            ingredients={ingredients}
+            priceHistory={priceHistory}
+            recipes={recipes}
+            onRecipeCreated={handleAiRecipeCreated}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../stores/appStore';
-import { generateTemperaturePDF } from '../../services/pdf';
 import TemperatureInput from '../../components/temperature/TemperatureInput';
 import TemperatureHistory from '../../components/temperature/TemperatureHistory';
 import EquipmentManager from '../../components/temperature/EquipmentManager';
@@ -82,6 +81,7 @@ export default function TemperaturePage() {
       const records = await getTemperatureRecords(from, to, exportEquipmentId || undefined);
       const periodLabel = `${format(from, 'dd/MM/yyyy', { locale: fr })} - ${format(to, 'dd/MM/yyyy', { locale: fr })}`;
 
+      const { generateTemperaturePDF } = await import('../../services/pdf');
       await generateTemperaturePDF(records, equipment, settings?.establishmentName ?? 'Mon etablissement', periodLabel);
       setShowExportPanel(false);
     } catch (err) {

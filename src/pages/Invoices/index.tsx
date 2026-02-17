@@ -4,9 +4,9 @@ import { useAppStore } from '../../stores/appStore';
 import type { Invoice } from '../../types';
 import { cn, vibrate } from '../../utils';
 import { showError } from '../../stores/toastStore';
-import InvoiceScanner from '../../components/invoices/InvoiceScanner';
 import InvoiceGallery from '../../components/invoices/InvoiceGallery';
 
+const InvoiceScanner = lazy(() => import('../../components/invoices/InvoiceScanner'));
 const PriceTracker = lazy(() => import('../../components/invoices/PriceTracker'));
 
 type SubTab = 'scanner' | 'factures' | 'cadencier';
@@ -145,7 +145,17 @@ export default function InvoicesPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto relative py-2">
-        {activeSubTab === 'scanner' && <InvoiceScanner onComplete={handleScanComplete} />}
+        {activeSubTab === 'scanner' && (
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-3 border-[color:var(--app-accent)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <InvoiceScanner onComplete={handleScanComplete} />
+          </Suspense>
+        )}
 
         {activeSubTab === 'factures' && (
           <div className="pb-4">

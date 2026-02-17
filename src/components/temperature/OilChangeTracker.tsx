@@ -16,7 +16,6 @@ import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../stores/appStore';
 import type { OilChangeRecord } from '../../types';
 import { showError, showSuccess } from '../../stores/toastStore';
-import { generateOilChangePDF } from '../../services/pdf';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { cn, sanitize } from '../../utils';
 
@@ -228,6 +227,7 @@ export default function OilChangeTracker({ establishmentName }: OilChangeTracker
 
   const handleExportPdf = async () => {
     const periodLabel = `${format(monthStart, 'dd/MM/yyyy', { locale: fr })} - ${format(monthEnd, 'dd/MM/yyyy', { locale: fr })}`;
+    const { generateOilChangePDF } = await import('../../services/pdf');
     await generateOilChangePDF(selectedRecords, establishmentName || 'Mon etablissement', periodLabel);
   };
 
