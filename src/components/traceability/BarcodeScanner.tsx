@@ -129,7 +129,7 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
   }, [onAnalyzeLabel]);
 
   const applyCapturedPhoto = useCallback(async (sourcePhoto: Blob) => {
-    const compressedPhoto = await compressImage(sourcePhoto, 1024, 0.65);
+    const compressedPhoto = await compressImage(sourcePhoto);
     setCapturedPhoto(compressedPhoto);
     setLabelAnalyzed(false);
     setPhotoPreviewUrl((previousUrl) => {

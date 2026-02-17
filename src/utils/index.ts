@@ -140,9 +140,9 @@ export function sanitizeInput(text: string): string {
 
 /**
  * Compress an image blob by resizing and converting to JPEG.
- * maxWidth: max pixel width (default 1200). quality: JPEG quality 0-1 (default 0.7).
+ * maxWidth: max pixel width (default 2400). quality: JPEG quality 0-1 (default 0.92).
  */
-export async function compressImage(blob: Blob, maxWidth = 1200, quality = 0.7): Promise<Blob> {
+export async function compressImage(blob: Blob, maxWidth = 2400, quality = 0.92): Promise<Blob> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(blob);
