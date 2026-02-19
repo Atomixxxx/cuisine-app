@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -46,7 +46,8 @@ export default function Traceability() {
   const [scanPrefill, setScanPrefill] = useState<ProductFormPrefill | undefined>();
 
   // Label OCR state
-  const [labelOcrPrefill, setLabelOcrPrefill] = useState<ProductFormPrefill | undefined>();
+  const [, setLabelOcrPrefill] = useState<ProductFormPrefill | undefined>();
+  const labelOcrPrefillRef = useRef<ProductFormPrefill | undefined>(undefined);
   const [ocrAvailable, setOcrAvailable] = useState(false);
 
   // Detail state
@@ -186,11 +187,16 @@ export default function Traceability() {
   // Handlers
   const handleAnalyzeLabel = useCallback(
     async (photo: Blob) => {
+      setLabelOcrPrefill(undefined);
+      labelOcrPrefillRef.current = undefined;
       try {
         const ocrResult = await analyzeLabelImage(photo);
         const ocrPrefill = mapLabelOcrToPrefill(ocrResult);
         setLabelOcrPrefill(ocrPrefill);
+        labelOcrPrefillRef.current = ocrPrefill;
       } catch (error) {
+        setLabelOcrPrefill(undefined);
+        labelOcrPrefillRef.current = undefined;
         logger.warn('Label OCR analysis failed', { error });
         showError("Echec de l'analyse OCR. Vous pouvez remplir manuellement.");
       }
@@ -202,27 +208,29 @@ export default function Traceability() {
     async (barcode: string | undefined, photo: Blob | undefined) => {
       setScannedBarcode(barcode);
       setCapturedPhoto(photo);
+      const ocrPrefill = labelOcrPrefillRef.current;
 
       try {
         const latestProduct = barcode ? await getLatestProductByBarcode(barcode) : null;
         const barcodePrefill = buildProductFormPrefill({ barcode, latestProduct });
-        const finalPrefill = labelOcrPrefill
-          ? mergePrefills(barcodePrefill, labelOcrPrefill)
+        const finalPrefill = ocrPrefill
+          ? mergePrefills(barcodePrefill, ocrPrefill)
           : barcodePrefill;
         setScanPrefill(finalPrefill);
       } catch (error) {
         logger.warn('Failed to build prefill from latest barcode product', { error, barcode });
         const barcodePrefill = buildProductFormPrefill({ barcode });
-        const finalPrefill = labelOcrPrefill
-          ? mergePrefills(barcodePrefill, labelOcrPrefill)
+        const finalPrefill = ocrPrefill
+          ? mergePrefills(barcodePrefill, ocrPrefill)
           : barcodePrefill;
         setScanPrefill(finalPrefill);
       }
 
       setLabelOcrPrefill(undefined);
+      labelOcrPrefillRef.current = undefined;
       setScannerStep('form');
     },
-    [getLatestProductByBarcode, labelOcrPrefill]
+    [getLatestProductByBarcode]
   );
 
   const handleSaveProduct = useCallback(
@@ -249,6 +257,7 @@ export default function Traceability() {
     setCapturedPhoto(undefined);
     setScanPrefill(undefined);
     setLabelOcrPrefill(undefined);
+    labelOcrPrefillRef.current = undefined;
   }, []);
 
   const handleDeleteProduct = useCallback(

@@ -162,9 +162,10 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
   }, []);
 
   const handleContinue = useCallback(() => {
+    if (analyzingLabel) return;
     const barcode = scannedBarcode || manualBarcode || undefined;
     onScanComplete(barcode, capturedPhoto ?? undefined);
-  }, [scannedBarcode, manualBarcode, capturedPhoto, onScanComplete]);
+  }, [analyzingLabel, scannedBarcode, manualBarcode, capturedPhoto, onScanComplete]);
 
   // ── Step 1: Barcode scanning ──
   if (step === 'barcode') {
@@ -400,13 +401,24 @@ export default function BarcodeScanner({ onScanComplete, onCancel, onAnalyzeLabe
         </button>
         <button
           type="button"
+          disabled={analyzingLabel}
           onClick={handleContinue}
           className={cn(
             'flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors',
-            'app-accent-bg active:opacity-70'
+            'app-accent-bg active:opacity-70 disabled:opacity-60 disabled:cursor-not-allowed'
           )}
         >
-          Continuer
+          {analyzingLabel ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Analyse en cours...
+            </span>
+          ) : (
+            'Continuer'
+          )}
         </button>
       </div>
     </div>
