@@ -1,4 +1,14 @@
-import type { Equipment, TemperatureRecord } from '../types';
+import type {
+  AppSettings,
+  Equipment,
+  Ingredient,
+  Invoice,
+  Order,
+  PriceHistory,
+  ProductTrace,
+  Recipe,
+  TemperatureRecord,
+} from '../types';
 import { getApiKey } from './ocr';
 
 export type AssistantActionType = 'temperature_batch' | 'info' | 'chat';
@@ -18,6 +28,13 @@ interface AssistantDependencies {
   equipment: Equipment[];
   addTemperatureRecord: (record: TemperatureRecord) => Promise<void>;
   getTemperatureRecords: (startDate?: Date, endDate?: Date, equipmentId?: string) => Promise<TemperatureRecord[]>;
+  invoices?: Invoice[];
+  orders?: Order[];
+  ingredients?: Ingredient[];
+  priceHistory?: PriceHistory[];
+  recipes?: Recipe[];
+  products?: ProductTrace[];
+  settings?: AppSettings | null;
 }
 
 function normalizeText(value: string): string {
@@ -150,23 +167,270 @@ function helpMessage(): AssistantResponse {
   };
 }
 
-async function askGeminiAssistant(question: string, equipment: Equipment[]): Promise<string | null> {
+function toDate(value: Date | string | number | null | undefined): Date | null {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDateLabel(value: Date | string | number | null | undefined): string {
+  const parsed = toDate(value);
+  if (!parsed) return 'n/a';
+  return parsed.toLocaleDateString('fr-FR');
+}
+
+function formatMoney(value: number): string {
+  const safe = Number.isFinite(value) ? value : 0;
+  return `${safe.toFixed(2)} EUR`;
+}
+
+function takeLines(lines: string[], limit: number): string {
+  const visible = lines.slice(0, limit);
+  const hidden = lines.length - visible.length;
+  return hidden > 0
+    ? `${visible.join('\n')}\n- ... ${hidden} element(s) supplementaire(s)`
+    : visible.join('\n');
+}
+
+function summarizeEquipment(equipment: Equipment[]): string {
+  if (!equipment.length) return 'Aucun equipement configure.';
+  const lines = equipment.map((eq) =>
+    `- ${eq.name} (${eq.type}) plage ${eq.minTemp} a ${eq.maxTemp} degres`,
+  );
+  return `Total: ${equipment.length}\n${takeLines(lines, 20)}`;
+}
+
+function summarizeIngredients(ingredients: Ingredient[]): string {
+  if (!ingredients.length) return 'Aucun ingredient.';
+  const lines = ingredients
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((item) => `- ${item.name} | unite ${item.unit} | prix fiche ${formatMoney(item.unitPrice)}`);
+  return `Total: ${ingredients.length}\n${takeLines(lines, 30)}`;
+}
+
+function getLatestPrice(item: PriceHistory): { price: number; date: Date | null } {
+  let latestDate: Date | null = null;
+  let latestPrice = item.averagePrice;
+
+  for (const point of item.prices) {
+    const pointDate = toDate(point.date);
+    if (!pointDate) continue;
+    if (!latestDate || pointDate.getTime() > latestDate.getTime()) {
+      latestDate = pointDate;
+      latestPrice = point.price;
+    }
+  }
+
+  return { price: latestPrice, date: latestDate };
+}
+
+function summarizePriceHistory(priceHistory: PriceHistory[]): string {
+  if (!priceHistory.length) return 'Aucune entree de cadencier.';
+  const lines = priceHistory
+    .slice()
+    .sort((a, b) => a.itemName.localeCompare(b.itemName))
+    .map((item) => {
+      const latest = getLatestPrice(item);
+      const latestLabel = latest.date
+        ? `${formatMoney(latest.price)} au ${formatDateLabel(latest.date)}`
+        : `${formatMoney(latest.price)} (date n/a)`;
+      const supplier = item.supplier || 'Inconnu';
+      return `- ${item.itemName} | ${supplier} | dernier ${latestLabel} | min ${formatMoney(item.minPrice)} | max ${formatMoney(item.maxPrice)} | moyenne ${formatMoney(item.averagePrice)}`;
+    });
+
+  return `Total: ${priceHistory.length}\n${takeLines(lines, 35)}`;
+}
+
+function summarizeInvoices(invoices: Invoice[]): string {
+  if (!invoices.length) return 'Aucune facture.';
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  let totalAmount = 0;
+  let monthCount = 0;
+  let monthAmount = 0;
+  const supplierCount = new Map<string, number>();
+
+  for (const invoice of invoices) {
+    const amount = Number.isFinite(invoice.totalTTC) ? invoice.totalTTC : 0;
+    totalAmount += amount;
+
+    const supplier = invoice.supplier?.trim() || 'Inconnu';
+    supplierCount.set(supplier, (supplierCount.get(supplier) ?? 0) + 1);
+
+    const invoiceDate = toDate(invoice.invoiceDate);
+    if (invoiceDate && invoiceDate >= monthStart && invoiceDate < nextMonthStart) {
+      monthCount += 1;
+      monthAmount += amount;
+    }
+  }
+
+  const topSuppliers = Array.from(supplierCount.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 8)
+    .map(([supplier, count]) => `${supplier} (${count})`)
+    .join(', ');
+
+  const recentLines = invoices
+    .slice()
+    .sort((a, b) => {
+      const aTime = toDate(a.invoiceDate)?.getTime() ?? 0;
+      const bTime = toDate(b.invoiceDate)?.getTime() ?? 0;
+      return bTime - aTime;
+    })
+    .map((invoice) => {
+      const supplier = invoice.supplier?.trim() || 'Inconnu';
+      return `- ${formatDateLabel(invoice.invoiceDate)} | ${supplier} | ${formatMoney(invoice.totalTTC)}`;
+    });
+
+  return [
+    `Total: ${invoices.length} facture(s), montant cumule ${formatMoney(totalAmount)}`,
+    `Mois en cours: ${monthCount} facture(s), ${formatMoney(monthAmount)}`,
+    `Top fournisseurs: ${topSuppliers || 'n/a'}`,
+    takeLines(recentLines, 25),
+  ].join('\n');
+}
+
+function summarizeOrders(orders: Order[]): string {
+  if (!orders.length) return 'Aucune commande.';
+
+  const statusCount = new Map<Order['status'], number>();
+  for (const order of orders) {
+    statusCount.set(order.status, (statusCount.get(order.status) ?? 0) + 1);
+  }
+
+  const statusSummary = Array.from(statusCount.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([status, count]) => `${status}: ${count}`)
+    .join(', ');
+
+  const recentLines = orders
+    .slice()
+    .sort((a, b) => {
+      const aTime = toDate(a.orderDate)?.getTime() ?? 0;
+      const bTime = toDate(b.orderDate)?.getTime() ?? 0;
+      return bTime - aTime;
+    })
+    .map((order) => `- ${order.orderNumber} | ${order.supplier} | ${order.status} | ${formatMoney(order.totalHT)} HT | ${formatDateLabel(order.orderDate)}`);
+
+  return [
+    `Total: ${orders.length} commande(s)`,
+    `Par statut: ${statusSummary || 'n/a'}`,
+    takeLines(recentLines, 20),
+  ].join('\n');
+}
+
+function summarizeProducts(products: ProductTrace[]): string {
+  if (!products.length) return 'Aucun produit de tracabilite.';
+
+  const now = new Date();
+  const soon = new Date(now);
+  soon.setDate(soon.getDate() + 7);
+
+  let active = 0;
+  let used = 0;
+  let expiringSoon = 0;
+  let expired = 0;
+
+  for (const product of products) {
+    if (product.status === 'active') active += 1;
+    if (product.status === 'used') used += 1;
+
+    const expirationDate = toDate(product.expirationDate);
+    if (!expirationDate) continue;
+
+    if (expirationDate < now) {
+      expired += 1;
+      continue;
+    }
+
+    if (expirationDate <= soon) {
+      expiringSoon += 1;
+    }
+  }
+
+  const soonLines = products
+    .slice()
+    .filter((product) => product.status === 'active')
+    .sort((a, b) => {
+      const aTime = toDate(a.expirationDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const bTime = toDate(b.expirationDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return aTime - bTime;
+    })
+    .map((product) => `- ${product.productName} | ${product.supplier} | lot ${product.lotNumber} | exp ${formatDateLabel(product.expirationDate)}`);
+
+  return [
+    `Total: ${products.length} produit(s)`,
+    `Actifs: ${active}, utilises: ${used}, expires: ${expired}, expiration <= 7 jours: ${expiringSoon}`,
+    takeLines(soonLines, 20),
+  ].join('\n');
+}
+
+function summarizeRecipes(recipes: Recipe[]): string {
+  if (!recipes.length) return 'Aucune recette.';
+  const titles = recipes
+    .slice()
+    .sort((a, b) => a.title.localeCompare(b.title))
+    .map((recipe) => `- ${recipe.title}`);
+  return `Total: ${recipes.length}\n${takeLines(titles, 30)}`;
+}
+
+function summarizeSettings(settings: AppSettings | null | undefined): string {
+  if (!settings) return 'Aucun parametre charge.';
+  return [
+    `Etablissement: ${settings.establishmentName || 'inconnu'}`,
+    `Alerte variation prix: ${settings.priceAlertThreshold}%`,
+  ].join('\n');
+}
+
+async function askGeminiAssistant(question: string, deps: AssistantDependencies): Promise<string | null> {
   const apiKey = await getApiKey();
   if (!apiKey) return null;
 
-  const equipmentSummary =
-    equipment.length === 0
-      ? 'Aucun equipement configure.'
-      : equipment
-          .map((eq) => `- ${eq.name} (${eq.type}) plage ${eq.minTemp} a ${eq.maxTemp} degres`)
-          .join('\n');
+  const equipmentSummary = summarizeEquipment(deps.equipment);
+  const ingredientsSummary = summarizeIngredients(deps.ingredients ?? []);
+  const priceHistorySummary = summarizePriceHistory(deps.priceHistory ?? []);
+  const invoicesSummary = summarizeInvoices(deps.invoices ?? []);
+  const ordersSummary = summarizeOrders(deps.orders ?? []);
+  const productsSummary = summarizeProducts(deps.products ?? []);
+  const recipesSummary = summarizeRecipes(deps.recipes ?? []);
+  const settingsSummary = summarizeSettings(deps.settings);
 
-  const prompt = `Tu es un assistant cuisine HACCP. Reponds en francais, de maniere concise et actionnable.
-Contexte equipements:
-${equipmentSummary}
-
-Si la demande implique une action de saisie, dis clairement de passer par la commande explicite.
-Question: ${question}`;
+  const prompt = [
+    'Tu es un assistant cuisine HACCP expert.',
+    'Reponds en francais, de maniere concise, claire et actionnable.',
+    'Utilise uniquement le contexte fourni ci-dessous et n invente pas de donnees.',
+    'Si la reponse n est pas dans le contexte, indique-le explicitement.',
+    '',
+    'Contexte application:',
+    settingsSummary,
+    '',
+    'Equipements:',
+    equipmentSummary,
+    '',
+    'Ingredients:',
+    ingredientsSummary,
+    '',
+    'Cadencier prix:',
+    priceHistorySummary,
+    '',
+    'Factures:',
+    invoicesSummary,
+    '',
+    'Commandes:',
+    ordersSummary,
+    '',
+    'Produits tracabilite:',
+    productsSummary,
+    '',
+    'Recettes:',
+    recipesSummary,
+    '',
+    `Question utilisateur: ${question}`,
+  ].join('\n');
 
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
     method: 'POST',
@@ -176,7 +440,7 @@ Question: ${question}`;
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 400 },
+      generationConfig: { temperature: 0.2, maxOutputTokens: 500 },
     }),
   });
 
@@ -209,7 +473,7 @@ export async function processAssistantMessage(
   const todayResponse = await handleTodayStatusIntent(trimmed, deps);
   if (todayResponse) return todayResponse;
 
-  const aiReply = await askGeminiAssistant(trimmed, deps.equipment);
+  const aiReply = await askGeminiAssistant(trimmed, deps);
   if (aiReply) {
     return { action: 'chat', reply: aiReply };
   }

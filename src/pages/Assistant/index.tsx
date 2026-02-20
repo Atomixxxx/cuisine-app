@@ -1,6 +1,7 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { processAssistantMessage } from '../../services/assistant';
+import type { Ingredient, Invoice, Order, PriceHistory, ProductTrace, Recipe } from '../../types';
 import { cn } from '../../utils';
 
 interface ChatMessage {
@@ -12,12 +13,25 @@ interface ChatMessage {
 
 export default function AssistantPage() {
   const equipment = useAppStore((s) => s.equipment);
+  const settings = useAppStore((s) => s.settings);
   const loadEquipment = useAppStore((s) => s.loadEquipment);
   const addTemperatureRecord = useAppStore((s) => s.addTemperatureRecord);
   const getTemperatureRecords = useAppStore((s) => s.getTemperatureRecords);
+  const getInvoices = useAppStore((s) => s.getInvoices);
+  const getOrders = useAppStore((s) => s.getOrders);
+  const getIngredients = useAppStore((s) => s.getIngredients);
+  const getPriceHistory = useAppStore((s) => s.getPriceHistory);
+  const getProducts = useAppStore((s) => s.getProducts);
+  const getRecipes = useAppStore((s) => s.getRecipes);
 
   const [input, setInput] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [products, setProducts] = useState<ProductTrace[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: crypto.randomUUID(),
@@ -29,16 +43,36 @@ export default function AssistantPage() {
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    void loadEquipment();
-  }, [loadEquipment]);
+    let cancelled = false;
+
+    const applyIfMounted = <T,>(setter: (data: T) => void, data: T) => {
+      if (!cancelled) setter(data);
+    };
+
+    void Promise.allSettled([
+      loadEquipment(),
+      getInvoices({ limit: 100 }).then((data) => applyIfMounted(setInvoices, data)),
+      getOrders().then((data) => applyIfMounted(setOrders, data)),
+      getIngredients().then((data) => applyIfMounted(setIngredients, data)),
+      getPriceHistory().then((data) => applyIfMounted(setPriceHistory, data)),
+      getRecipes().then((data) => applyIfMounted(setRecipes, data)),
+      getProducts({ limit: 200 }).then((data) => applyIfMounted(setProducts, data)),
+    ]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadEquipment, getInvoices, getOrders, getIngredients, getPriceHistory, getRecipes, getProducts]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, processing]);
 
   const helperText = useMemo(
-    () => `${equipment.length} equipement(s) disponible(s) pour les commandes automatiques.`,
-    [equipment.length],
+    () =>
+      `${equipment.length} equipement(s), ${priceHistory.length} prix, ` +
+      `${invoices.length} facture(s), ${recipes.length} recette(s).`,
+    [equipment.length, priceHistory.length, invoices.length, recipes.length],
   );
 
   const pushMessage = (role: ChatMessage['role'], text: string) => {
@@ -65,6 +99,13 @@ export default function AssistantPage() {
         equipment,
         addTemperatureRecord,
         getTemperatureRecords,
+        invoices,
+        orders,
+        ingredients,
+        priceHistory,
+        recipes,
+        products,
+        settings,
       });
       pushMessage('assistant', result.reply);
     } catch {
@@ -123,4 +164,3 @@ export default function AssistantPage() {
     </div>
   );
 }
-
