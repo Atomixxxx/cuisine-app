@@ -1,8 +1,9 @@
-﻿import { useState, useMemo, useCallback } from 'react';
+﻿import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAppStore } from '../../stores/appStore';
-import { showError } from '../../stores/toastStore';
+import { showError, showSuccess } from '../../stores/toastStore';
 import type { Invoice } from '../../types';
-import { formatDateShort, blobToUrl, generateSupplierColor } from '../../utils';
+import { formatDateShort, blobToUrl, generateSupplierColor, sanitizeInput } from '../../utils';
+import { buildSupplierQuickPicks, canonicalizeSupplierName } from '../../services/suppliers';
 import InvoiceForm from './InvoiceForm';
 import type { OCRResult } from '../../services/ocr';
 
@@ -16,7 +17,57 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
   const [zoom, setZoom] = useState(1);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [reassigning, setReassigning] = useState(false);
+  const [newSupplier, setNewSupplier] = useState('');
+  const [knownSuppliers, setKnownSuppliers] = useState<string[]>([]);
+  const [savingSupplier, setSavingSupplier] = useState(false);
   const deleteInvoice = useAppStore((s) => s.deleteInvoice);
+  const updateInvoice = useAppStore((s) => s.updateInvoice);
+  const rebuildPriceHistory = useAppStore((s) => s.rebuildPriceHistory);
+  const getInvoices = useAppStore((s) => s.getInvoices);
+  const getPriceHistory = useAppStore((s) => s.getPriceHistory);
+
+  useEffect(() => {
+    if (!reassigning) return;
+    const load = async () => {
+      try {
+        const [invoices, history] = await Promise.all([getInvoices(), getPriceHistory()]);
+        const dynamic = [
+          ...invoices.map((inv) => inv.supplier),
+          ...history.map((h) => h.supplier),
+        ].map((v) => v.trim()).filter(Boolean);
+        setKnownSuppliers(dynamic);
+      } catch {
+        // non-blocking
+      }
+    };
+    void load();
+  }, [reassigning, getInvoices, getPriceHistory]);
+
+  const supplierQuickPicks = useMemo(() => buildSupplierQuickPicks(knownSuppliers), [knownSuppliers]);
+  const canonicalNew = useMemo(() => canonicalizeSupplierName(newSupplier.trim()), [newSupplier]);
+
+  const handleOpenReassign = useCallback(() => {
+    setNewSupplier(invoice.supplier);
+    setReassigning(true);
+  }, [invoice.supplier]);
+
+  const handleReassignSave = useCallback(async () => {
+    const target = (canonicalNew || newSupplier.trim());
+    if (!target) return;
+    setSavingSupplier(true);
+    try {
+      await updateInvoice({ ...invoice, supplier: target });
+      await rebuildPriceHistory();
+      showSuccess(`Fournisseur mis a jour : ${target}`);
+      setReassigning(false);
+      onClose();
+    } catch {
+      showError('Impossible de modifier le fournisseur');
+    } finally {
+      setSavingSupplier(false);
+    }
+  }, [canonicalNew, newSupplier, invoice, updateInvoice, rebuildPriceHistory, onClose]);
 
   const imageUrls = useMemo(() => {
     const blobUrls = (invoice.images ?? [])
@@ -130,9 +181,17 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
         )}
 
         <div className="glass-card glass-panel space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: generateSupplierColor(invoice.supplier || '') }} />
-            <h3 className="font-semibold app-text">{invoice.supplier || 'Fournisseur inconnu'}</h3>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: generateSupplierColor(invoice.supplier || '') }} />
+              <h3 className="font-semibold app-text truncate">{invoice.supplier || 'Fournisseur inconnu'}</h3>
+            </div>
+            <button
+              onClick={handleOpenReassign}
+              className="shrink-0 px-2.5 py-1 rounded-lg app-surface-2 ios-caption font-semibold text-[color:var(--app-accent)] active:opacity-70 transition-opacity"
+            >
+              Changer
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
@@ -204,6 +263,77 @@ export default function InvoiceDetail({ invoice, onClose }: InvoiceDetailProps) 
               </button>
               <button onClick={handleDelete} className="flex-1 py-2 rounded-xl app-danger-bg text-sm font-medium">
                 Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reassigning && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
+          <div className="glass-card glass-panel p-5 w-full max-w-sm space-y-4">
+            <h3 className="text-base font-bold app-text">Changer de fournisseur</h3>
+            <p className="text-xs app-muted">
+              Fournisseur actuel : <span className="font-semibold app-text">{invoice.supplier || 'Inconnu'}</span>
+            </p>
+
+            <div>
+              <label className="block text-xs font-medium app-muted mb-1">Nouveau fournisseur</label>
+              <input
+                type="text"
+                value={newSupplier}
+                onChange={(e) => setNewSupplier(sanitizeInput(e.target.value))}
+                className="w-full px-3 py-2 rounded-lg border app-border app-surface app-text text-sm focus:ring-2 focus:ring-[color:var(--app-accent)] focus:border-transparent"
+                placeholder="Nom du fournisseur"
+                autoFocus
+              />
+              {canonicalNew && canonicalNew !== newSupplier.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setNewSupplier(canonicalNew)}
+                  className="mt-1 text-xs font-semibold text-[color:var(--app-accent)] active:opacity-70"
+                >
+                  Utiliser : {canonicalNew}
+                </button>
+              )}
+            </div>
+
+            {supplierQuickPicks.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {supplierQuickPicks.map((pick) => (
+                  <button
+                    key={pick}
+                    type="button"
+                    onClick={() => setNewSupplier(pick)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold active:opacity-70 transition-opacity ${
+                      (canonicalNew || newSupplier.trim()).toLowerCase() === pick.toLowerCase()
+                        ? 'app-accent-bg'
+                        : 'app-surface-2 app-text'
+                    }`}
+                  >
+                    {pick}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setReassigning(false)}
+                disabled={savingSupplier}
+                className="flex-1 py-2.5 rounded-xl app-surface-2 app-border app-text text-sm font-medium active:opacity-70"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleReassignSave}
+                disabled={savingSupplier || !(canonicalNew || newSupplier.trim())}
+                className="flex-1 py-2.5 rounded-xl app-accent-bg text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {savingSupplier && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
+                {savingSupplier ? 'Sauvegarde...' : 'Confirmer'}
               </button>
             </div>
           </div>
