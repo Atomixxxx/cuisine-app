@@ -11,13 +11,14 @@ interface InvoiceGalleryProps {
   onRefresh: () => void;
 }
 
-type SortOption = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
+type SortOption = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc' | 'supplier_asc';
 
 const SORT_LABELS: Record<SortOption, string> = {
   date_desc: 'Date (recent)',
   date_asc: 'Date (ancien)',
   amount_desc: 'Montant (decroissant)',
   amount_asc: 'Montant (croissant)',
+  supplier_asc: 'Fournisseur (A-Z)',
 };
 
 export default function InvoiceGallery({ invoices, loading, onRefresh }: InvoiceGalleryProps) {
@@ -65,6 +66,8 @@ export default function InvoiceGallery({ invoices, loading, onRefresh }: Invoice
           return b.totalTTC - a.totalTTC;
         case 'amount_asc':
           return a.totalTTC - b.totalTTC;
+        case 'supplier_asc':
+          return a.supplier.localeCompare(b.supplier);
       }
     });
 

@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useBadgeStore } from "../../stores/badgeStore";
 import { useAppStore } from "../../stores/appStore";
 import { STORAGE_KEYS } from "../../constants/storageKeys";
+import { useCommandPalette } from "../../hooks/useCommandPalette";
+import CommandPalette from "./CommandPalette";
 
 /* ---------- Tab bar config with colored icons (matching sidebar) ---------- */
 
@@ -157,6 +159,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const darkMode = useAppStore((s) => s.darkMode);
   const setDarkMode = useAppStore((s) => s.setDarkMode);
   const loadSettings = useAppStore((s) => s.loadSettings);
+  const isCommandPaletteOpen = useCommandPalette((s) => s.isOpen);
+  const toggleCommandPalette = useCommandPalette((s) => s.toggle);
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(() => localStorage.getItem(LAST_BACKUP_KEY));
 
   useEffect(() => {
@@ -173,6 +177,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       window.removeEventListener('cuisine-backup-updated', refresh as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        toggleCommandPalette();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toggleCommandPalette]);
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
@@ -306,6 +324,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
+
+      {isCommandPaletteOpen && <CommandPalette />}
     </div>
   );
 }

@@ -9,10 +9,11 @@ import { cn, formatDateShort, generateSupplierColor } from '../../utils';
 import { Skeleton } from '../common/Skeleton';
 import ConfirmDialog from '../common/ConfirmDialog';
 
-type SortOption = 'name' | 'avg' | 'max' | 'variation' | 'entries';
+type SortOption = 'name' | 'supplier' | 'avg' | 'max' | 'variation' | 'entries';
 
 const SORT_OPTIONS: { key: SortOption; label: string }[] = [
   { key: 'name', label: 'Nom' },
+  { key: 'supplier', label: 'Fournisseur' },
   { key: 'avg', label: 'Prix moyen' },
   { key: 'max', label: 'Prix max' },
   { key: 'variation', label: 'Variation' },
@@ -46,6 +47,8 @@ function getLastEntryDate(item: PriceHistory): Date | null {
 export default function PriceTracker() {
   const [priceData, setPriceData] = useState<PriceHistory[]>([]);
   const [search, setSearch] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [groupBySupplier, setGroupBySupplier] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('variation');
   const [selectedItem, setSelectedItem] = useState<PriceHistory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,19 +108,25 @@ export default function PriceTracker() {
     return map;
   }, [priceData]);
 
+  const suppliers = useMemo(() => {
+    const set = new Set(priceData.map((item) => item.supplier).filter(Boolean));
+    return Array.from(set).sort();
+  }, [priceData]);
+
   const filtered = useMemo(() => {
-    let data = priceData;
-    if (search) {
-      const q = normalizeLabel(search);
-      data = data.filter((item) =>
-        normalizeLabel(item.itemName).includes(q) || normalizeLabel(item.supplier).includes(q),
-      );
-    }
+    const q = normalizeLabel(search);
+    const data = priceData.filter((item) => {
+      if (supplierFilter && item.supplier !== supplierFilter) return false;
+      if (!q) return true;
+      return normalizeLabel(item.itemName).includes(q) || normalizeLabel(item.supplier).includes(q);
+    });
 
     return [...data].sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return a.itemName.localeCompare(b.itemName);
+        case 'supplier':
+          return a.supplier.localeCompare(b.supplier);
         case 'avg':
           return b.averagePrice - a.averagePrice;
         case 'max':
@@ -129,7 +138,18 @@ export default function PriceTracker() {
           return getVariation(b) - getVariation(a);
       }
     });
-  }, [priceData, search, sortBy]);
+  }, [priceData, search, supplierFilter, sortBy]);
+
+  const grouped = useMemo(() => {
+    if (!groupBySupplier) return null;
+    const map = new Map<string, PriceHistory[]>();
+    filtered.forEach((item) => {
+      const key = item.supplier || 'Inconnu';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)?.push(item);
+    });
+    return map;
+  }, [filtered, groupBySupplier]);
 
   const overview = useMemo(() => {
     const total = filtered.length;
@@ -148,6 +168,84 @@ export default function PriceTracker() {
   if (selectedItem) {
     return <PriceChart item={selectedItem} onBack={() => setSelectedItem(null)} threshold={threshold} onDelete={() => handleDeleteItem(selectedItem.id)} />;
   }
+
+  const inputClass = 'app-input';
+  const renderItemCard = (item: PriceHistory) => {
+    const variation = getVariation(item);
+    const isAlert = variation > threshold;
+    const duplicateCount = duplicateCountByName.get(normalizeLabel(item.itemName)) ?? 1;
+    const hasMultipleSuppliers = duplicateCount > 1;
+    const lastDate = getLastEntryDate(item);
+    const rangePercent = item.maxPrice > 0
+      ? Math.max(8, Math.round(((item.maxPrice - item.minPrice) / item.maxPrice) * 100))
+      : 0;
+
+    return (
+      <button
+        key={item.id}
+        onClick={() => setSelectedItem(item)}
+        className={cn(
+          'w-full text-left rounded-2xl border p-3.5 transition-all active:scale-[0.99]',
+          isAlert
+            ? 'bg-[color:var(--app-danger)]/8 border-[color:var(--app-danger)]/35'
+            : 'app-card',
+        )}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="ios-body font-semibold app-text truncate">{item.itemName}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: generateSupplierColor(item.supplier) }} />
+              <span className="text-[12px] app-muted truncate">{item.supplier}</span>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[18px] font-bold app-text leading-none">{formatMoney(item.averagePrice)}</p>
+            <p className="ios-small app-muted mt-1">prix moyen</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          <span
+            className={cn(
+              'px-2 py-0.5 rounded-full ios-small font-semibold',
+              isAlert
+                ? 'bg-[color:var(--app-danger)]/16 text-[color:var(--app-danger)]'
+                : 'bg-[color:var(--app-success)]/16 text-[color:var(--app-success)]',
+            )}
+          >
+            {variation >= 0 ? '+' : ''}{variation}%
+          </span>
+          {hasMultipleSuppliers && (
+            <span className="px-2 py-0.5 rounded-full ios-small font-semibold bg-[color:var(--app-accent)]/14 text-[color:var(--app-accent)]">
+              {duplicateCount} fournisseurs
+            </span>
+          )}
+          <span className="px-2 py-0.5 rounded-full ios-small font-semibold app-surface-2 app-muted">
+            {item.prices.length} entrees
+          </span>
+        </div>
+
+        <div className="mt-3">
+          <div className="flex justify-between ios-small mb-1">
+            <span className="text-[color:var(--app-success)] font-semibold">min {formatMoney(item.minPrice)}</span>
+            <span className="text-[color:var(--app-danger)] font-semibold">max {formatMoney(item.maxPrice)}</span>
+          </div>
+          <div className="h-1.5 rounded-full app-surface-3 overflow-hidden">
+            <div
+              className={cn('h-full rounded-full', isAlert ? 'app-danger-bg' : 'app-accent-bg')}
+              style={{ width: `${rangePercent}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between ios-small app-muted">
+          <span>Derniere maj: {lastDate ? formatDateShort(lastDate) : 'n/a'}</span>
+          <span className="font-semibold">Voir detail</span>
+        </div>
+      </button>
+    );
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -196,6 +294,26 @@ export default function PriceTracker() {
             </svg>
           </button>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-[1fr,auto] gap-2">
+        <select value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)} className={inputClass}>
+          <option value="">Tous les fournisseurs</option>
+          {suppliers.map((supplier) => (
+            <option key={supplier} value={supplier}>
+              {supplier}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => setGroupBySupplier(!groupBySupplier)}
+          className={cn(
+            'px-3 py-2.5 rounded-xl ios-caption font-semibold shrink-0 active:opacity-70 transition-opacity',
+            groupBySupplier ? 'app-accent-bg' : 'app-surface-2 app-muted',
+          )}
+        >
+          Grouper
+        </button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -265,84 +383,26 @@ export default function PriceTracker() {
         onCancel={() => setConfirmClearAll(false)}
       />
 
-      {!loading && filtered.length > 0 && (
+      {!loading && !groupBySupplier && filtered.length > 0 && (
         <div className="space-y-2.5">
-          {filtered.map((item) => {
-            const variation = getVariation(item);
-            const isAlert = variation > threshold;
-            const duplicateCount = duplicateCountByName.get(normalizeLabel(item.itemName)) ?? 1;
-            const hasMultipleSuppliers = duplicateCount > 1;
-            const lastDate = getLastEntryDate(item);
-            const rangePercent = item.maxPrice > 0
-              ? Math.max(8, Math.round(((item.maxPrice - item.minPrice) / item.maxPrice) * 100))
-              : 0;
+          {filtered.map((item) => renderItemCard(item))}
+        </div>
+      )}
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => setSelectedItem(item)}
-                className={cn(
-                  'w-full text-left rounded-2xl border p-3.5 transition-all active:scale-[0.99]',
-                  isAlert
-                    ? 'bg-[color:var(--app-danger)]/8 border-[color:var(--app-danger)]/35'
-                    : 'app-card',
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="ios-body font-semibold app-text truncate">{item.itemName}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: generateSupplierColor(item.supplier) }} />
-                      <span className="text-[12px] app-muted truncate">{item.supplier}</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[18px] font-bold app-text leading-none">{formatMoney(item.averagePrice)}</p>
-                    <p className="ios-small app-muted mt-1">prix moyen</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 mt-3">
-                  <span
-                    className={cn(
-                      'px-2 py-0.5 rounded-full ios-small font-semibold',
-                      isAlert
-                        ? 'bg-[color:var(--app-danger)]/16 text-[color:var(--app-danger)]'
-                        : 'bg-[color:var(--app-success)]/16 text-[color:var(--app-success)]',
-                    )}
-                  >
-                    {variation >= 0 ? '+' : ''}{variation}%
-                  </span>
-                  {hasMultipleSuppliers && (
-                    <span className="px-2 py-0.5 rounded-full ios-small font-semibold bg-[color:var(--app-accent)]/14 text-[color:var(--app-accent)]">
-                      {duplicateCount} fournisseurs
-                    </span>
-                  )}
-                  <span className="px-2 py-0.5 rounded-full ios-small font-semibold app-surface-2 app-muted">
-                    {item.prices.length} entrees
-                  </span>
-                </div>
-
-                <div className="mt-3">
-                  <div className="flex justify-between ios-small mb-1">
-                    <span className="text-[color:var(--app-success)] font-semibold">min {formatMoney(item.minPrice)}</span>
-                    <span className="text-[color:var(--app-danger)] font-semibold">max {formatMoney(item.maxPrice)}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full app-surface-3 overflow-hidden">
-                    <div
-                      className={cn('h-full rounded-full', isAlert ? 'app-danger-bg' : 'app-accent-bg')}
-                      style={{ width: `${rangePercent}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between ios-small app-muted">
-                  <span>Derniere maj: {lastDate ? formatDateShort(lastDate) : 'n/a'}</span>
-                  <span className="font-semibold">Voir detail</span>
-                </div>
-              </button>
-            );
-          })}
+      {!loading && groupBySupplier && grouped && filtered.length > 0 && (
+        <div className="space-y-4">
+          {Array.from(grouped.entries()).map(([supplier, items]) => (
+            <div key={supplier} className="glass-card glass-panel">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: generateSupplierColor(supplier) }} />
+                <h3 className="ios-body font-semibold app-text">{supplier}</h3>
+                <span className="ios-caption app-muted">({items.length})</span>
+              </div>
+              <div className="space-y-2.5">
+                {items.map((item) => renderItemCard(item))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
